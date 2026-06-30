@@ -23,12 +23,12 @@ export default function ComposeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { sendEmail } = useEmails();
-  const params = useLocalSearchParams<{ to?: string; subject?: string }>();
+  const params = useLocalSearchParams<{ to?: string; subject?: string; body?: string }>();
 
   const [to, setTo] = useState(params.to ?? "");
   const [cc, setCc] = useState("");
   const [subject, setSubject] = useState(params.subject ?? "");
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(params.body ?? "");
   const [showCc, setShowCc] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -36,7 +36,8 @@ export default function ComposeScreen() {
   const bodyRef = useRef<TextInput>(null);
 
   useEffect(() => {
-    if (!user) return;
+    // Only auto-insert signature for new emails (not replies/forwards that already have body)
+    if (!user || params.body) return;
     getProfile(user.id).then((p) => {
       if (p?.signature) {
         setBody(`\n\n— \n${p.signature}`);

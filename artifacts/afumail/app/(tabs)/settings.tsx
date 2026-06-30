@@ -88,7 +88,11 @@ export default function SettingsScreen() {
     setPrefs((p) => ({ ...p, [key]: next }));
     await setPref(key, next);
     if (key === "darkMode") {
-      Appearance.setColorScheme(next ? "dark" : "light");
+      try {
+        if (typeof (Appearance as any).setColorScheme === "function") {
+          (Appearance as any).setColorScheme(next ? "dark" : "light");
+        }
+      } catch {}
     }
   }
 
@@ -297,7 +301,7 @@ export default function SettingsScreen() {
               <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
                 <Feather name="phone" size={15} color={colors.foreground} />
               </View>
-              <Text style={[styles.rowLabel, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>Recovery Phone</Text>
+              <Text style={[styles.rowLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Recovery Phone</Text>
               <View style={styles.navRight}>
                 <Text style={[styles.infoText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{phoneNumber || "Not set"}</Text>
                 <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
@@ -311,7 +315,7 @@ export default function SettingsScreen() {
               <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
                 <Feather name="mail" size={15} color={colors.foreground} />
               </View>
-              <Text style={[styles.rowLabel, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>Recovery Email</Text>
+              <Text style={[styles.rowLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Recovery Email</Text>
               <View style={styles.navRight}>
                 <Text style={[styles.infoText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{recoveryEmail || "Not set"}</Text>
                 <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
@@ -339,7 +343,7 @@ export default function SettingsScreen() {
                     <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
                       <Feather name={row.icon as any} size={15} color={colors.foreground} />
                     </View>
-                    <Text style={[styles.rowLabel, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+                    <Text style={[styles.rowLabel, { color: colors.foreground, fontFamily: row.type === "nav" ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
                       {row.label}
                     </Text>
                     <View style={styles.rowRight}>

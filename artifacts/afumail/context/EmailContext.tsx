@@ -73,9 +73,11 @@ interface EmailContextType {
   getEmailsByCategory: (category: EmailCategory) => Email[];
   getEmailById: (id: string) => Email | undefined;
   markAsRead: (id: string) => Promise<void>;
+  markAsUnread: (id: string) => Promise<void>;
   toggleStar: (id: string) => Promise<void>;
   archiveEmail: (id: string) => Promise<void>;
   deleteEmail: (id: string) => Promise<void>;
+  moveToFolder: (id: string, folder: EmailFolder) => Promise<void>;
   sendEmail: (data: ComposeData, fromEmail: string, fromName: string) => Promise<void>;
   unreadCount: number;
   refreshEmails: () => Promise<void>;
@@ -90,9 +92,11 @@ const EmailContext = createContext<EmailContextType>({
   getEmailsByCategory: () => [],
   getEmailById: () => undefined,
   markAsRead: async () => {},
+  markAsUnread: async () => {},
   toggleStar: async () => {},
   archiveEmail: async () => {},
   deleteEmail: async () => {},
+  moveToFolder: async () => {},
   sendEmail: async () => {},
   unreadCount: 0,
   refreshEmails: async () => {},
@@ -244,6 +248,16 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
     [emails]
   );
 
+  const markAsUnread = useCallback(async (id: string) => {
+    setEmails((prev) => prev.map((e) => (e.id === id ? { ...e, read: false } : e)));
+    await supabase.from("emails").update({ read: false }).eq("id", id);
+  }, []);
+
+  const moveToFolder = useCallback(async (id: string, folder: EmailFolder) => {
+    setEmails((prev) => prev.map((e) => (e.id === id ? { ...e, folder } : e)));
+    await supabase.from("emails").update({ folder }).eq("id", id);
+  }, []);
+
   const archiveEmail = useCallback(
     async (id: string) => {
       setEmails((prev) =>
@@ -368,9 +382,11 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
         getEmailsByCategory,
         getEmailById,
         markAsRead,
+        markAsUnread,
         toggleStar,
         archiveEmail,
         deleteEmail,
+        moveToFolder,
         sendEmail,
         unreadCount,
         refreshEmails: loadEmails,
