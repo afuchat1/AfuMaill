@@ -1,10 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./supabase-config";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// The AfuMail Supabase project credentials are stored in supabase-config.ts.
+// The anon key is an intentionally public client-side key — safe with RLS enabled.
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
@@ -21,10 +22,6 @@ export interface Profile {
   created_at: string;
 }
 
-/**
- * Check if a username is available.
- * Queries the public profiles table (SELECT is open to anon).
- */
 export async function isUsernameAvailable(username: string): Promise<boolean> {
   const { data, error } = await supabase
     .from("profiles")
@@ -34,37 +31,27 @@ export async function isUsernameAvailable(username: string): Promise<boolean> {
 
   if (error) {
     console.warn("Username check error:", error.message);
-    // If the profiles table doesn't exist yet, treat as available
     return true;
   }
   return data === null;
 }
 
-/**
- * Register a new user with Supabase Auth and insert a profile row.
- */
 export async function registerUser(
   email: string,
   password: string,
   username: string,
   fullName: string
 ): Promise<{ error?: string }> {
-  // 1. Create auth user
   const { data, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
   });
 
-  if (signUpError) {
-    return { error: signUpError.message };
-  }
+  if (signUpError) return { error: signUpError.message };
 
   const userId = data.user?.id;
-  if (!userId) {
-    return { error: "Registration failed. Please try again." };
-  }
+  if (!userId) return { error: "Registration failed. Please try again." };
 
-  // 2. Insert profile row
   const { error: profileError } = await supabase.from("profiles").insert({
     id: userId,
     username: username.toLowerCase().trim(),
@@ -72,16 +59,10 @@ export async function registerUser(
     email,
   });
 
-  if (profileError) {
-    return { error: profileError.message };
-  }
-
+  if (profileError) return { error: profileError.message };
   return {};
 }
 
-/**
- * Sign in an existing user.
- */
 export async function signInUser(
   email: string,
   password: string
