@@ -257,7 +257,7 @@ export default function InboxPage({
           <FlatList
             data={displayedEmails}
             keyExtractor={(e) => e.id}
-            renderItem={({ item }) => <EmailRow email={item} />}
+            renderItem={({ item }) => <EmailRow email={item} currentFolder={currentFolder} />}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
