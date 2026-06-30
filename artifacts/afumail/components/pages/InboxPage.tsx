@@ -140,11 +140,11 @@ export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrol
                 onPress={() => openFolder(f.folder)}
                 style={[styles.sidebarRow, active && { backgroundColor: colors.secondary }]}
               >
-                <Feather name={f.icon as any} size={18} color={active ? colors.accent : colors.mutedForeground} />
+                <Feather name={f.icon as any} size={21} color={active ? colors.accent : colors.foreground} />
                 <Text
                   style={[
                     styles.sidebarLabel,
-                    { color: active ? colors.foreground : colors.mutedForeground, fontFamily: active ? "Inter_600SemiBold" : "Inter_400Regular" },
+                    { color: active ? colors.foreground : colors.foreground, fontFamily: "Inter_700Bold" },
                   ]}
                 >
                   {f.label}
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     gap: 14,
     marginBottom: 2,
   },
-  sidebarLabel: { flex: 1, fontSize: 15 },
+  sidebarLabel: { flex: 1, fontSize: 16 },
   badge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10, minWidth: 22, alignItems: "center" },
   badgeText: { fontSize: 11, color: "#FFFFFF" },
   main: { flex: 1 },
