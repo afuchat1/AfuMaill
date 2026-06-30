@@ -2,8 +2,9 @@ import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -49,6 +50,25 @@ export default function MainScreen() {
   const NAV_HEIGHT = isWeb ? 84 : 60 + insets.bottom;
   const pageHeight = height - NAV_HEIGHT;
 
+  // Ref to call InboxPage's openSidebar imperatively
+  const drawerOpenFn = useRef<(() => void) | null>(null);
+  const currentPageRef = useRef(currentPage);
+  useEffect(() => { currentPageRef.current = currentPage; }, [currentPage]);
+
+  // Left-edge swipe → open drawer (only works on inbox page)
+  const edgePan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) =>
+        currentPageRef.current === 0 &&
+        gs.dx > 20 &&
+        gs.dx > Math.abs(gs.dy) * 1.5,
+      onPanResponderGrant: () => {
+        drawerOpenFn.current?.();
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      },
+    })
+  ).current;
+
   function goToPage(index: number, animated = true) {
     scrollRef.current?.scrollTo({ x: index * width, animated });
     setCurrentPage(index);
@@ -56,6 +76,14 @@ export default function MainScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
+      {/* ── Left-edge drawer swipe zone (inbox page only) ── */}
+      {currentPage === 0 && !sidebarOpen && (
+        <View
+          style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 28, zIndex: 100 }}
+          {...edgePan.panHandlers}
+        />
+      )}
+
       {/* ── Horizontal pager ── */}
       <ScrollView
         ref={scrollRef}
@@ -78,6 +106,7 @@ export default function MainScreen() {
             onSidebarChange={setSidebarOpen}
             onGoToSettings={() => goToPage(3)}
             onTabsScrollStateChange={setTabsScrolling}
+            registerOpenDrawer={(fn) => { drawerOpenFn.current = fn; }}
           />
         </View>
 

@@ -46,9 +46,10 @@ interface Props {
   onSidebarChange?: (open: boolean) => void;
   onGoToSettings?: () => void;
   onTabsScrollStateChange?: (isScrolling: boolean) => void;
+  registerOpenDrawer?: (fn: () => void) => void;
 }
 
-export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrollStateChange }: Props) {
+export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrollStateChange, registerOpenDrawer }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -71,15 +72,20 @@ export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrol
     }
   }, [onTabsScrollStateChange]);
 
-  function openSidebar() {
+  const openSidebar = useCallback(() => {
     setSidebarOpen(true);
     onSidebarChange?.(true);
-  }
+  }, [onSidebarChange]);
 
-  function closeSidebar() {
+  const closeSidebar = useCallback(() => {
     setSidebarOpen(false);
     onSidebarChange?.(false);
-  }
+  }, [onSidebarChange]);
+
+  // Register open function so parent can trigger drawer via edge swipe
+  useEffect(() => {
+    registerOpenDrawer?.(openSidebar);
+  }, [registerOpenDrawer, openSidebar]);
 
   const displayedEmails =
     currentFolder === "inbox"
