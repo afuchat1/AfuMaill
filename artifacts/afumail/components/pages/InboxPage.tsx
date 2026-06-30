@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
+  PanResponder,
   Platform,
   Pressable,
   RefreshControl,
@@ -47,9 +48,10 @@ interface Props {
   onGoToSettings?: () => void;
   onTabsScrollStateChange?: (isScrolling: boolean) => void;
   registerOpenDrawer?: (fn: () => void) => void;
+  onTabsAtEndChange?: (atEnd: boolean) => void;
 }
 
-export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrollStateChange, registerOpenDrawer }: Props) {
+export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrollStateChange, registerOpenDrawer, onTabsAtEndChange }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -62,6 +64,31 @@ export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrol
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const tabScrollEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Tabs scroll tracking — for "scroll tabs first, then switch page" behaviour
+  const tabsScrollViewRef = useRef<ScrollView>(null);
+  const tabsScrollXRef = useRef(0);
+  const tabsMaxScrollRef = useRef(0); // contentWidth - visibleWidth
+  const tabsAtEndRef = useRef(false);
+  const onTabsAtEndChangeRef = useRef(onTabsAtEndChange);
+  useEffect(() => { onTabsAtEndChangeRef.current = onTabsAtEndChange; }, [onTabsAtEndChange]);
+
+  // PanResponder on the root View: intercepts horizontal-left swipes while
+  // tabs still have room to scroll, and scrolls them instead of letting the
+  // parent pager grab the gesture.
+  const rootPan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) =>
+        !tabsAtEndRef.current &&
+        gs.dx < -22 &&
+        Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5,
+      onPanResponderGrant: (_, gs) => {
+        const amount = Math.max(Math.abs(gs.dx), 60) + 80;
+        const newX = Math.min(tabsScrollXRef.current + amount, tabsMaxScrollRef.current);
+        tabsScrollViewRef.current?.scrollTo({ x: newX, animated: true });
+      },
+    })
+  ).current;
 
   const notifyTabsScrolling = useCallback((active: boolean) => {
     if (tabScrollEndTimer.current) clearTimeout(tabScrollEndTimer.current);
@@ -112,7 +139,7 @@ export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrol
       : SIDE_FOLDERS.find((f) => f.folder === currentFolder)?.label ?? "Inbox";
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <View style={[styles.root, { backgroundColor: colors.background }]} {...rootPan.panHandlers}>
       {/* Sidebar overlay */}
       {sidebarOpen && (
         <Pressable style={styles.overlay} onPress={closeSidebar} />
@@ -198,11 +225,23 @@ export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrol
         {currentFolder === "inbox" && (
           <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
             <ScrollView
+              ref={tabsScrollViewRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.tabsList}
               nestedScrollEnabled
               directionalLockEnabled
+              scrollEventThrottle={16}
+              onScroll={(e) => {
+                const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+                tabsScrollXRef.current = contentOffset.x;
+                tabsMaxScrollRef.current = Math.max(0, contentSize.width - layoutMeasurement.width);
+                const atEnd = tabsMaxScrollRef.current <= 0 || contentOffset.x >= tabsMaxScrollRef.current - 4;
+                if (atEnd !== tabsAtEndRef.current) {
+                  tabsAtEndRef.current = atEnd;
+                  onTabsAtEndChangeRef.current?.(atEnd);
+                }
+              }}
               onScrollBeginDrag={() => notifyTabsScrolling(true)}
               onScrollEndDrag={() => notifyTabsScrolling(false)}
               onMomentumScrollEnd={() => notifyTabsScrolling(false)}

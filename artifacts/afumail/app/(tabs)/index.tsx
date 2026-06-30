@@ -44,6 +44,9 @@ export default function MainScreen() {
   const [currentPage, setCurrentPage] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tabsScrolling, setTabsScrolling] = useState(false);
+  // Tracks whether inbox category tabs have been scrolled to their rightmost end.
+  // While false on inbox page, the pager is locked so left swipes scroll tabs instead.
+  const [tabsAtEnd, setTabsAtEnd] = useState(false);
 
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
@@ -89,7 +92,7 @@ export default function MainScreen() {
         ref={scrollRef}
         horizontal
         pagingEnabled
-        scrollEnabled={!sidebarOpen && !tabsScrolling}
+        scrollEnabled={!sidebarOpen && !tabsScrolling && (tabsAtEnd || currentPage !== 0)}
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={32}
         decelerationRate="fast"
@@ -107,6 +110,7 @@ export default function MainScreen() {
             onGoToSettings={() => goToPage(3)}
             onTabsScrollStateChange={setTabsScrolling}
             registerOpenDrawer={(fn) => { drawerOpenFn.current = fn; }}
+            onTabsAtEndChange={setTabsAtEnd}
           />
         </View>
 
