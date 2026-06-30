@@ -167,7 +167,7 @@ export default function MainScreen() {
                     styles.navLabel,
                     {
                       color: active ? colors.primary : colors.mutedForeground,
-                      fontFamily: active ? "Inter_700Bold" : "Inter_400Regular",
+                      fontFamily: "Inter_700Bold",
                     },
                   ]}
                 >
@@ -202,8 +202,8 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   navLabel: {
-    fontSize: 10,
-    letterSpacing: 0.2,
+    fontSize: 11,
+    letterSpacing: 0.3,
   },
   composeFab: {
     width: 48,
