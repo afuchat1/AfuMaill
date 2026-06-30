@@ -16,11 +16,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
-import { isUsernameAvailable, registerUser, signInUser } from "@/lib/supabase";
+import { isUsernameAvailable, registerUser, savePhoneNumber, signInUser } from "@/lib/supabase";
 import { useColors } from "@/hooks/useColors";
 
 type Mode = "login" | "register";
-type RegisterStep = 1 | 2 | 3;
+type RegisterStep = 1 | 2 | 3 | 4;
 
 function slugify(text: string) {
   return text
@@ -54,6 +54,11 @@ export default function LoginScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerError, setRegisterError] = useState("");
+
+  // Step 4 — phone number
+  const [newUserId, setNewUserId] = useState<string | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneLoading, setPhoneLoading] = useState(false);
 
   const lastNameRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
@@ -134,7 +139,7 @@ export default function LoginScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }
 
-  // ─── Register step 3 → done ───────────────────────────────
+  // ─── Register step 3 → step 4 ────────────────────────────
   async function handleRegister() {
     if (!password.trim()) {
       setRegisterError("Please create a password.");
@@ -156,7 +161,7 @@ export default function LoginScreen() {
     const email = `${username.trim().toLowerCase()}@afuchat.com`;
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
 
-    const { error } = await registerUser(email, password, username.trim().toLowerCase(), fullName);
+    const { error, userId } = await registerUser(email, password, username.trim().toLowerCase(), fullName);
 
     if (error) {
       setRegisterError(error);
@@ -166,8 +171,20 @@ export default function LoginScreen() {
     }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    await refreshUser();
+    setNewUserId(userId ?? null);
     setRegisterLoading(false);
+    setStep(4);
+  }
+
+  // ─── Step 4: phone number → finish ────────────────────────
+  async function handleFinishWithPhone(skip: boolean) {
+    setPhoneLoading(true);
+    if (!skip && phoneNumber.trim() && newUserId) {
+      await savePhoneNumber(newUserId, phoneNumber.trim());
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    await refreshUser();
+    setPhoneLoading(false);
   }
 
   function switchToLogin() {
@@ -530,14 +547,69 @@ export default function LoginScreen() {
                 </>
               )}
 
-              <Pressable style={styles.switchRow} onPress={switchToLogin}>
-                <Text style={[styles.switchText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                  Already have an account?{" "}
-                  <Text style={[styles.switchLink, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>
-                    Sign in
+              {/* ── STEP 4: Phone number ──────────────────── */}
+              {step === 4 && (
+                <>
+                  <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                    Add a phone number
                   </Text>
-                </Text>
-              </Pressable>
+                  <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                    Used only for account recovery if you ever forget your password. You can skip this and add it later in Settings.
+                  </Text>
+
+                  <View style={styles.fields}>
+                    <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                      <TextInput
+                        style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+                        placeholder="+1 555 000 0000"
+                        placeholderTextColor={colors.mutedForeground}
+                        value={phoneNumber}
+                        onChangeText={setPhoneNumber}
+                        keyboardType="phone-pad"
+                        returnKeyType="done"
+                        onSubmitEditing={() => handleFinishWithPhone(false)}
+                      />
+                    </View>
+
+                    <Pressable
+                      onPress={() => handleFinishWithPhone(false)}
+                      disabled={phoneLoading}
+                      style={({ pressed }) => [
+                        styles.primaryBtn,
+                        { backgroundColor: pressed ? "#333" : colors.primary, opacity: phoneLoading ? 0.7 : 1 },
+                      ]}
+                    >
+                      {phoneLoading
+                        ? <ActivityIndicator color={colors.primaryForeground} size="small" />
+                        : <Text style={[styles.primaryBtnText, { color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }]}>
+                            Save & Continue
+                          </Text>
+                      }
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => handleFinishWithPhone(true)}
+                      disabled={phoneLoading}
+                      style={styles.skipBtn}
+                    >
+                      <Text style={[styles.skipText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                        Skip for now
+                      </Text>
+                    </Pressable>
+                  </View>
+                </>
+              )}
+
+              {step < 4 && (
+                <Pressable style={styles.switchRow} onPress={switchToLogin}>
+                  <Text style={[styles.switchText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                    Already have an account?{" "}
+                    <Text style={[styles.switchLink, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>
+                      Sign in
+                    </Text>
+                  </Text>
+                </Pressable>
+              )}
             </View>
           )}
         </ScrollView>
@@ -634,15 +706,11 @@ const styles = StyleSheet.create({
   backBtn: {
     padding: 4,
   },
-  stepDots: {
-    flexDirection: "row",
+  skipBtn: {
     alignItems: "center",
-    gap: 6,
-    flex: 1,
-    justifyContent: "center",
+    paddingVertical: 12,
   },
-  dot: {
-    height: 8,
-    borderRadius: 4,
+  skipText: {
+    fontSize: 14,
   },
 });
