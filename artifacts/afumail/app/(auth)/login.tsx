@@ -26,8 +26,8 @@ function slugify(text: string) {
   return text
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, ".")
-    .replace(/[^a-z0-9.]/g, "");
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9._]/g, "");
 }
 
 export default function LoginScreen() {
