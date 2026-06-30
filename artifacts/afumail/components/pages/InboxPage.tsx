@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
   Platform,
@@ -45,9 +45,10 @@ const SIDE_FOLDERS: { label: string; folder: EmailFolder; icon: string }[] = [
 interface Props {
   onSidebarChange?: (open: boolean) => void;
   onGoToSettings?: () => void;
+  onTabsScrollStateChange?: (isScrolling: boolean) => void;
 }
 
-export default function InboxPage({ onSidebarChange, onGoToSettings }: Props) {
+export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrollStateChange }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -59,6 +60,16 @@ export default function InboxPage({ onSidebarChange, onGoToSettings }: Props) {
   const [currentFolder, setCurrentFolder] = useState<EmailFolder>("inbox");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const tabScrollEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const notifyTabsScrolling = useCallback((active: boolean) => {
+    if (tabScrollEndTimer.current) clearTimeout(tabScrollEndTimer.current);
+    if (active) {
+      onTabsScrollStateChange?.(true);
+    } else {
+      tabScrollEndTimer.current = setTimeout(() => onTabsScrollStateChange?.(false), 80);
+    }
+  }, [onTabsScrollStateChange]);
 
   function openSidebar() {
     setSidebarOpen(true);
@@ -180,7 +191,16 @@ export default function InboxPage({ onSidebarChange, onGoToSettings }: Props) {
         {/* Smart tabs (only for inbox) */}
         {currentFolder === "inbox" && (
           <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsList}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tabsList}
+              nestedScrollEnabled
+              directionalLockEnabled
+              onScrollBeginDrag={() => notifyTabsScrolling(true)}
+              onScrollEndDrag={() => notifyTabsScrolling(false)}
+              onMomentumScrollEnd={() => notifyTabsScrolling(false)}
+            >
               {INBOX_TABS.map((tab) => {
                 const active = activeTab === tab.category;
                 const tabEmails =

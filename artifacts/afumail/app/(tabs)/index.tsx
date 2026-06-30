@@ -42,6 +42,7 @@ export default function MainScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [tabsScrolling, setTabsScrolling] = useState(false);
 
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
@@ -60,7 +61,7 @@ export default function MainScreen() {
         ref={scrollRef}
         horizontal
         pagingEnabled
-        scrollEnabled={!sidebarOpen}
+        scrollEnabled={!sidebarOpen && !tabsScrolling}
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={32}
         decelerationRate="fast"
@@ -76,6 +77,7 @@ export default function MainScreen() {
           <InboxPage
             onSidebarChange={setSidebarOpen}
             onGoToSettings={() => goToPage(3)}
+            onTabsScrollStateChange={setTabsScrolling}
           />
         </View>
 
