@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { router, Stack, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -34,6 +35,14 @@ function RootLayoutNav() {
       router.replace("/(tabs)");
     }
   }, [isAuthenticated, isLoading, segments]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FAF8F5" }}>
+        <ActivityIndicator size="large" color="#1A1A1A" />
+      </View>
+    );
+  }
 
   return (
     <Stack>
