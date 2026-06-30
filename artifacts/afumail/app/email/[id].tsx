@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -11,7 +11,17 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "@/components/Avatar";
@@ -54,27 +64,73 @@ const ATTACHMENT_ICONS: Record<string, string> = {
 };
 
 const MOVE_FOLDERS: { label: string; folder: EmailFolder; icon: string }[] = [
-  { label: "Inbox", folder: "inbox", icon: "inbox" },
+  { label: "Inbox",   folder: "inbox",    icon: "inbox" },
   { label: "Archive", folder: "archived", icon: "archive" },
-  { label: "Spam", folder: "spam", icon: "alert-octagon" },
-  { label: "Trash", folder: "trash", icon: "trash-2" },
+  { label: "Spam",    folder: "spam",     icon: "alert-octagon" },
+  { label: "Trash",   folder: "trash",    icon: "trash-2" },
 ];
 
 export default function EmailDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const navigation = useNavigation();
   const { getEmailById, toggleStar, archiveEmail, deleteEmail, markAsRead, markAsUnread, moveToFolder } = useEmails();
 
   const email = getEmailById(id ?? "");
 
   const [actionsVisible, setActionsVisible] = useState(false);
-  const [moveVisible, setMoveVisible] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [moveVisible,    setMoveVisible]    = useState(false);
+  const [toast,          setToast]          = useState<string | null>(null);
 
   useEffect(() => {
     if (email && !email.read) markAsRead(email.id);
   }, [email?.id]);
+
+  // ── Swipe-back gesture ──────────────────────────────────────────────────────
+  const translateX = useSharedValue(0);
+
+  const screenStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  function goBack() {
+    router.back();
+  }
+
+  function disableTransitionAnimation() {
+    navigation.setOptions({ animation: "none" });
+  }
+
+  const BACK_THRESHOLD  = width * 0.32;
+  const BACK_VELOCITY   = 550;
+
+  const swipeBack = Gesture.Pan()
+    .activeOffsetX([6, Infinity])
+    .failOffsetY([-14, 14])
+    .onUpdate((e) => {
+      translateX.value = Math.max(0, e.translationX);
+    })
+    .onEnd((e) => {
+      const shouldGoBack =
+        e.translationX > BACK_THRESHOLD || e.velocityX > BACK_VELOCITY;
+
+      if (shouldGoBack) {
+        translateX.value = withTiming(
+          width + 40,
+          { duration: 180, easing: Easing.out(Easing.quad) },
+          (finished) => {
+            if (finished) {
+              runOnJS(disableTransitionAnimation)();
+              runOnJS(goBack)();
+            }
+          }
+        );
+      } else {
+        translateX.value = withSpring(0, { damping: 22, stiffness: 320, mass: 0.6 });
+      }
+    });
 
   function showToast(msg: string) {
     setToast(msg);
@@ -156,219 +212,284 @@ export default function EmailDetailScreen() {
   const isWeb = Platform.OS === "web";
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      {/* Toast */}
-      {toast && (
-        <View style={[styles.toast, { backgroundColor: colors.foreground }]}>
-          <Feather name="check" size={14} color={colors.background} />
-          <Text style={[styles.toastText, { color: colors.background, fontFamily: "Inter_500Medium" }]}>{toast}</Text>
-        </View>
-      )}
-
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={colors.foreground} />
-        </Pressable>
-
-        <View style={styles.headerActions}>
-          <Pressable onPress={handleStar} hitSlop={8}>
-            <Feather name={email.starred ? "star" : "star"} size={20} color={email.starred ? "#F59E0B" : colors.mutedForeground} fill={email.starred ? "#F59E0B" : "none"} />
-          </Pressable>
-          <Pressable onPress={handleArchive} hitSlop={8}>
-            <Feather name="archive" size={20} color={colors.mutedForeground} />
-          </Pressable>
-          <Pressable onPress={handleDelete} hitSlop={8}>
-            <Feather name="trash-2" size={20} color={colors.mutedForeground} />
-          </Pressable>
-          <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActionsVisible(true); }} hitSlop={8}>
-            <Feather name="more-horizontal" size={20} color={colors.mutedForeground} />
-          </Pressable>
-        </View>
-      </View>
-
-      <ScrollView style={styles.scroll} contentContainerStyle={{ paddingBottom: insets.bottom + 120 }} showsVerticalScrollIndicator={false}>
-        {/* Subject */}
-        <View style={styles.subjectSection}>
-          <Text style={[styles.subject, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-            {email.subject}
-          </Text>
-          <View style={styles.badgeRow}>
-            {email.category && (
-              <View style={[styles.categoryBadge, { backgroundColor: colors.accent + "18" }]}>
-                <Text style={[styles.categoryText, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>
-                  {email.category.charAt(0).toUpperCase() + email.category.slice(1)}
-                </Text>
-              </View>
-            )}
-            {!email.read && (
-              <View style={[styles.unreadDot, { backgroundColor: colors.accent }]} />
-            )}
-          </View>
-        </View>
-
-        {/* Sender info */}
-        <View style={[styles.senderSection, { borderBottomColor: colors.border }]}>
-          <Avatar name={email.from.name} size={44} fontSize={15} />
-          <View style={styles.senderInfo}>
-            <View style={styles.senderTopRow}>
-              <Text style={[styles.senderName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                {email.from.name}
-              </Text>
-              <Text style={[styles.timestamp, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                {formatFullDate(email.timestamp)}
-              </Text>
-            </View>
-            <Text style={[styles.senderEmail, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              {email.from.email}
-            </Text>
-            <Text style={[styles.recipientLine, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              To: {email.to.map((t) => t.name || t.email).join(", ")}
-            </Text>
-            {email.cc && email.cc.length > 0 && (
-              <Text style={[styles.recipientLine, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                Cc: {email.cc.map((c) => c.name || c.email).join(", ")}
-              </Text>
-            )}
-          </View>
-        </View>
-
-        {/* Body */}
-        <View style={styles.bodySection}>
-          <Text style={[styles.body, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
-            {email.body}
-          </Text>
-        </View>
-
-        {/* Attachments */}
-        {email.attachments.length > 0 && (
-          <View style={[styles.attachmentsSection, { borderTopColor: colors.border }]}>
-            <Text style={[styles.attachTitle, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>
-              {email.attachments.length} Attachment{email.attachments.length > 1 ? "s" : ""}
-            </Text>
-            {email.attachments.map((att) => {
-              const fileExt = att.name.split(".").pop()?.toLowerCase() ?? "";
-              const icon = ATTACHMENT_ICONS[fileExt] ?? "file";
-              return (
-                <Pressable
-                  key={att.id}
-                  style={({ pressed }) => [styles.attachmentCard, { backgroundColor: pressed ? colors.secondary : colors.muted, borderColor: colors.border }]}
-                >
-                  <View style={[styles.attachIconWrap, { backgroundColor: colors.accent + "18" }]}>
-                    <Feather name={icon as any} size={18} color={colors.accent} />
-                  </View>
-                  <View style={styles.attachInfo}>
-                    <Text style={[styles.attachName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
-                      {att.name}
-                    </Text>
-                    <Text style={[styles.attachSize, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                      {formatFileSize(att.size)}
-                    </Text>
-                  </View>
-                  <Pressable style={[styles.downloadBtn, { backgroundColor: colors.accent + "18" }]}>
-                    <Feather name="download" size={14} color={colors.accent} />
-                  </Pressable>
-                </Pressable>
-              );
-            })}
+    <GestureDetector gesture={swipeBack}>
+      <Animated.View style={[styles.root, { backgroundColor: colors.background }, screenStyle]}>
+        {/* Toast */}
+        {toast && (
+          <View style={[styles.toast, { backgroundColor: colors.foreground }]}>
+            <Feather name="check" size={14} color={colors.background} />
+            <Text style={[styles.toastText, { color: colors.background, fontFamily: "Inter_500Medium" }]}>{toast}</Text>
           </View>
         )}
-      </ScrollView>
 
-      {/* Reply bar */}
-      <View style={[styles.replyBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 12 }]}>
-        <Pressable
-          onPress={handleReply}
-          style={({ pressed }) => [styles.replyButton, { backgroundColor: pressed ? colors.accent + "22" : colors.muted, borderColor: colors.border }]}
-        >
-          <Feather name="corner-up-left" size={15} color={colors.foreground} />
-          <Text style={[styles.replyBtnText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Reply</Text>
-        </Pressable>
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.back();
+            }}
+            hitSlop={8}
+            style={styles.backBtn}
+          >
+            <Feather name="arrow-left" size={22} color={colors.foreground} />
+          </Pressable>
 
-        <Pressable
-          onPress={handleReplyAll}
-          style={({ pressed }) => [styles.replyButton, { backgroundColor: pressed ? colors.accent + "22" : colors.muted, borderColor: colors.border }]}
-        >
-          <Feather name="corner-up-left" size={15} color={colors.foreground} />
-          <Text style={[styles.replyBtnText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Reply All</Text>
-        </Pressable>
-
-        <Pressable
-          onPress={handleForward}
-          style={({ pressed }) => [styles.replyButton, { backgroundColor: pressed ? colors.accent + "22" : colors.muted, borderColor: colors.border }]}
-        >
-          <Feather name="corner-up-right" size={15} color={colors.foreground} />
-          <Text style={[styles.replyBtnText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Forward</Text>
-        </Pressable>
-      </View>
-
-      {/* ── More Actions Sheet ── */}
-      <BottomSheet visible={actionsVisible} onClose={() => setActionsVisible(false)}>
-        <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-          <Text style={[styles.sheetTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>More Actions</Text>
-
-          {[
-            { icon: "mail", label: "Mark as Unread", onPress: handleMarkUnread },
-            { icon: "folder", label: "Move to Folder", onPress: () => { setActionsVisible(false); setTimeout(() => setMoveVisible(true), 320); } },
-            { icon: "corner-up-right", label: "Forward", onPress: () => { setActionsVisible(false); handleForward(); } },
-            { icon: "share-2", label: "Share Email", onPress: handleShare },
-            { icon: "alert-octagon", label: "Report as Spam", onPress: () => handleMoveToFolder("spam"), danger: true },
-          ].map((action, idx) => (
-            <Pressable
-              key={idx}
-              onPress={action.onPress}
-              style={({ pressed }) => [styles.sheetRow, { backgroundColor: pressed ? colors.secondary : "transparent" }]}
-            >
-              <View style={[styles.sheetIconWrap, { backgroundColor: ("danger" in action && action.danger) ? colors.destructive + "18" : colors.secondary }]}>
-                <Feather name={action.icon as any} size={16} color={("danger" in action && action.danger) ? colors.destructive : colors.foreground} />
-              </View>
-              <Text style={[styles.sheetLabel, { color: ("danger" in action && action.danger) ? colors.destructive : colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-                {action.label}
-              </Text>
-              <Feather name="chevron-right" size={15} color={colors.mutedForeground} />
+          <View style={styles.headerActions}>
+            <Pressable onPress={handleStar} hitSlop={8}>
+              <Feather
+                name="star"
+                size={20}
+                color={email.starred ? "#F59E0B" : colors.mutedForeground}
+              />
             </Pressable>
-          ))}
+            <Pressable onPress={handleArchive} hitSlop={8}>
+              <Feather name="archive" size={20} color={colors.mutedForeground} />
+            </Pressable>
+            <Pressable onPress={handleDelete} hitSlop={8}>
+              <Feather name="trash-2" size={20} color={colors.mutedForeground} />
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setActionsVisible(true);
+              }}
+              hitSlop={8}
+            >
+              <Feather name="more-horizontal" size={20} color={colors.mutedForeground} />
+            </Pressable>
+          </View>
+        </View>
+
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+          showsVerticalScrollIndicator={false}
+          scrollEventThrottle={16}
+        >
+          {/* Subject */}
+          <View style={styles.subjectSection}>
+            <Text style={[styles.subject, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+              {email.subject}
+            </Text>
+            <View style={styles.badgeRow}>
+              {email.category && (
+                <View style={[styles.categoryBadge, { backgroundColor: colors.accent + "18" }]}>
+                  <Text style={[styles.categoryText, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>
+                    {email.category.charAt(0).toUpperCase() + email.category.slice(1)}
+                  </Text>
+                </View>
+              )}
+              {!email.read && (
+                <View style={[styles.unreadDot, { backgroundColor: colors.accent }]} />
+              )}
+            </View>
+          </View>
+
+          {/* Sender info */}
+          <View style={[styles.senderSection, { borderBottomColor: colors.border }]}>
+            <Avatar name={email.from.name} size={44} fontSize={15} />
+            <View style={styles.senderInfo}>
+              <View style={styles.senderTopRow}>
+                <Text style={[styles.senderName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                  {email.from.name}
+                </Text>
+                <Text style={[styles.timestamp, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  {formatFullDate(email.timestamp)}
+                </Text>
+              </View>
+              <Text style={[styles.senderEmail, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                {email.from.email}
+              </Text>
+              <Text style={[styles.recipientLine, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                To: {email.to.map((t) => t.name || t.email).join(", ")}
+              </Text>
+              {email.cc && email.cc.length > 0 && (
+                <Text style={[styles.recipientLine, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  Cc: {email.cc.map((c) => c.name || c.email).join(", ")}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* Body */}
+          <View style={styles.bodySection}>
+            <Text style={[styles.body, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+              {email.body}
+            </Text>
+          </View>
+
+          {/* Attachments */}
+          {email.attachments.length > 0 && (
+            <View style={[styles.attachmentsSection, { borderTopColor: colors.border }]}>
+              <Text style={[styles.attachTitle, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>
+                {email.attachments.length} Attachment{email.attachments.length > 1 ? "s" : ""}
+              </Text>
+              {email.attachments.map((att) => {
+                const fileExt = att.name.split(".").pop()?.toLowerCase() ?? "";
+                const icon = ATTACHMENT_ICONS[fileExt] ?? "file";
+                return (
+                  <Pressable
+                    key={att.id}
+                    style={({ pressed }) => [
+                      styles.attachmentCard,
+                      { backgroundColor: pressed ? colors.secondary : colors.muted, borderColor: colors.border },
+                    ]}
+                  >
+                    <View style={[styles.attachIconWrap, { backgroundColor: colors.accent + "18" }]}>
+                      <Feather name={icon as any} size={18} color={colors.accent} />
+                    </View>
+                    <View style={styles.attachInfo}>
+                      <Text
+                        style={[styles.attachName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}
+                        numberOfLines={1}
+                      >
+                        {att.name}
+                      </Text>
+                      <Text style={[styles.attachSize, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                        {formatFileSize(att.size)}
+                      </Text>
+                    </View>
+                    <View style={[styles.downloadBtn, { backgroundColor: colors.accent + "18" }]}>
+                      <Feather name="download" size={14} color={colors.accent} />
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Reply bar */}
+        <View
+          style={[
+            styles.replyBar,
+            { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 12 },
+          ]}
+        >
+          <Pressable
+            onPress={handleReply}
+            style={({ pressed }) => [
+              styles.replyButton,
+              { backgroundColor: pressed ? colors.accent + "22" : colors.muted, borderColor: colors.border },
+            ]}
+          >
+            <Feather name="corner-up-left" size={15} color={colors.foreground} />
+            <Text style={[styles.replyBtnText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Reply</Text>
+          </Pressable>
 
           <Pressable
-            onPress={() => setActionsVisible(false)}
-            style={[styles.sheetCancel, { backgroundColor: colors.secondary, marginTop: 4 }]}
+            onPress={handleReplyAll}
+            style={({ pressed }) => [
+              styles.replyButton,
+              { backgroundColor: pressed ? colors.accent + "22" : colors.muted, borderColor: colors.border },
+            ]}
           >
-            <Text style={[styles.sheetCancelText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Cancel</Text>
+            <Feather name="corner-up-left" size={15} color={colors.foreground} />
+            <Text style={[styles.replyBtnText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Reply All</Text>
           </Pressable>
-        </View>
-      </BottomSheet>
-
-      {/* ── Move to Folder Sheet ── */}
-      <BottomSheet visible={moveVisible} onClose={() => setMoveVisible(false)}>
-        <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-          <Text style={[styles.sheetTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Move to Folder</Text>
-
-          {MOVE_FOLDERS.filter((f) => f.folder !== email.folder).map((f) => (
-            <Pressable
-              key={f.folder}
-              onPress={() => handleMoveToFolder(f.folder)}
-              style={({ pressed }) => [styles.sheetRow, { backgroundColor: pressed ? colors.secondary : "transparent" }]}
-            >
-              <View style={[styles.sheetIconWrap, { backgroundColor: colors.secondary }]}>
-                <Feather name={f.icon as any} size={16} color={colors.foreground} />
-              </View>
-              <Text style={[styles.sheetLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-                {f.label}
-              </Text>
-            </Pressable>
-          ))}
 
           <Pressable
-            onPress={() => setMoveVisible(false)}
-            style={[styles.sheetCancel, { backgroundColor: colors.secondary, marginTop: 4 }]}
+            onPress={handleForward}
+            style={({ pressed }) => [
+              styles.replyButton,
+              { backgroundColor: pressed ? colors.accent + "22" : colors.muted, borderColor: colors.border },
+            ]}
           >
-            <Text style={[styles.sheetCancelText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Cancel</Text>
+            <Feather name="corner-up-right" size={15} color={colors.foreground} />
+            <Text style={[styles.replyBtnText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Forward</Text>
           </Pressable>
         </View>
-      </BottomSheet>
-    </View>
+
+        {/* ── More Actions Sheet ── */}
+        <BottomSheet visible={actionsVisible} onClose={() => setActionsVisible(false)}>
+          <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+            <Text style={[styles.sheetTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>More Actions</Text>
+
+            {[
+              { icon: "mail",          label: "Mark as Unread",    onPress: handleMarkUnread },
+              { icon: "folder",        label: "Move to Folder",    onPress: () => { setActionsVisible(false); setTimeout(() => setMoveVisible(true), 320); } },
+              { icon: "corner-up-right", label: "Forward",         onPress: () => { setActionsVisible(false); handleForward(); } },
+              { icon: "share-2",       label: "Share Email",       onPress: handleShare },
+              { icon: "alert-octagon", label: "Report as Spam",    onPress: () => handleMoveToFolder("spam"), danger: true },
+            ].map((action, idx) => (
+              <Pressable
+                key={idx}
+                onPress={action.onPress}
+                style={({ pressed }) => [styles.sheetRow, { backgroundColor: pressed ? colors.secondary : "transparent" }]}
+              >
+                <View
+                  style={[
+                    styles.sheetIconWrap,
+                    { backgroundColor: ("danger" in action && action.danger) ? colors.destructive + "18" : colors.secondary },
+                  ]}
+                >
+                  <Feather
+                    name={action.icon as any}
+                    size={16}
+                    color={("danger" in action && action.danger) ? colors.destructive : colors.foreground}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.sheetLabel,
+                    {
+                      color: ("danger" in action && action.danger) ? colors.destructive : colors.foreground,
+                      fontFamily: "Inter_600SemiBold",
+                    },
+                  ]}
+                >
+                  {action.label}
+                </Text>
+                <Feather name="chevron-right" size={15} color={colors.mutedForeground} />
+              </Pressable>
+            ))}
+
+            <Pressable
+              onPress={() => setActionsVisible(false)}
+              style={[styles.sheetCancel, { backgroundColor: colors.secondary, marginTop: 4 }]}
+            >
+              <Text style={[styles.sheetCancelText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                Cancel
+              </Text>
+            </Pressable>
+          </View>
+        </BottomSheet>
+
+        {/* ── Move to Folder Sheet ── */}
+        <BottomSheet visible={moveVisible} onClose={() => setMoveVisible(false)}>
+          <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+            <Text style={[styles.sheetTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Move to Folder</Text>
+
+            {MOVE_FOLDERS.filter((f) => f.folder !== email.folder).map((f) => (
+              <Pressable
+                key={f.folder}
+                onPress={() => handleMoveToFolder(f.folder)}
+                style={({ pressed }) => [styles.sheetRow, { backgroundColor: pressed ? colors.secondary : "transparent" }]}
+              >
+                <View style={[styles.sheetIconWrap, { backgroundColor: colors.secondary }]}>
+                  <Feather name={f.icon as any} size={16} color={colors.foreground} />
+                </View>
+                <Text style={[styles.sheetLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                  {f.label}
+                </Text>
+              </Pressable>
+            ))}
+
+            <Pressable
+              onPress={() => setMoveVisible(false)}
+              style={[styles.sheetCancel, { backgroundColor: colors.secondary, marginTop: 4 }]}
+            >
+              <Text style={[styles.sheetCancelText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                Cancel
+              </Text>
+            </Pressable>
+          </View>
+        </BottomSheet>
+      </Animated.View>
+    </GestureDetector>
   );
 }
 
@@ -408,7 +529,13 @@ const styles = StyleSheet.create({
   recipientLine: { fontSize: 12, marginTop: 1 },
   bodySection: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24 },
   body: { fontSize: 16, lineHeight: 27, letterSpacing: 0.1 },
-  attachmentsSection: { paddingHorizontal: 20, paddingTop: 16, borderTopWidth: StyleSheet.hairlineWidth, gap: 10, paddingBottom: 8 },
+  attachmentsSection: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 10,
+    paddingBottom: 8,
+  },
   attachTitle: { fontSize: 12, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 },
   attachmentCard: {
     flexDirection: "row",
@@ -463,13 +590,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     gap: 2,
   },
-  sheetHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginBottom: 16,
-  },
+  sheetHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 16 },
   sheetTitle: { fontSize: 18, letterSpacing: -0.3, marginBottom: 12 },
   sheetRow: {
     flexDirection: "row",
@@ -481,11 +602,6 @@ const styles = StyleSheet.create({
   },
   sheetIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   sheetLabel: { flex: 1, fontSize: 15 },
-  sheetCancel: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 4,
-  },
+  sheetCancel: { borderRadius: 14, paddingVertical: 14, alignItems: "center", marginTop: 4 },
   sheetCancelText: { fontSize: 15 },
 });
