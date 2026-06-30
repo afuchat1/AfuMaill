@@ -3,7 +3,6 @@ import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
-  PanResponder,
   Platform,
   Pressable,
   RefreshControl,
@@ -85,28 +84,6 @@ export default function InboxPage({
   const onOpenSidebarRef = useRef(onOpenSidebar);
   useEffect(() => { onOpenSidebarRef.current = onOpenSidebar; }, [onOpenSidebar]);
 
-  // ── PanResponder: intercepts swipes while pager is locked (!tabsAtEnd) ────
-  // Left  → scroll category tabs further right
-  // Right → open sidebar page
-  const rootPan = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gs) => {
-        if (tabsAtEndRef.current) return false; // pager handles it when unlocked
-        return Math.abs(gs.dx) > 22 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5;
-      },
-      onPanResponderGrant: (_, gs) => {
-        if (gs.dx < 0) {
-          const amount = Math.max(Math.abs(gs.dx), 60) + 80;
-          const newX = Math.min(tabsScrollXRef.current + amount, tabsMaxScrollRef.current);
-          tabsScrollViewRef.current?.scrollTo({ x: newX, animated: true });
-        } else {
-          onOpenSidebarRef.current?.();
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }
-      },
-    })
-  ).current;
-
   const notifyTabsScrolling = useCallback((active: boolean) => {
     if (tabScrollEndTimer.current) clearTimeout(tabScrollEndTimer.current);
     if (active) {
@@ -132,7 +109,7 @@ export default function InboxPage({
   const folderLabel = FOLDER_LABELS[currentFolder] ?? "Inbox";
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]} {...rootPan.panHandlers}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
       <View style={[styles.main, { paddingTop: topPad }]}>
 
         {/* ── Header ── */}
