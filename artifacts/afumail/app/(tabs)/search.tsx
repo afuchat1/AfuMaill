@@ -1,5 +1,7 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+import * as Haptics from "expo-haptics";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Platform,
@@ -16,14 +18,9 @@ import type { Email } from "@/context/EmailContext";
 import { useEmails } from "@/context/EmailContext";
 import { useColors } from "@/hooks/useColors";
 
-const RECENT_SEARCHES = [
-  "emails from Alex",
-  "invoice June",
-  "flight confirmation",
-  "meeting notes",
-];
-
-const SEARCH_FILTERS = ["All", "Unread", "Starred", "Attachments", "People"];
+const STORAGE_KEY = "@afumail:recent_searches";
+const MAX_RECENT = 8;
+const SEARCH_FILTERS = ["All", "Unread", "Starred", "Attachments"];
 
 export default function SearchScreen() {
   const colors = useColors();
@@ -31,6 +28,37 @@ export default function SearchScreen() {
   const { emails } = useEmails();
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+
+  const isWeb = Platform.OS === "web";
+  const topPad = isWeb ? 67 : insets.top;
+
+  // Load recent searches from AsyncStorage on mount
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
+      if (raw) {
+        try { setRecentSearches(JSON.parse(raw)); } catch {}
+      }
+    });
+  }, []);
+
+  function saveRecent(term: string) {
+    const trimmed = term.trim();
+    if (!trimmed) return;
+    const next = [trimmed, ...recentSearches.filter((s) => s !== trimmed)].slice(0, MAX_RECENT);
+    setRecentSearches(next);
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  }
+
+  function clearRecent() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setRecentSearches([]);
+    AsyncStorage.removeItem(STORAGE_KEY);
+  }
+
+  function submitSearch() {
+    if (query.trim()) saveRecent(query);
+  }
 
   const results = useMemo<Email[]>(() => {
     if (!query.trim()) return [];
@@ -51,9 +79,6 @@ export default function SearchScreen() {
     });
   }, [query, emails, activeFilter]);
 
-  const isWeb = Platform.OS === "web";
-  const topPad = isWeb ? 67 : insets.top;
-
   return (
     <View style={[styles.root, { backgroundColor: colors.background, paddingTop: topPad }]}>
       {/* Header */}
@@ -66,12 +91,13 @@ export default function SearchScreen() {
             placeholderTextColor={colors.mutedForeground}
             value={query}
             onChangeText={setQuery}
+            onSubmitEditing={submitSearch}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
           />
           {!!query && (
-            <Pressable onPress={() => setQuery("")}>
+            <Pressable onPress={() => setQuery("")} hitSlop={8}>
               <Feather name="x" size={16} color={colors.mutedForeground} />
             </Pressable>
           )}
@@ -80,74 +106,78 @@ export default function SearchScreen() {
 
       {/* Filter chips */}
       {!!query && (
-        <View style={[styles.filtersContainer, { borderBottomColor: colors.border }]}>
-          <FlatList
-            horizontal
-            data={SEARCH_FILTERS}
-            keyExtractor={(f) => f}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filtersList}
-            renderItem={({ item }) => {
-              const active = activeFilter === item;
-              return (
-                <Pressable
-                  onPress={() => setActiveFilter(item)}
+        <View style={[styles.filtersRow, { borderBottomColor: colors.border }]}>
+          {SEARCH_FILTERS.map((f) => {
+            const active = activeFilter === f;
+            return (
+              <Pressable
+                key={f}
+                onPress={() => setActiveFilter(f)}
+                style={[
+                  styles.chip,
+                  { backgroundColor: active ? colors.primary : colors.secondary, borderColor: active ? colors.primary : colors.border },
+                ]}
+              >
+                <Text
                   style={[
-                    styles.chip,
-                    {
-                      backgroundColor: active ? colors.primary : colors.secondary,
-                      borderColor: active ? colors.primary : colors.border,
-                    },
+                    styles.chipText,
+                    { color: active ? colors.primaryForeground : colors.foreground, fontFamily: active ? "Inter_700Bold" : "Inter_400Regular" },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      {
-                        color: active ? colors.primaryForeground : colors.foreground,
-                        fontFamily: active ? "Inter_500Medium" : "Inter_400Regular",
-                      },
-                    ]}
-                  >
-                    {item}
-                  </Text>
-                </Pressable>
-              );
-            }}
-          />
+                  {f}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       )}
 
       {/* Content */}
       {!query ? (
         <View style={styles.recentSection}>
-          <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>
-            Recent Searches
-          </Text>
-          {RECENT_SEARCHES.map((search) => (
-            <Pressable
-              key={search}
-              onPress={() => setQuery(search)}
-              style={({ pressed }) => [
-                styles.recentItem,
-                {
-                  backgroundColor: pressed ? colors.secondary : "transparent",
-                  borderBottomColor: colors.border,
-                },
-              ]}
-            >
-              <Feather name="clock" size={15} color={colors.mutedForeground} />
-              <Text style={[styles.recentText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
-                {search}
+          {recentSearches.length > 0 ? (
+            <>
+              <View style={styles.recentHeader}>
+                <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>
+                  Recent
+                </Text>
+                <Pressable onPress={clearRecent} hitSlop={8}>
+                  <Text style={[styles.clearText, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>Clear</Text>
+                </Pressable>
+              </View>
+              {recentSearches.map((search) => (
+                <Pressable
+                  key={search}
+                  onPress={() => { setQuery(search); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  style={({ pressed }) => [
+                    styles.recentItem,
+                    { backgroundColor: pressed ? colors.secondary : "transparent", borderBottomColor: colors.border },
+                  ]}
+                >
+                  <Feather name="clock" size={15} color={colors.mutedForeground} />
+                  <Text style={[styles.recentText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+                    {search}
+                  </Text>
+                  <Feather name="arrow-up-left" size={14} color={colors.mutedForeground} style={{ opacity: 0.5 }} />
+                </Pressable>
+              ))}
+            </>
+          ) : (
+            <View style={styles.emptyState}>
+              <Feather name="search" size={40} color={colors.mutedForeground} />
+              <Text style={[styles.emptyTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                Search Mail
               </Text>
-              <Feather name="arrow-up-left" size={14} color={colors.mutedForeground} style={styles.recentArrow} />
-            </Pressable>
-          ))}
+              <Text style={[styles.emptySubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                Search by sender, subject, or keyword
+              </Text>
+            </View>
+          )}
         </View>
       ) : results.length === 0 ? (
         <View style={styles.emptyState}>
           <Feather name="search" size={40} color={colors.mutedForeground} />
-          <Text style={[styles.emptyTitle, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>
+          <Text style={[styles.emptyTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
             No results
           </Text>
           <Text style={[styles.emptySubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
@@ -161,7 +191,7 @@ export default function SearchScreen() {
           renderItem={({ item }) => <EmailRow email={item} />}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+          contentContainerStyle={{ paddingBottom: 20 }}
         />
       )}
     </View>
@@ -169,14 +199,8 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
+  root: { flex: 1 },
+  header: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -186,38 +210,27 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 10,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    padding: 0,
-  },
-  filtersContainer: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  filtersList: {
+  searchInput: { flex: 1, fontSize: 16, padding: 0 },
+  filtersRow: {
+    flexDirection: "row",
+    gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    gap: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  chipText: {
-    fontSize: 13,
-  },
-  recentSection: {
-    paddingTop: 8,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
+  chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
+  chipText: { fontSize: 13 },
+  recentSection: { flex: 1 },
+  recentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
+  sectionLabel: { fontSize: 12, letterSpacing: 0.8, textTransform: "uppercase" },
+  clearText: { fontSize: 13 },
   recentItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -226,26 +239,8 @@ const styles = StyleSheet.create({
     gap: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  recentText: {
-    flex: 1,
-    fontSize: 15,
-  },
-  recentArrow: {
-    opacity: 0.5,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    paddingBottom: 80,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    marginTop: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    textAlign: "center",
-  },
+  recentText: { flex: 1, fontSize: 15 },
+  emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingBottom: 80 },
+  emptyTitle: { fontSize: 18, marginTop: 8 },
+  emptySubtitle: { fontSize: 14, textAlign: "center", paddingHorizontal: 40 },
 });
