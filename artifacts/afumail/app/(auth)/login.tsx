@@ -286,28 +286,14 @@ export default function LoginScreen() {
           {/* ── REGISTER MODE ───────────────────────────── */}
           {mode === "register" && (
             <View style={styles.card}>
-              {/* Step indicator */}
-              <View style={styles.stepRow}>
-                {step > 1 && (
+              {/* Back button */}
+              {step > 1 && (
+                <View style={styles.stepRow}>
                   <Pressable onPress={goBack} hitSlop={8} style={styles.backBtn}>
                     <Feather name="arrow-left" size={18} color={colors.foreground} />
                   </Pressable>
-                )}
-                <View style={styles.stepDots}>
-                  {([1, 2, 3] as RegisterStep[]).map((s) => (
-                    <View
-                      key={s}
-                      style={[
-                        styles.dot,
-                        {
-                          backgroundColor: s <= step ? colors.primary : colors.border,
-                          width: s === step ? 20 : 8,
-                        },
-                      ]}
-                    />
-                  ))}
                 </View>
-              </View>
+              )}
 
               {/* ── STEP 1: Name ──────────────────────────── */}
               {step === 1 && (
