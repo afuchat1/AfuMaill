@@ -175,6 +175,13 @@ export default function EmailDetailScreen() {
     router.back();
   }
 
+  async function handleUnarchive() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await moveToFolder(email!.id, "inbox");
+    showToast("Moved to Inbox");
+    router.back();
+  }
+
   async function handleDelete() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     await deleteEmail(email!.id);
@@ -243,8 +250,15 @@ export default function EmailDetailScreen() {
                 color={email.starred ? "#F59E0B" : colors.mutedForeground}
               />
             </Pressable>
-            <Pressable onPress={handleArchive} hitSlop={8}>
-              <Feather name="archive" size={20} color={colors.mutedForeground} />
+            <Pressable
+              onPress={email.folder === "archived" ? handleUnarchive : handleArchive}
+              hitSlop={8}
+            >
+              <Feather
+                name={email.folder === "archived" ? "inbox" : "archive"}
+                size={20}
+                color={email.folder === "archived" ? colors.primary : colors.mutedForeground}
+              />
             </Pressable>
             <Pressable onPress={handleDelete} hitSlop={8}>
               <Feather name="trash-2" size={20} color={colors.mutedForeground} />
@@ -409,6 +423,10 @@ export default function EmailDetailScreen() {
 
             {[
               { icon: "mail",          label: "Mark as Unread",    onPress: handleMarkUnread },
+              ...(email.folder === "archived"
+                ? [{ icon: "inbox", label: "Move to Inbox", onPress: () => { setActionsVisible(false); handleUnarchive(); } }]
+                : []
+              ),
               { icon: "folder",        label: "Move to Folder",    onPress: () => { setActionsVisible(false); setTimeout(() => setMoveVisible(true), 320); } },
               { icon: "corner-up-right", label: "Forward",         onPress: () => { setActionsVisible(false); handleForward(); } },
               { icon: "share-2",       label: "Share Email",       onPress: handleShare },
