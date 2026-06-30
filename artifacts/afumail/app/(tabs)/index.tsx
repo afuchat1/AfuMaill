@@ -13,6 +13,12 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import InboxPage from "@/components/pages/InboxPage";
@@ -25,7 +31,6 @@ import CalendarScreen from "./calendar";
 import SearchScreen from "./search";
 import SettingsScreen from "./settings";
 
-// Page 0 = Sidebar, 1 = Inbox, 2 = Search, 3 = Calendar, 4 = Settings
 const NAV = [
   { key: "inbox",    label: "Mail",     icon: "inbox",    page: 1 },
   { key: "search",   label: "Search",   icon: "search",   page: 2 },
@@ -33,6 +38,9 @@ const NAV = [
   { key: "calendar", label: "Calendar", icon: "calendar", page: 3 },
   { key: "settings", label: "Settings", icon: "settings", page: 4 },
 ] as const;
+
+const INDICATOR_SPRING = { damping: 22, stiffness: 280, mass: 0.7 };
+const PAGE_TO_NAV_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 3, 4: 4 };
 
 export default function MainScreen() {
   const colors = useColors();
@@ -43,10 +51,9 @@ export default function MainScreen() {
   const { unreadCount } = useEmails();
 
   const scrollRef = useRef<ScrollView>(null);
-  const [currentPage, setCurrentPage] = useState(1); // start on inbox
+  const [currentPage, setCurrentPage] = useState(1);
   const [currentFolder, setCurrentFolder] = useState<EmailFolder>("inbox");
   const [tabsScrolling, setTabsScrolling] = useState(false);
-  // When false on inbox, pager is locked so left swipes scroll tabs instead.
   const [tabsAtEnd, setTabsAtEnd] = useState(false);
 
   const isIOS = Platform.OS === "ios";
@@ -54,7 +61,9 @@ export default function MainScreen() {
   const NAV_HEIGHT = isWeb ? 84 : 60 + insets.bottom;
   const pageHeight = height - NAV_HEIGHT;
 
-  // Scroll to page 1 (inbox) on first render — avoids flashing sidebar
+  const itemWidth = width / NAV.length;
+  const indicatorX = useSharedValue(0 * itemWidth + itemWidth / 2);
+
   useEffect(() => {
     const t = setTimeout(() => {
       scrollRef.current?.scrollTo({ x: width, y: 0, animated: false });
@@ -63,34 +72,38 @@ export default function MainScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const navIdx = PAGE_TO_NAV_IDX[currentPage] ?? 0;
+    indicatorX.value = withSpring(navIdx * itemWidth + itemWidth / 2, INDICATOR_SPRING);
+  }, [currentPage, itemWidth]);
+
   function goToPage(index: number, animated = true) {
     scrollRef.current?.scrollTo({ x: index * width, animated });
     setCurrentPage(index);
   }
 
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: indicatorX.value - 12 }],
+  }));
+
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-
-      {/* ── Horizontal pager ── */}
       <ScrollView
         ref={scrollRef}
         horizontal
         pagingEnabled
-        // Pager is locked while on inbox with tabs not yet scrolled to end.
-        // Left swipes are handled by InboxPage's PanResponder (scroll tabs or open sidebar).
-        // Programmatic goToPage() calls always work regardless of scrollEnabled.
         scrollEnabled={!tabsScrolling && (tabsAtEnd || currentPage !== 1)}
         showsHorizontalScrollIndicator={false}
-        scrollEventThrottle={32}
+        scrollEventThrottle={16}
         decelerationRate="fast"
         bounces={false}
         onMomentumScrollEnd={(e) => {
           const x = e.nativeEvent.contentOffset.x;
-          setCurrentPage(Math.round(x / width));
+          const page = Math.round(x / width);
+          setCurrentPage(page);
         }}
         style={{ flex: 1 }}
       >
-        {/* Page 0 — Sidebar */}
         <View style={{ width, height: pageHeight }}>
           <SidebarPage
             currentFolder={currentFolder}
@@ -102,7 +115,6 @@ export default function MainScreen() {
           />
         </View>
 
-        {/* Page 1 — Inbox */}
         <View style={{ width, height: pageHeight }}>
           <InboxPage
             currentFolder={currentFolder}
@@ -113,23 +125,20 @@ export default function MainScreen() {
           />
         </View>
 
-        {/* Page 2 — Search */}
         <View style={{ width, height: pageHeight }}>
           <SearchScreen />
         </View>
 
-        {/* Page 3 — Calendar */}
         <View style={{ width, height: pageHeight }}>
           <CalendarScreen />
         </View>
 
-        {/* Page 4 — Settings */}
         <View style={{ width, height: pageHeight }}>
           <SettingsScreen />
         </View>
       </ScrollView>
 
-      {/* ── Bottom nav bar ── */}
+      {/* Bottom nav bar */}
       <View
         style={[
           styles.navBar,
@@ -149,6 +158,16 @@ export default function MainScreen() {
         )}
 
         <View style={[styles.navInner, { paddingBottom: insets.bottom }]}>
+          {/* Sliding active indicator */}
+          <Animated.View
+            style={[
+              styles.indicator,
+              { backgroundColor: colors.primary },
+              indicatorStyle,
+            ]}
+            pointerEvents="none"
+          />
+
           {NAV.map((item) => {
             const isCompose = item.key === "compose";
             const active = !isCompose && currentPage === item.page;
@@ -199,7 +218,7 @@ export default function MainScreen() {
                     styles.navLabel,
                     {
                       color: active ? colors.primary : colors.mutedForeground,
-                      fontFamily: "Inter_700Bold",
+                      fontFamily: active ? "Inter_700Bold" : "Inter_500Medium",
                     },
                   ]}
                 >
@@ -226,6 +245,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
     paddingTop: 8,
+    position: "relative",
+  },
+  indicator: {
+    position: "absolute",
+    top: 0,
+    width: 24,
+    height: 3,
+    borderRadius: 1.5,
   },
   navItem: {
     flex: 1,

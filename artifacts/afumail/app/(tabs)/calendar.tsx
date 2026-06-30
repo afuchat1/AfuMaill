@@ -3,7 +3,6 @@ import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -14,6 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { BottomSheet } from "@/components/ui/BottomSheet";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { createCalendarEvent, deleteCalendarEvent, getCalendarEvents } from "@/lib/supabase";
@@ -53,7 +53,6 @@ export default function CalendarScreen() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Create event modal
   const [createVisible, setCreateVisible] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newTime, setNewTime] = useState("");
@@ -249,77 +248,75 @@ export default function CalendarScreen() {
         </View>
       </ScrollView>
 
-      {/* ── Create Event Modal ── */}
-      <Modal visible={createVisible} transparent animationType="slide" onRequestClose={() => setCreateVisible(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setCreateVisible(false)}>
-          <Pressable style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
-            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.sheetTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-              New Event — {MONTHS[month]} {selectedDay}
-            </Text>
+      {/* ── Create Event Bottom Sheet ── */}
+      <BottomSheet visible={createVisible} onClose={() => setCreateVisible(false)}>
+        <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+          <Text style={[styles.sheetTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+            New Event — {MONTHS[month]} {selectedDay}
+          </Text>
 
+          <TextInput
+            style={[styles.input, { color: colors.foreground, backgroundColor: colors.secondary, borderColor: colors.border, fontFamily: "Inter_400Regular" }]}
+            placeholder="Event title"
+            placeholderTextColor={colors.mutedForeground}
+            value={newTitle}
+            onChangeText={setNewTitle}
+            autoFocus
+          />
+
+          <View style={styles.inputRow}>
             <TextInput
-              style={[styles.input, { color: colors.foreground, backgroundColor: colors.secondary, borderColor: colors.border, fontFamily: "Inter_400Regular" }]}
-              placeholder="Event title"
+              style={[styles.input, styles.inputHalf, { color: colors.foreground, backgroundColor: colors.secondary, borderColor: colors.border, fontFamily: "Inter_400Regular" }]}
+              placeholder="Time (e.g. 2:00 PM)"
               placeholderTextColor={colors.mutedForeground}
-              value={newTitle}
-              onChangeText={setNewTitle}
-              autoFocus
+              value={newTime}
+              onChangeText={setNewTime}
             />
+            <TextInput
+              style={[styles.input, styles.inputHalf, { color: colors.foreground, backgroundColor: colors.secondary, borderColor: colors.border, fontFamily: "Inter_400Regular" }]}
+              placeholder="Duration (e.g. 1 hr)"
+              placeholderTextColor={colors.mutedForeground}
+              value={newDuration}
+              onChangeText={setNewDuration}
+            />
+          </View>
 
-            <View style={styles.inputRow}>
-              <TextInput
-                style={[styles.input, styles.inputHalf, { color: colors.foreground, backgroundColor: colors.secondary, borderColor: colors.border, fontFamily: "Inter_400Regular" }]}
-                placeholder="Time (e.g. 2:00 PM)"
-                placeholderTextColor={colors.mutedForeground}
-                value={newTime}
-                onChangeText={setNewTime}
-              />
-              <TextInput
-                style={[styles.input, styles.inputHalf, { color: colors.foreground, backgroundColor: colors.secondary, borderColor: colors.border, fontFamily: "Inter_400Regular" }]}
-                placeholder="Duration (e.g. 1 hr)"
-                placeholderTextColor={colors.mutedForeground}
-                value={newDuration}
-                onChangeText={setNewDuration}
-              />
-            </View>
+          {/* Color picker */}
+          <View style={styles.colorRow}>
+            {EVENT_COLORS.map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => setNewColor(c)}
+                style={[
+                  styles.colorSwatch,
+                  { backgroundColor: c },
+                  newColor === c && styles.colorSwatchSelected,
+                ]}
+              >
+                {newColor === c && <Feather name="check" size={12} color="#FFFFFF" />}
+              </Pressable>
+            ))}
+          </View>
 
-            {/* Color picker */}
-            <View style={styles.colorRow}>
-              {EVENT_COLORS.map((c) => (
-                <Pressable
-                  key={c}
-                  onPress={() => setNewColor(c)}
-                  style={[
-                    styles.colorSwatch,
-                    { backgroundColor: c },
-                    newColor === c && styles.colorSwatchSelected,
-                  ]}
-                >
-                  {newColor === c && <Feather name="check" size={12} color="#FFFFFF" />}
-                </Pressable>
-              ))}
-            </View>
-
-            <Pressable
-              onPress={handleCreateEvent}
-              disabled={saving || !newTitle.trim()}
-              style={[
-                styles.createBtn,
-                { backgroundColor: newTitle.trim() ? colors.primary : colors.muted },
-              ]}
-            >
-              {saving ? (
-                <ActivityIndicator color={colors.primaryForeground} />
-              ) : (
-                <Text style={[styles.createBtnText, { color: newTitle.trim() ? colors.primaryForeground : colors.mutedForeground, fontFamily: "Inter_700Bold" }]}>
-                  Create Event
-                </Text>
-              )}
-            </Pressable>
+          <Pressable
+            onPress={handleCreateEvent}
+            disabled={saving || !newTitle.trim()}
+            style={[
+              styles.createBtn,
+              { backgroundColor: newTitle.trim() ? colors.primary : colors.muted },
+            ]}
+          >
+            {saving ? (
+              <ActivityIndicator color={colors.primaryForeground} />
+            ) : (
+              <Text style={[styles.createBtnText, { color: newTitle.trim() ? colors.primaryForeground : colors.mutedForeground, fontFamily: "Inter_700Bold" }]}>
+                Create Event
+              </Text>
+            )}
           </Pressable>
-        </Pressable>
-      </Modal>
+        </View>
+      </BottomSheet>
     </View>
   );
 }
@@ -361,9 +358,7 @@ const styles = StyleSheet.create({
   eventContent: { flex: 1, paddingVertical: 14, gap: 3 },
   eventTitle: { fontSize: 15 },
   eventTime: { fontSize: 13 },
-  // Modal
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-  modalSheet: {
+  sheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderWidth: 1,

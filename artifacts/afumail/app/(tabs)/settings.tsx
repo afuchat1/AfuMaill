@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
   Alert,
   Appearance,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -19,6 +18,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "@/components/Avatar";
+import { Dialog } from "@/components/ui/Dialog";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { getPreferences, Preferences, setPref } from "@/lib/preferences";
@@ -31,7 +31,6 @@ export default function SettingsScreen() {
   const isWeb = Platform.OS === "web";
   const topPad = isWeb ? 67 : insets.top;
 
-  // ── Preferences ──────────────────────────────────────────────────────────
   const [prefs, setPrefs] = useState<Preferences>({
     fontSize: "Medium",
     emailDensity: "Comfortable",
@@ -46,32 +45,25 @@ export default function SettingsScreen() {
     externalImages: true,
   });
 
-  // ── Storage stats ─────────────────────────────────────────────────────────
   const [emailCount, setEmailCount] = useState<number | null>(null);
-
-  // ── Account Recovery state ────────────────────────────────────────────────
   const [phoneNumber, setPhoneNumber] = useState("");
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // ── Modal visibility ──────────────────────────────────────────────────────
   const [phoneModal, setPhoneModal] = useState(false);
   const [recoveryModal, setRecoveryModal] = useState(false);
   const [fontSizeModal, setFontSizeModal] = useState(false);
   const [densityModal, setDensityModal] = useState(false);
   const [quietModal, setQuietModal] = useState(false);
 
-  // ── Modal inputs ──────────────────────────────────────────────────────────
   const [phoneInput, setPhoneInput] = useState("");
   const [recoveryInput, setRecoveryInput] = useState("");
   const [recoveryError, setRecoveryError] = useState("");
   const [quietStart, setQuietStart] = useState("22:00");
   const [quietEnd, setQuietEnd] = useState("07:00");
 
-  // ── Load everything on mount ──────────────────────────────────────────────
   useEffect(() => {
     getPreferences().then(setPrefs);
-
     if (!user) return;
     getProfile(user.id).then((p) => {
       if (!p) return;
@@ -81,7 +73,6 @@ export default function SettingsScreen() {
     getEmailStats(user.id).then((s) => setEmailCount(s.total));
   }, [user]);
 
-  // ── Toggle handler ────────────────────────────────────────────────────────
   async function toggleSwitch(key: keyof Preferences) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const next = !prefs[key] as any;
@@ -96,52 +87,28 @@ export default function SettingsScreen() {
     }
   }
 
-  // ── Row press routing ─────────────────────────────────────────────────────
   function handleRowPress(label: string) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     switch (label) {
-      case "Signature":
-        router.push("/settings/signature");
-        break;
-      case "Vacation Reply":
-        router.push("/settings/vacation");
-        break;
-      case "Connected Accounts":
-        router.push("/settings/connected-accounts");
-        break;
-      case "Font Size":
-        setFontSizeModal(true);
-        break;
-      case "Email Density":
-        setDensityModal(true);
-        break;
+      case "Signature":           router.push("/settings/signature"); break;
+      case "Vacation Reply":      router.push("/settings/vacation"); break;
+      case "Connected Accounts":  router.push("/settings/connected-accounts"); break;
+      case "Font Size":           setFontSizeModal(true); break;
+      case "Email Density":       setDensityModal(true); break;
       case "Quiet Hours":
         setQuietStart(prefs.quietHoursStart);
         setQuietEnd(prefs.quietHoursEnd);
         setQuietModal(true);
         break;
-      case "Two-Factor Auth":
-        router.push("/settings/two-factor");
-        break;
-      case "Privacy Controls":
-        router.push("/settings/privacy");
-        break;
-      case "Manage Storage":
-        router.push("/settings/storage");
-        break;
-      case "Help & Support":
-        router.push("/settings/support");
-        break;
-      case "Terms of Service":
-        router.push("/settings/legal");
-        break;
-      case "Privacy Policy":
-        router.push("/settings/legal");
-        break;
+      case "Two-Factor Auth":     router.push("/settings/two-factor"); break;
+      case "Privacy Controls":    router.push("/settings/privacy"); break;
+      case "Manage Storage":      router.push("/settings/storage"); break;
+      case "Help & Support":      router.push("/settings/support"); break;
+      case "Terms of Service":    router.push("/settings/legal"); break;
+      case "Privacy Policy":      router.push("/settings/legal"); break;
     }
   }
 
-  // ── Recovery handlers ─────────────────────────────────────────────────────
   async function handleSavePhone() {
     if (!user) return;
     setSaving(true);
@@ -168,7 +135,6 @@ export default function SettingsScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }
 
-  // ── Font size / density pickers ───────────────────────────────────────────
   async function pickFontSize(v: Preferences["fontSize"]) {
     await setPref("fontSize", v);
     setPrefs((p) => ({ ...p, fontSize: v }));
@@ -203,7 +169,6 @@ export default function SettingsScreen() {
     await logout();
   }
 
-  // ── Dynamic section data ──────────────────────────────────────────────────
   const SECTIONS = [
     {
       title: "Account",
@@ -275,7 +240,6 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}>
-        {/* Profile card */}
         {user && (
           <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border, marginHorizontal: 16, marginTop: 16 }]}>
             <Avatar name={user.name} size={52} fontSize={18} />
@@ -324,7 +288,6 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Dynamic sections */}
         {SECTIONS.map((section) => (
           <View key={section.title} style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>
@@ -379,7 +342,6 @@ export default function SettingsScreen() {
           </View>
         ))}
 
-        {/* Sign out */}
         <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
           <Pressable
             onPress={handleLogout}
@@ -391,182 +353,172 @@ export default function SettingsScreen() {
         </View>
       </ScrollView>
 
-      {/* ── Phone Modal ── */}
-      <Modal visible={phoneModal} transparent animationType="fade" onRequestClose={() => setPhoneModal(false)}>
-        <Pressable style={styles.overlay} onPress={() => setPhoneModal(false)}>
-          <Pressable style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
-            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Recovery Phone</Text>
-            <Text style={[styles.modalSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              Only used to verify your identity if you lose account access.
-            </Text>
-            <View style={[styles.modalInput, { borderColor: colors.border, backgroundColor: colors.background }]}>
-              <TextInput
-                style={[{ flex: 1, fontSize: 16, color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-                placeholder="+1 555 000 0000"
-                placeholderTextColor={colors.mutedForeground}
-                value={phoneInput}
-                onChangeText={setPhoneInput}
-                keyboardType="phone-pad"
-                autoFocus
-              />
-            </View>
-            <View style={styles.modalActions}>
-              <Pressable onPress={() => setPhoneModal(false)} style={[styles.modalCancelBtn, { borderColor: colors.border }]}>
-                <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.foreground }}>Cancel</Text>
-              </Pressable>
-              <Pressable onPress={handleSavePhone} disabled={saving} style={[styles.modalSaveBtn, { backgroundColor: colors.primary, opacity: saving ? 0.7 : 1 }]}>
-                {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground }}>Save</Text>}
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {/* ── Phone Dialog ── */}
+      <Dialog visible={phoneModal} onClose={() => setPhoneModal(false)}>
+        <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Recovery Phone</Text>
+          <Text style={[styles.modalSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Only used to verify your identity if you lose account access.
+          </Text>
+          <View style={[styles.modalInput, { borderColor: colors.border, backgroundColor: colors.background }]}>
+            <TextInput
+              style={[{ flex: 1, fontSize: 16, color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+              placeholder="+1 555 000 0000"
+              placeholderTextColor={colors.mutedForeground}
+              value={phoneInput}
+              onChangeText={setPhoneInput}
+              keyboardType="phone-pad"
+              autoFocus
+            />
+          </View>
+          <View style={styles.modalActions}>
+            <Pressable onPress={() => setPhoneModal(false)} style={[styles.modalCancelBtn, { borderColor: colors.border }]}>
+              <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.foreground }}>Cancel</Text>
+            </Pressable>
+            <Pressable onPress={handleSavePhone} disabled={saving} style={[styles.modalSaveBtn, { backgroundColor: colors.primary, opacity: saving ? 0.7 : 1 }]}>
+              {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground }}>Save</Text>}
+            </Pressable>
+          </View>
+        </View>
+      </Dialog>
 
-      {/* ── Recovery Email Modal ── */}
-      <Modal visible={recoveryModal} transparent animationType="fade" onRequestClose={() => setRecoveryModal(false)}>
-        <Pressable style={styles.overlay} onPress={() => setRecoveryModal(false)}>
-          <Pressable style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
-            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Recovery Email</Text>
-            <Text style={[styles.modalSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              Another AfuMail username that can receive a password-reset link.
-            </Text>
-            <View style={[styles.usernameRow, { borderColor: colors.border, backgroundColor: colors.background }]}>
-              <TextInput
-                style={{ flex: 1, fontSize: 16, color: colors.foreground, fontFamily: "Inter_400Regular", paddingHorizontal: 14, paddingVertical: 13 }}
-                placeholder="username"
-                placeholderTextColor={colors.mutedForeground}
-                value={recoveryInput}
-                onChangeText={(t) => { setRecoveryInput(t); setRecoveryError(""); }}
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoFocus
-              />
-              <Text style={{ fontSize: 13, paddingRight: 12, color: colors.mutedForeground, fontFamily: "Inter_400Regular" }}>@afuchat.com</Text>
-            </View>
-            {!!recoveryError && <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: colors.destructive }}>{recoveryError}</Text>}
-            <View style={styles.modalActions}>
-              <Pressable onPress={() => setRecoveryModal(false)} style={[styles.modalCancelBtn, { borderColor: colors.border }]}>
-                <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.foreground }}>Cancel</Text>
-              </Pressable>
-              <Pressable onPress={handleSaveRecoveryEmail} disabled={saving} style={[styles.modalSaveBtn, { backgroundColor: colors.primary, opacity: saving ? 0.7 : 1 }]}>
-                {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground }}>Save</Text>}
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {/* ── Recovery Email Dialog ── */}
+      <Dialog visible={recoveryModal} onClose={() => setRecoveryModal(false)}>
+        <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Recovery Email</Text>
+          <Text style={[styles.modalSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Another AfuMail username that can receive a password-reset link.
+          </Text>
+          <View style={[styles.usernameRow, { borderColor: colors.border, backgroundColor: colors.background }]}>
+            <TextInput
+              style={{ flex: 1, fontSize: 16, color: colors.foreground, fontFamily: "Inter_400Regular", paddingHorizontal: 14, paddingVertical: 13 }}
+              placeholder="username"
+              placeholderTextColor={colors.mutedForeground}
+              value={recoveryInput}
+              onChangeText={(t) => { setRecoveryInput(t); setRecoveryError(""); }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus
+            />
+            <Text style={{ fontSize: 13, paddingRight: 12, color: colors.mutedForeground, fontFamily: "Inter_400Regular" }}>@afuchat.com</Text>
+          </View>
+          {!!recoveryError && <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: colors.destructive }}>{recoveryError}</Text>}
+          <View style={styles.modalActions}>
+            <Pressable onPress={() => setRecoveryModal(false)} style={[styles.modalCancelBtn, { borderColor: colors.border }]}>
+              <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.foreground }}>Cancel</Text>
+            </Pressable>
+            <Pressable onPress={handleSaveRecoveryEmail} disabled={saving} style={[styles.modalSaveBtn, { backgroundColor: colors.primary, opacity: saving ? 0.7 : 1 }]}>
+              {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground }}>Save</Text>}
+            </Pressable>
+          </View>
+        </View>
+      </Dialog>
 
-      {/* ── Font Size Picker ── */}
-      <Modal visible={fontSizeModal} transparent animationType="fade" onRequestClose={() => setFontSizeModal(false)}>
-        <Pressable style={styles.overlay} onPress={() => setFontSizeModal(false)}>
-          <Pressable style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
-            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Font Size</Text>
-            {(["Small", "Medium", "Large"] as const).map((opt) => (
-              <Pressable
-                key={opt}
-                onPress={() => pickFontSize(opt)}
-                style={({ pressed }) => [
-                  styles.pickerRow,
-                  {
-                    backgroundColor: prefs.fontSize === opt ? colors.accent + "18" : pressed ? colors.secondary : "transparent",
-                    borderColor: prefs.fontSize === opt ? colors.accent : colors.border,
-                  },
-                ]}
-              >
-                <Text style={[styles.pickerLabel, { color: colors.foreground, fontFamily: prefs.fontSize === opt ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
+      {/* ── Font Size Dialog ── */}
+      <Dialog visible={fontSizeModal} onClose={() => setFontSizeModal(false)}>
+        <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Font Size</Text>
+          {(["Small", "Medium", "Large"] as const).map((opt) => (
+            <Pressable
+              key={opt}
+              onPress={() => pickFontSize(opt)}
+              style={({ pressed }) => [
+                styles.pickerRow,
+                {
+                  backgroundColor: prefs.fontSize === opt ? colors.accent + "18" : pressed ? colors.secondary : "transparent",
+                  borderColor: prefs.fontSize === opt ? colors.accent : colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.pickerLabel, { color: colors.foreground, fontFamily: prefs.fontSize === opt ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
+                {opt}
+              </Text>
+              {prefs.fontSize === opt && <Feather name="check" size={16} color={colors.accent} />}
+            </Pressable>
+          ))}
+        </View>
+      </Dialog>
+
+      {/* ── Email Density Dialog ── */}
+      <Dialog visible={densityModal} onClose={() => setDensityModal(false)}>
+        <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Email Density</Text>
+          <Text style={[styles.modalSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Controls how much spacing appears between emails in your inbox.
+          </Text>
+          {(["Compact", "Comfortable"] as const).map((opt) => (
+            <Pressable
+              key={opt}
+              onPress={() => pickDensity(opt)}
+              style={({ pressed }) => [
+                styles.pickerRow,
+                {
+                  backgroundColor: prefs.emailDensity === opt ? colors.accent + "18" : pressed ? colors.secondary : "transparent",
+                  borderColor: prefs.emailDensity === opt ? colors.accent : colors.border,
+                },
+              ]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.pickerLabel, { color: colors.foreground, fontFamily: prefs.emailDensity === opt ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
                   {opt}
                 </Text>
-                {prefs.fontSize === opt && <Feather name="check" size={16} color={colors.accent} />}
-              </Pressable>
-            ))}
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* ── Email Density Picker ── */}
-      <Modal visible={densityModal} transparent animationType="fade" onRequestClose={() => setDensityModal(false)}>
-        <Pressable style={styles.overlay} onPress={() => setDensityModal(false)}>
-          <Pressable style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
-            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Email Density</Text>
-            <Text style={[styles.modalSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              Controls how much spacing appears between emails in your inbox.
-            </Text>
-            {(["Compact", "Comfortable"] as const).map((opt) => (
-              <Pressable
-                key={opt}
-                onPress={() => pickDensity(opt)}
-                style={({ pressed }) => [
-                  styles.pickerRow,
-                  {
-                    backgroundColor: prefs.emailDensity === opt ? colors.accent + "18" : pressed ? colors.secondary : "transparent",
-                    borderColor: prefs.emailDensity === opt ? colors.accent : colors.border,
-                  },
-                ]}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.pickerLabel, { color: colors.foreground, fontFamily: prefs.emailDensity === opt ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
-                    {opt}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "Inter_400Regular", marginTop: 2 }}>
-                    {opt === "Compact" ? "More emails visible at once" : "More breathing room between emails"}
-                  </Text>
-                </View>
-                {prefs.emailDensity === opt && <Feather name="check" size={16} color={colors.accent} />}
-              </Pressable>
-            ))}
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* ── Quiet Hours Modal ── */}
-      <Modal visible={quietModal} transparent animationType="fade" onRequestClose={() => setQuietModal(false)}>
-        <Pressable style={styles.overlay} onPress={() => setQuietModal(false)}>
-          <Pressable style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
-            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Quiet Hours</Text>
-            <Text style={[styles.modalSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              Silence notifications between these times each day.
-            </Text>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={{ flex: 1, gap: 6 }}>
-                <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "Inter_500Medium", textTransform: "uppercase", letterSpacing: 0.6 }}>Start</Text>
-                <View style={[styles.modalInput, { borderColor: colors.border, backgroundColor: colors.background }]}>
-                  <TextInput
-                    style={{ flex: 1, fontSize: 18, color: colors.foreground, fontFamily: "Inter_600SemiBold", textAlign: "center" }}
-                    value={quietStart}
-                    onChangeText={setQuietStart}
-                    placeholder="22:00"
-                    placeholderTextColor={colors.mutedForeground}
-                    keyboardType="numbers-and-punctuation"
-                    maxLength={5}
-                  />
-                </View>
+                <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+                  {opt === "Compact" ? "More emails visible at once" : "More breathing room between emails"}
+                </Text>
               </View>
-              <View style={{ flex: 1, gap: 6 }}>
-                <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "Inter_500Medium", textTransform: "uppercase", letterSpacing: 0.6 }}>End</Text>
-                <View style={[styles.modalInput, { borderColor: colors.border, backgroundColor: colors.background }]}>
-                  <TextInput
-                    style={{ flex: 1, fontSize: 18, color: colors.foreground, fontFamily: "Inter_600SemiBold", textAlign: "center" }}
-                    value={quietEnd}
-                    onChangeText={setQuietEnd}
-                    placeholder="07:00"
-                    placeholderTextColor={colors.mutedForeground}
-                    keyboardType="numbers-and-punctuation"
-                    maxLength={5}
-                  />
-                </View>
+              {prefs.emailDensity === opt && <Feather name="check" size={16} color={colors.accent} />}
+            </Pressable>
+          ))}
+        </View>
+      </Dialog>
+
+      {/* ── Quiet Hours Dialog ── */}
+      <Dialog visible={quietModal} onClose={() => setQuietModal(false)}>
+        <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Quiet Hours</Text>
+          <Text style={[styles.modalSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Silence notifications between these times each day.
+          </Text>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <View style={{ flex: 1, gap: 6 }}>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "Inter_500Medium", textTransform: "uppercase", letterSpacing: 0.6 }}>Start</Text>
+              <View style={[styles.modalInput, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                <TextInput
+                  style={{ flex: 1, fontSize: 18, color: colors.foreground, fontFamily: "Inter_600SemiBold", textAlign: "center" }}
+                  value={quietStart}
+                  onChangeText={setQuietStart}
+                  placeholder="22:00"
+                  placeholderTextColor={colors.mutedForeground}
+                  keyboardType="numbers-and-punctuation"
+                  maxLength={5}
+                />
               </View>
             </View>
-            <View style={styles.modalActions}>
-              <Pressable onPress={disableQuietHours} style={[styles.modalCancelBtn, { borderColor: colors.border }]}>
-                <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: colors.mutedForeground }}>Turn Off</Text>
-              </Pressable>
-              <Pressable onPress={saveQuietHours} style={[styles.modalSaveBtn, { backgroundColor: colors.primary }]}>
-                <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground }}>Save</Text>
-              </Pressable>
+            <View style={{ flex: 1, gap: 6 }}>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "Inter_500Medium", textTransform: "uppercase", letterSpacing: 0.6 }}>End</Text>
+              <View style={[styles.modalInput, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                <TextInput
+                  style={{ flex: 1, fontSize: 18, color: colors.foreground, fontFamily: "Inter_600SemiBold", textAlign: "center" }}
+                  value={quietEnd}
+                  onChangeText={setQuietEnd}
+                  placeholder="07:00"
+                  placeholderTextColor={colors.mutedForeground}
+                  keyboardType="numbers-and-punctuation"
+                  maxLength={5}
+                />
+              </View>
             </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </View>
+          <View style={styles.modalActions}>
+            <Pressable onPress={disableQuietHours} style={[styles.modalCancelBtn, { borderColor: colors.border }]}>
+              <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: colors.mutedForeground }}>Turn Off</Text>
+            </Pressable>
+            <Pressable onPress={saveQuietHours} style={[styles.modalSaveBtn, { backgroundColor: colors.primary }]}>
+              <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground }}>Save</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Dialog>
     </View>
   );
 }
@@ -629,15 +581,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   signOutText: { fontSize: 15 },
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
   modalCard: {
-    width: "100%",
     borderRadius: 20,
     borderWidth: 1,
     padding: 24,

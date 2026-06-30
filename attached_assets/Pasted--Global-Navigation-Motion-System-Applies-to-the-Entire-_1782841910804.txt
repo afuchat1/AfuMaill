@@ -1,0 +1,202 @@
+# Global Navigation & Motion System (Applies to the Entire AfuMail App)
+
+This specification is **mandatory** for every part of the application. It is not limited to the main screens. Every screen, subpage, drawer, tab, category, modal, and bottom sheet must follow the same navigation and animation system to create one continuous experience.
+
+## Universal Rule
+
+There should never be an instant screen change, abrupt page replacement, or disconnected transition unless explicitly required (e.g., app launch or authentication).
+
+Every destination should feel connected to the previous one through motion.
+
+## This Includes Every UI Surface
+
+The navigation system must apply to:
+
+* Main pages
+* Bottom navigation pages
+* Sidebar navigation
+* Navigation drawer items
+* Settings pages
+* Settings subpages
+* Email folders
+* Custom folders
+* Labels
+* Search
+* Search results
+* Filter pages
+* AI pages
+* AI tools
+* Compose email
+* Drafts
+* Sent mail
+* Archive
+* Spam
+* Trash
+* Contacts
+* Contact details
+* Calendar
+* Event pages
+* Attachment viewer
+* PDF viewer
+* Image viewer
+* Video viewer
+* Audio player
+* Profile pages
+* Account switcher
+* Security pages
+* Privacy pages
+* Storage pages
+* Notification settings
+* Theme settings
+* Language settings
+* Accessibility settings
+* Help pages
+* About pages
+* Onboarding
+* Login
+* Registration
+* Password recovery
+* Verification screens
+* Business workspace
+* Admin pages
+* Every future feature added to the application
+
+If a new screen is introduced in the future, it must automatically follow this navigation system.
+
+---
+
+# Navigation Behavior
+
+Every page opens using the same smooth horizontal slide animation.
+
+Opening a page:
+
+* Slide from right to left.
+* Preserve the previous page in memory.
+
+Going back:
+
+* Slide from left to right.
+* Support interactive edge-swipe back gestures.
+
+Nested navigation continues the same pattern without exception.
+
+Example:
+
+Inbox → Email → Attachment → PDF Viewer → Share Sheet → Preview
+
+Each transition should animate naturally without breaking the navigation flow.
+
+---
+
+# Tabs
+
+Every tab in the application should feel like part of the same workspace.
+
+Changing tabs should:
+
+* Animate smoothly.
+* Preserve scroll position.
+* Preserve loaded data.
+* Preserve user state.
+* Never recreate the page unnecessarily.
+* Never flash or reload.
+
+Tabs should transition with subtle horizontal motion or fade-through motion while maintaining context.
+
+---
+
+# Drawers
+
+Every drawer should:
+
+* Slide smoothly from its assigned edge.
+* Dim the background.
+* Support swipe-to-close.
+* Close with the reverse animation.
+* Maintain the current page beneath it.
+
+---
+
+# Bottom Sheets
+
+Every bottom sheet must use one shared component.
+
+Requirements:
+
+* Slide up from the bottom.
+* Rounded top corners.
+* Multiple snap positions.
+* Fully draggable.
+* Swipe down to dismiss.
+* Background blur or dim.
+* Respect keyboard height.
+* Smooth spring animation.
+* Never interrupt the navigation flow.
+
+All menus, filters, sharing actions, AI actions, folder pickers, sorting options, and contextual actions must use this component.
+
+---
+
+# Dialogs
+
+Dialogs should:
+
+* Fade and scale gently.
+* Never appear abruptly.
+* Use consistent spacing and sizing.
+* Maintain focus until dismissed.
+
+---
+
+# Shared Element Animations
+
+Whenever possible, animate the selected element into the destination screen.
+
+Examples:
+
+* Email card expands into the email view.
+* Contact avatar grows into the profile.
+* Attachment thumbnail expands into the full viewer.
+
+These transitions should reinforce continuity.
+
+---
+
+# State Preservation
+
+The application must preserve:
+
+* Scroll position.
+* Search queries.
+* Draft emails.
+* Filters.
+* Selected tabs.
+* Expanded sections.
+* Form inputs.
+* Reading position.
+* Navigation history.
+
+Returning to any page should restore it exactly as the user left it.
+
+---
+
+# Performance
+
+Navigation should feel immediate.
+
+Requirements:
+
+* No visible loading flashes between pages.
+* Keep frequently used pages alive in memory where appropriate.
+* Lazy-load heavy content.
+* Preload likely next screens.
+* Target smooth 60 FPS animations (or higher where supported).
+
+---
+
+# Motion Philosophy
+
+Every movement should communicate that the user is navigating within one continuous application—not jumping between separate screens.
+
+The entire product should feel like a single living canvas where every page, subpage, category, tab, drawer, modal, dialog, bottom sheet, and future feature follows one unified navigation and motion language. There should be no exceptions to this system.

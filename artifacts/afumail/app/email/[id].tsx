@@ -4,7 +4,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -16,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "@/components/Avatar";
+import { BottomSheet } from "@/components/ui/BottomSheet";
 import type { EmailFolder } from "@/context/EmailContext";
 import { useEmails } from "@/context/EmailContext";
 import { useColors } from "@/hooks/useColors";
@@ -153,6 +153,8 @@ export default function EmailDetailScreen() {
     } catch {}
   }
 
+  const isWeb = Platform.OS === "web";
+
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       {/* Toast */}
@@ -191,7 +193,6 @@ export default function EmailDetailScreen() {
           <Text style={[styles.subject, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
             {email.subject}
           </Text>
-          {/* Category + read badge */}
           <View style={styles.badgeRow}>
             {email.category && (
               <View style={[styles.categoryBadge, { backgroundColor: colors.accent + "18" }]}>
@@ -302,75 +303,71 @@ export default function EmailDetailScreen() {
       </View>
 
       {/* ── More Actions Sheet ── */}
-      <Modal visible={actionsVisible} transparent animationType="slide" onRequestClose={() => setActionsVisible(false)}>
-        <Pressable style={styles.sheetOverlay} onPress={() => setActionsVisible(false)}>
-          <Pressable style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
-            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.sheetTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>More Actions</Text>
+      <BottomSheet visible={actionsVisible} onClose={() => setActionsVisible(false)}>
+        <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+          <Text style={[styles.sheetTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>More Actions</Text>
 
-            {[
-              { icon: "mail", label: "Mark as Unread", onPress: handleMarkUnread },
-              { icon: "folder", label: "Move to Folder", onPress: () => { setMoveVisible(true); } },
-              { icon: "corner-up-right", label: "Forward", onPress: () => { setActionsVisible(false); handleForward(); } },
-              { icon: "share-2", label: "Share Email", onPress: handleShare },
-              { icon: "alert-octagon", label: "Report as Spam", onPress: () => handleMoveToFolder("spam"), danger: true },
-            ].map((action, idx) => (
-              <Pressable
-                key={idx}
-                onPress={action.onPress}
-                style={({ pressed }) => [styles.sheetRow, { backgroundColor: pressed ? colors.secondary : "transparent" }]}
-              >
-                <View style={[styles.sheetIconWrap, { backgroundColor: ("danger" in action && action.danger) ? colors.destructive + "18" : colors.secondary }]}>
-                  <Feather name={action.icon as any} size={16} color={("danger" in action && action.danger) ? colors.destructive : colors.foreground} />
-                </View>
-                <Text style={[styles.sheetLabel, { color: ("danger" in action && action.danger) ? colors.destructive : colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-                  {action.label}
-                </Text>
-                <Feather name="chevron-right" size={15} color={colors.mutedForeground} />
-              </Pressable>
-            ))}
-
+          {[
+            { icon: "mail", label: "Mark as Unread", onPress: handleMarkUnread },
+            { icon: "folder", label: "Move to Folder", onPress: () => { setActionsVisible(false); setTimeout(() => setMoveVisible(true), 320); } },
+            { icon: "corner-up-right", label: "Forward", onPress: () => { setActionsVisible(false); handleForward(); } },
+            { icon: "share-2", label: "Share Email", onPress: handleShare },
+            { icon: "alert-octagon", label: "Report as Spam", onPress: () => handleMoveToFolder("spam"), danger: true },
+          ].map((action, idx) => (
             <Pressable
-              onPress={() => setActionsVisible(false)}
-              style={[styles.sheetCancel, { backgroundColor: colors.secondary, marginTop: 4 }]}
+              key={idx}
+              onPress={action.onPress}
+              style={({ pressed }) => [styles.sheetRow, { backgroundColor: pressed ? colors.secondary : "transparent" }]}
             >
-              <Text style={[styles.sheetCancelText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Cancel</Text>
+              <View style={[styles.sheetIconWrap, { backgroundColor: ("danger" in action && action.danger) ? colors.destructive + "18" : colors.secondary }]}>
+                <Feather name={action.icon as any} size={16} color={("danger" in action && action.danger) ? colors.destructive : colors.foreground} />
+              </View>
+              <Text style={[styles.sheetLabel, { color: ("danger" in action && action.danger) ? colors.destructive : colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                {action.label}
+              </Text>
+              <Feather name="chevron-right" size={15} color={colors.mutedForeground} />
             </Pressable>
+          ))}
+
+          <Pressable
+            onPress={() => setActionsVisible(false)}
+            style={[styles.sheetCancel, { backgroundColor: colors.secondary, marginTop: 4 }]}
+          >
+            <Text style={[styles.sheetCancelText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Cancel</Text>
           </Pressable>
-        </Pressable>
-      </Modal>
+        </View>
+      </BottomSheet>
 
       {/* ── Move to Folder Sheet ── */}
-      <Modal visible={moveVisible} transparent animationType="slide" onRequestClose={() => setMoveVisible(false)}>
-        <Pressable style={styles.sheetOverlay} onPress={() => setMoveVisible(false)}>
-          <Pressable style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
-            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.sheetTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Move to Folder</Text>
+      <BottomSheet visible={moveVisible} onClose={() => setMoveVisible(false)}>
+        <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+          <Text style={[styles.sheetTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Move to Folder</Text>
 
-            {MOVE_FOLDERS.filter((f) => f.folder !== email.folder).map((f) => (
-              <Pressable
-                key={f.folder}
-                onPress={() => handleMoveToFolder(f.folder)}
-                style={({ pressed }) => [styles.sheetRow, { backgroundColor: pressed ? colors.secondary : "transparent" }]}
-              >
-                <View style={[styles.sheetIconWrap, { backgroundColor: colors.secondary }]}>
-                  <Feather name={f.icon as any} size={16} color={colors.foreground} />
-                </View>
-                <Text style={[styles.sheetLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-                  {f.label}
-                </Text>
-              </Pressable>
-            ))}
-
+          {MOVE_FOLDERS.filter((f) => f.folder !== email.folder).map((f) => (
             <Pressable
-              onPress={() => setMoveVisible(false)}
-              style={[styles.sheetCancel, { backgroundColor: colors.secondary, marginTop: 4 }]}
+              key={f.folder}
+              onPress={() => handleMoveToFolder(f.folder)}
+              style={({ pressed }) => [styles.sheetRow, { backgroundColor: pressed ? colors.secondary : "transparent" }]}
             >
-              <Text style={[styles.sheetCancelText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Cancel</Text>
+              <View style={[styles.sheetIconWrap, { backgroundColor: colors.secondary }]}>
+                <Feather name={f.icon as any} size={16} color={colors.foreground} />
+              </View>
+              <Text style={[styles.sheetLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                {f.label}
+              </Text>
             </Pressable>
+          ))}
+
+          <Pressable
+            onPress={() => setMoveVisible(false)}
+            style={[styles.sheetCancel, { backgroundColor: colors.secondary, marginTop: 4 }]}
+          >
+            <Text style={[styles.sheetCancelText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Cancel</Text>
           </Pressable>
-        </Pressable>
-      </Modal>
+        </View>
+      </BottomSheet>
     </View>
   );
 }
@@ -444,7 +441,6 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   replyBtnText: { fontSize: 13 },
-  // Toast
   toast: {
     position: "absolute",
     bottom: 100,
@@ -458,12 +454,6 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   toastText: { fontSize: 13 },
-  // Action sheets
-  sheetOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
-  },
   sheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
