@@ -19,6 +19,9 @@ export interface Profile {
   email: string;
   phone_number: string | null;
   recovery_email: string | null;
+  signature: string;
+  vacation_reply_enabled: boolean;
+  vacation_reply_message: string;
   created_at: string;
 }
 
@@ -127,6 +130,50 @@ export async function signInUser(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: error.message };
   return {};
+}
+
+export async function saveSignature(
+  userId: string,
+  signature: string
+): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ signature })
+    .eq("id", userId);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function saveVacationReply(
+  userId: string,
+  enabled: boolean,
+  message: string
+): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ vacation_reply_enabled: enabled, vacation_reply_message: message })
+    .eq("id", userId);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function getEmailStats(userId: string): Promise<{
+  total: number;
+  byFolder: Record<string, number>;
+}> {
+  const { data, error } = await supabase
+    .from("emails")
+    .select("folder")
+    .eq("owner_id", userId);
+
+  if (error || !data) return { total: 0, byFolder: {} };
+
+  const byFolder: Record<string, number> = {};
+  for (const row of data) {
+    const f = (row.folder as string) || "inbox";
+    byFolder[f] = (byFolder[f] ?? 0) + 1;
+  }
+  return { total: data.length, byFolder };
 }
 
 export async function resetPasswordByRecoveryEmail(

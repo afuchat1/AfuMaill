@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { useEmails } from "@/context/EmailContext";
 import { useColors } from "@/hooks/useColors";
+import { getProfile } from "@/lib/supabase";
 
 export default function ComposeScreen() {
   const colors = useColors();
@@ -33,6 +34,15 @@ export default function ComposeScreen() {
   const [sent, setSent] = useState(false);
 
   const bodyRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    getProfile(user.id).then((p) => {
+      if (p?.signature) {
+        setBody(`\n\n— \n${p.signature}`);
+      }
+    });
+  }, [user]);
 
   async function handleSend() {
     if (!to.trim()) return;
