@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "AfuMail"
+version = "1.0.0"
+id = "artifacts/afumail"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 18765
+
+[services.development]
+run = "pnpm --filter @workspace/afumail run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/afumail", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/afumail", "run", "serve" ]
+
+[services.env]
+PORT = "18765"
+BASE_PATH = "/"

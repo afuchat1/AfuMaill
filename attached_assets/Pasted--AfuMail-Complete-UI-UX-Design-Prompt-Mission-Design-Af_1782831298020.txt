@@ -1,0 +1,619 @@
+# AfuMail — Complete UI/UX Design Prompt
+
+## Mission
+
+Design **AfuMail**, a next-generation email application that feels radically modern, calm, and intelligent.
+
+This is **not another Gmail clone**.
+
+The product should establish its own identity with a clean, premium experience that can remain visually relevant for many years.
+
+The interface should feel invisible, allowing users to focus entirely on communication.
+
+---
+
+# Design Principles
+
+The design must feel:
+
+* Minimal
+* Silent
+* Elegant
+* Fast
+* Spacious
+* Premium
+* Professional
+* Intelligent
+* Calm
+* Timeless
+
+Avoid making the UI look playful or overly branded.
+
+No gradients everywhere.
+
+No oversized icons.
+
+No rounded cartoon buttons.
+
+No excessive shadows.
+
+No unnecessary borders.
+
+No noisy cards.
+
+Everything should breathe.
+
+---
+
+# Color System
+
+Primary colors
+
+* White
+* Soft Cream (#FAF8F5)
+* Light Gray
+* Charcoal
+* Black
+
+Accent colors only when necessary
+
+* Blue for actions
+* Green for success
+* Orange for warning
+* Red for destructive actions
+
+Color should communicate meaning, not decoration.
+
+---
+
+# Typography
+
+Use modern typography similar in quality to premium productivity software.
+
+Large readable headings.
+
+Medium-weight body text.
+
+Comfortable line spacing.
+
+Excellent readability.
+
+---
+
+# Spacing
+
+Everything should have generous spacing.
+
+Never crowd information.
+
+Every screen should feel open.
+
+Users should never feel overwhelmed.
+
+---
+
+# Motion
+
+Animations should be subtle.
+
+150–250ms transitions.
+
+Smooth fades.
+
+Natural slide transitions.
+
+Soft loading states.
+
+No flashy animations.
+
+---
+
+# Layout Philosophy
+
+The interface should disappear.
+
+Content should become the focus.
+
+The layout should feel like professional desktop software while remaining perfect on mobile.
+
+---
+
+# Mobile First
+
+Design for phones first.
+
+Then adapt naturally to tablets.
+
+Finally expand beautifully to desktop.
+
+Never simply stretch the mobile interface.
+
+Desktop deserves its own optimized layout.
+
+---
+
+# Navigation
+
+Bottom navigation should contain
+
+• Inbox
+
+• Search
+
+• Compose
+
+• Calendar
+
+• Settings
+
+Compose should be centered and slightly emphasized.
+
+---
+
+# Desktop Navigation
+
+Desktop should use a left navigation rail.
+
+Sections
+
+Inbox
+
+Starred
+
+Sent
+
+Drafts
+
+Scheduled
+
+Archive
+
+Spam
+
+Trash
+
+Calendar
+
+Contacts
+
+Settings
+
+Pinned folders
+
+Custom labels
+
+Everything should collapse smoothly.
+
+---
+
+# Login Screen
+
+Minimal.
+
+Large AfuMail logo.
+
+Welcome headline.
+
+Email field.
+
+Password field.
+
+Continue button.
+
+Forgot password.
+
+Create account.
+
+Continue with Google.
+
+Continue with Apple.
+
+Dark mode support.
+
+Nothing unnecessary.
+
+---
+
+# Home Screen
+
+The inbox is the heart of the application.
+
+Each email should show
+
+Sender
+
+Subject
+
+Preview
+
+Time
+
+Attachment indicator
+
+Importance indicator
+
+Unread badge
+
+Swipe gestures
+
+Archive
+
+Delete
+
+Snooze
+
+Pin
+
+Mark read
+
+Everything should feel instant.
+
+---
+
+# Smart Inbox
+
+Tabs
+
+Primary
+
+Work
+
+Personal
+
+Finance
+
+Shopping
+
+Travel
+
+Updates
+
+Social
+
+AI automatically categorizes emails.
+
+---
+
+# Search Experience
+
+Search should feel like AI.
+
+Users can search naturally.
+
+Examples
+
+emails from Sarah last month
+
+invoice from Acme
+
+flight confirmation
+
+meeting notes
+
+Search should understand intent.
+
+Show instant suggestions.
+
+Recent searches.
+
+Filters.
+
+Attachments.
+
+People.
+
+Dates.
+
+---
+
+# Compose Screen
+
+Minimal writing experience.
+
+Recipient
+
+Subject
+
+Body
+
+Formatting toolbar
+
+Attachments
+
+Schedule send
+
+Templates
+
+AI writing assistant
+
+Voice dictation
+
+Translate
+
+Grammar correction
+
+Nothing should interrupt writing.
+
+---
+
+# AI Panel
+
+Available everywhere.
+
+Can
+
+Summarize emails.
+
+Rewrite.
+
+Translate.
+
+Explain.
+
+Improve tone.
+
+Generate replies.
+
+Detect scams.
+
+Create follow-ups.
+
+Suggest subject lines.
+
+Never feel intrusive.
+
+---
+
+# Reading Emails
+
+Reading mode should be distraction-free.
+
+Comfortable typography.
+
+Adaptive images.
+
+Attachment previews.
+
+Quick actions.
+
+Reply.
+
+Reply all.
+
+Forward.
+
+Archive.
+
+Delete.
+
+Translate.
+
+AI summary.
+
+Everything accessible within one tap.
+
+---
+
+# Attachment Viewer
+
+Open PDFs.
+
+Images.
+
+Videos.
+
+Office documents.
+
+Audio.
+
+ZIP previews where possible.
+
+Users should rarely need external apps.
+
+---
+
+# Calendar
+
+Integrated.
+
+Clean monthly view.
+
+Daily agenda.
+
+Meeting invitations.
+
+Email-linked events.
+
+AI scheduling suggestions.
+
+---
+
+# Contacts
+
+Beautiful contact profiles.
+
+Avatar.
+
+Email addresses.
+
+Recent conversations.
+
+Organizations.
+
+Notes.
+
+Shared files.
+
+---
+
+# Notifications
+
+Smart.
+
+Only interrupt users for important emails.
+
+Digest mode.
+
+Quiet hours.
+
+Priority notifications.
+
+VIP contacts.
+
+---
+
+# Offline Mode
+
+Users should continue using the application without internet.
+
+Compose emails offline.
+
+Read downloaded emails.
+
+Search cached emails.
+
+Queue outgoing messages.
+
+Automatically synchronize when connectivity returns.
+
+Offline mode must feel native rather than limited.
+
+---
+
+# Settings
+
+Simple.
+
+Account.
+
+Appearance.
+
+Notifications.
+
+Privacy.
+
+Security.
+
+Storage.
+
+AI preferences.
+
+Connected accounts.
+
+Languages.
+
+Accessibility.
+
+About.
+
+Nothing hidden.
+
+---
+
+# Dark Mode
+
+True dark.
+
+Excellent contrast.
+
+No pure black text on bright white.
+
+No glowing colors.
+
+Maintain elegance.
+
+---
+
+# Accessibility
+
+Large touch targets.
+
+Keyboard shortcuts.
+
+Screen reader compatibility.
+
+High contrast.
+
+Dynamic font sizes.
+
+Voice navigation.
+
+---
+
+# Performance
+
+Every interaction should feel immediate.
+
+Lazy loading.
+
+Progressive loading.
+
+Offline cache.
+
+Fast startup.
+
+Low memory usage.
+
+Battery efficient.
+
+---
+
+# Empty States
+
+Beautiful illustrations.
+
+Helpful guidance.
+
+Encouraging messaging.
+
+Never empty white pages.
+
+---
+
+# Error States
+
+Friendly.
+
+Clear.
+
+Human.
+
+Offer recovery actions.
+
+Never expose technical errors.
+
+---
+
+# Security UX
+
+Biometric unlock.
+
+Passkeys.
+
+Two-factor authentication.
+
+Trusted devices.
+
+Session management.
+
+Security dashboard.
+
+Privacy controls.
+
+Users should always understand what is happening.
+
+---
+
+# Visual Identity
+
+AfuMail should become instantly recognizable without relying on heavy branding.
+
+The product should communicate trust through precision, simplicity, spacing, and consistency.
+
+Every screen should feel handcrafted.
+
+Avoid copying Gmail, Outlook, Apple Mail, or any other existing email client. Study modern productivity software for usability, but create an original visual language that becomes uniquely associated with AfuMail.
+
+## Final Design Goal
+
+Deliver a world-class email experience that feels premium from the first launch. Every interaction should reduce cognitive load, every screen should have a clear purpose, and every visual element should justify its existence. The result should be an email application that users enjoy opening every day because it is calm, fast, intelligent, and effortless to use.
