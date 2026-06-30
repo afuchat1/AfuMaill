@@ -298,10 +298,10 @@ export default function SettingsScreen() {
               onPress={() => { setPhoneInput(phoneNumber); setPhoneModal(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
               style={({ pressed }) => [styles.settingRow, { backgroundColor: pressed ? colors.secondary : "transparent" }]}
             >
-              <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
-                <Feather name="phone" size={15} color={colors.foreground} />
+              <View style={styles.iconWrap}>
+                <Feather name="phone" size={21} color={colors.foreground} />
               </View>
-              <Text style={[styles.rowLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Recovery Phone</Text>
+              <Text style={[styles.rowLabel, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Recovery Phone</Text>
               <View style={styles.navRight}>
                 <Text style={[styles.infoText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{phoneNumber || "Not set"}</Text>
                 <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
@@ -312,10 +312,10 @@ export default function SettingsScreen() {
               onPress={() => { setRecoveryInput(recoveryEmail.replace("@afuchat.com", "")); setRecoveryError(""); setRecoveryModal(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
               style={({ pressed }) => [styles.settingRow, { backgroundColor: pressed ? colors.secondary : "transparent" }]}
             >
-              <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
-                <Feather name="mail" size={15} color={colors.foreground} />
+              <View style={styles.iconWrap}>
+                <Feather name="mail" size={21} color={colors.foreground} />
               </View>
-              <Text style={[styles.rowLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Recovery Email</Text>
+              <Text style={[styles.rowLabel, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Recovery Email</Text>
               <View style={styles.navRight}>
                 <Text style={[styles.infoText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{recoveryEmail || "Not set"}</Text>
                 <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
@@ -340,10 +340,10 @@ export default function SettingsScreen() {
                       { backgroundColor: row.type === "nav" && pressed ? colors.secondary : "transparent" },
                     ]}
                   >
-                    <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
-                      <Feather name={row.icon as any} size={15} color={colors.foreground} />
+                    <View style={styles.iconWrap}>
+                      <Feather name={row.icon as any} size={21} color={colors.foreground} />
                     </View>
-                    <Text style={[styles.rowLabel, { color: colors.foreground, fontFamily: row.type === "nav" ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
+                    <Text style={[styles.rowLabel, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
                       {row.label}
                     </Text>
                     <View style={styles.rowRight}>
