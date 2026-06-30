@@ -1,6 +1,5 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
@@ -23,69 +22,87 @@ import { useEmails } from "@/context/EmailContext";
 import { useColors } from "@/hooks/useColors";
 
 const INBOX_TABS: { label: string; category: EmailCategory | "all" }[] = [
-  { label: "Primary", category: "primary" },
-  { label: "Work", category: "work" },
+  { label: "Primary",  category: "primary" },
+  { label: "Work",     category: "work" },
   { label: "Personal", category: "personal" },
-  { label: "Finance", category: "finance" },
+  { label: "Finance",  category: "finance" },
   { label: "Shopping", category: "shopping" },
-  { label: "Travel", category: "travel" },
-  { label: "Updates", category: "updates" },
-  { label: "Social", category: "social" },
+  { label: "Travel",   category: "travel" },
+  { label: "Updates",  category: "updates" },
+  { label: "Social",   category: "social" },
 ];
 
-const SIDE_FOLDERS: { label: string; folder: EmailFolder; icon: string }[] = [
-  { label: "Inbox", folder: "inbox", icon: "inbox" },
-  { label: "Starred", folder: "starred", icon: "star" },
-  { label: "Sent", folder: "sent", icon: "send" },
-  { label: "Drafts", folder: "drafts", icon: "file-text" },
-  { label: "Archive", folder: "archived", icon: "archive" },
-  { label: "Spam", folder: "spam", icon: "alert-triangle" },
-  { label: "Trash", folder: "trash", icon: "trash-2" },
-];
+const FOLDER_LABELS: Partial<Record<EmailFolder, string>> = {
+  inbox:    "Inbox",
+  starred:  "Starred",
+  sent:     "Sent",
+  drafts:   "Drafts",
+  archived: "Archive",
+  spam:     "Spam",
+  trash:    "Trash",
+};
 
 interface Props {
-  onSidebarChange?: (open: boolean) => void;
+  currentFolder: EmailFolder;
   onGoToSettings?: () => void;
   onTabsScrollStateChange?: (isScrolling: boolean) => void;
-  registerOpenDrawer?: (fn: () => void) => void;
   onTabsAtEndChange?: (atEnd: boolean) => void;
+  onOpenSidebar?: () => void;
 }
 
-export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrollStateChange, registerOpenDrawer, onTabsAtEndChange }: Props) {
+export default function InboxPage({
+  currentFolder,
+  onGoToSettings,
+  onTabsScrollStateChange,
+  onTabsAtEndChange,
+  onOpenSidebar,
+}: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { emails, getEmailsByFolder, getEmailsByCategory, unreadCount, isLoading, refreshEmails } = useEmails();
+  const { getEmailsByFolder, getEmailsByCategory, unreadCount, refreshEmails } = useEmails();
   const isWeb = Platform.OS === "web";
   const topPad = isWeb ? 67 : insets.top;
 
   const [activeTab, setActiveTab] = useState<EmailCategory | "all">("primary");
-  const [currentFolder, setCurrentFolder] = useState<EmailFolder>("inbox");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const tabScrollEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Tabs scroll tracking — for "scroll tabs first, then switch page" behaviour
+  // Reset tab selection when entering inbox folder
+  useEffect(() => {
+    if (currentFolder === "inbox") setActiveTab("primary");
+  }, [currentFolder]);
+
+  // ── Tabs scroll tracking ──────────────────────────────────────────────────
   const tabsScrollViewRef = useRef<ScrollView>(null);
-  const tabsScrollXRef = useRef(0);
-  const tabsMaxScrollRef = useRef(0); // contentWidth - visibleWidth
-  const tabsAtEndRef = useRef(false);
+  const tabsScrollXRef    = useRef(0);
+  const tabsMaxScrollRef  = useRef(0);
+  const tabsAtEndRef      = useRef(false);
+
   const onTabsAtEndChangeRef = useRef(onTabsAtEndChange);
   useEffect(() => { onTabsAtEndChangeRef.current = onTabsAtEndChange; }, [onTabsAtEndChange]);
 
-  // PanResponder on the root View: intercepts horizontal-left swipes while
-  // tabs still have room to scroll, and scrolls them instead of letting the
-  // parent pager grab the gesture.
+  const onOpenSidebarRef = useRef(onOpenSidebar);
+  useEffect(() => { onOpenSidebarRef.current = onOpenSidebar; }, [onOpenSidebar]);
+
+  // ── PanResponder: intercepts swipes while pager is locked (!tabsAtEnd) ────
+  // Left  → scroll category tabs further right
+  // Right → open sidebar page
   const rootPan = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gs) =>
-        !tabsAtEndRef.current &&
-        gs.dx < -22 &&
-        Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5,
+      onMoveShouldSetPanResponder: (_, gs) => {
+        if (tabsAtEndRef.current) return false; // pager handles it when unlocked
+        return Math.abs(gs.dx) > 22 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5;
+      },
       onPanResponderGrant: (_, gs) => {
-        const amount = Math.max(Math.abs(gs.dx), 60) + 80;
-        const newX = Math.min(tabsScrollXRef.current + amount, tabsMaxScrollRef.current);
-        tabsScrollViewRef.current?.scrollTo({ x: newX, animated: true });
+        if (gs.dx < 0) {
+          const amount = Math.max(Math.abs(gs.dx), 60) + 80;
+          const newX = Math.min(tabsScrollXRef.current + amount, tabsMaxScrollRef.current);
+          tabsScrollViewRef.current?.scrollTo({ x: newX, animated: true });
+        } else {
+          onOpenSidebarRef.current?.();
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
       },
     })
   ).current;
@@ -98,21 +115,6 @@ export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrol
       tabScrollEndTimer.current = setTimeout(() => onTabsScrollStateChange?.(false), 80);
     }
   }, [onTabsScrollStateChange]);
-
-  const openSidebar = useCallback(() => {
-    setSidebarOpen(true);
-    onSidebarChange?.(true);
-  }, [onSidebarChange]);
-
-  const closeSidebar = useCallback(() => {
-    setSidebarOpen(false);
-    onSidebarChange?.(false);
-  }, [onSidebarChange]);
-
-  // Register open function so parent can trigger drawer via edge swipe
-  useEffect(() => {
-    registerOpenDrawer?.(openSidebar);
-  }, [registerOpenDrawer, openSidebar]);
 
   const displayedEmails =
     currentFolder === "inbox"
@@ -127,77 +129,15 @@ export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrol
     setRefreshing(false);
   }
 
-  function openFolder(folder: EmailFolder) {
-    setCurrentFolder(folder);
-    closeSidebar();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }
-
-  const folderLabel =
-    currentFolder === "inbox"
-      ? "Inbox"
-      : SIDE_FOLDERS.find((f) => f.folder === currentFolder)?.label ?? "Inbox";
+  const folderLabel = FOLDER_LABELS[currentFolder] ?? "Inbox";
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]} {...rootPan.panHandlers}>
-      {/* Sidebar overlay */}
-      {sidebarOpen && (
-        <Pressable style={styles.overlay} onPress={closeSidebar} />
-      )}
-
-      {/* Sidebar drawer */}
-      {sidebarOpen && (
-        <View
-          style={[
-            styles.sidebar,
-            {
-              backgroundColor: colors.card,
-              borderRightColor: colors.border,
-              paddingTop: topPad + 8,
-            },
-          ]}
-        >
-          <View style={styles.sidebarHeader}>
-            <Text style={[styles.sidebarBrand, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-              AfuMail
-            </Text>
-            <Pressable onPress={closeSidebar}>
-              <Feather name="x" size={20} color={colors.foreground} />
-            </Pressable>
-          </View>
-          {SIDE_FOLDERS.map((f) => {
-            const active = currentFolder === f.folder;
-            return (
-              <Pressable
-                key={f.folder}
-                onPress={() => openFolder(f.folder)}
-                style={[styles.sidebarRow, active && { backgroundColor: colors.secondary }]}
-              >
-                <Feather name={f.icon as any} size={21} color={active ? colors.accent : colors.foreground} />
-                <Text
-                  style={[
-                    styles.sidebarLabel,
-                    { color: active ? colors.foreground : colors.foreground, fontFamily: "Inter_700Bold" },
-                  ]}
-                >
-                  {f.label}
-                </Text>
-                {f.folder === "inbox" && unreadCount > 0 && (
-                  <View style={[styles.badge, { backgroundColor: colors.accent }]}>
-                    <Text style={[styles.badgeText, { fontFamily: "Inter_600SemiBold" }]}>{unreadCount}</Text>
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
-
-      {/* Main content */}
       <View style={[styles.main, { paddingTop: topPad }]}>
-        {/* Top header */}
+
+        {/* ── Header ── */}
         <View style={[styles.topHeader, { borderBottomColor: colors.border }]}>
-          <Pressable onPress={openSidebar} hitSlop={8}>
+          <Pressable onPress={() => onOpenSidebarRef.current?.()} hitSlop={8}>
             <View style={styles.hamburger}>
               <View style={[styles.hamburgerLine, { backgroundColor: colors.foreground }]} />
               <View style={[styles.hamburgerLine, { width: 18, backgroundColor: colors.foreground }]} />
@@ -221,7 +161,7 @@ export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrol
           </View>
         </View>
 
-        {/* Smart tabs (only for inbox) */}
+        {/* ── Category tabs (inbox only) ── */}
         {currentFolder === "inbox" && (
           <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
             <ScrollView
@@ -234,9 +174,11 @@ export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrol
               scrollEventThrottle={16}
               onScroll={(e) => {
                 const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-                tabsScrollXRef.current = contentOffset.x;
+                tabsScrollXRef.current   = contentOffset.x;
                 tabsMaxScrollRef.current = Math.max(0, contentSize.width - layoutMeasurement.width);
-                const atEnd = tabsMaxScrollRef.current <= 0 || contentOffset.x >= tabsMaxScrollRef.current - 4;
+                const atEnd =
+                  tabsMaxScrollRef.current <= 0 ||
+                  contentOffset.x >= tabsMaxScrollRef.current - 4;
                 if (atEnd !== tabsAtEndRef.current) {
                   tabsAtEndRef.current = atEnd;
                   onTabsAtEndChangeRef.current?.(atEnd);
@@ -257,20 +199,42 @@ export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrol
                 return (
                   <Pressable
                     key={tab.category}
-                    onPress={() => { setActiveTab(tab.category); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-                    style={[styles.tab, active && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
+                    onPress={() => {
+                      setActiveTab(tab.category);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                    style={[
+                      styles.tab,
+                      active && { borderBottomColor: colors.primary, borderBottomWidth: 2 },
+                    ]}
                   >
                     <Text
                       style={[
                         styles.tabText,
-                        { color: active ? colors.foreground : colors.mutedForeground, fontFamily: active ? "Inter_700Bold" : "Inter_400Regular" },
+                        {
+                          color: active ? colors.foreground : colors.mutedForeground,
+                          fontFamily: active ? "Inter_700Bold" : "Inter_400Regular",
+                        },
                       ]}
                     >
                       {tab.label}
                     </Text>
                     {unread > 0 && (
-                      <View style={[styles.tabBadge, { backgroundColor: active ? colors.primary : colors.muted }]}>
-                        <Text style={[styles.tabBadgeText, { color: active ? colors.primaryForeground : colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>
+                      <View
+                        style={[
+                          styles.tabBadge,
+                          { backgroundColor: active ? colors.primary : colors.muted },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.tabBadgeText,
+                            {
+                              color: active ? colors.primaryForeground : colors.mutedForeground,
+                              fontFamily: "Inter_600SemiBold",
+                            },
+                          ]}
+                        >
                           {unread}
                         </Text>
                       </View>
@@ -282,7 +246,7 @@ export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrol
           </View>
         )}
 
-        {/* Email list */}
+        {/* ── Email list ── */}
         {displayedEmails.length === 0 ? (
           <View style={styles.emptyState}>
             <Feather name="inbox" size={44} color={colors.mutedForeground} />
@@ -299,7 +263,13 @@ export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrol
             keyExtractor={(e) => e.id}
             renderItem={({ item }) => <EmailRow email={item} />}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={colors.accent}
+              />
+            }
             contentContainerStyle={{ paddingBottom: 20 }}
           />
         )}
@@ -310,77 +280,39 @@ export default function InboxPage({ onSidebarChange, onGoToSettings, onTabsScrol
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)", zIndex: 10 },
-  sidebar: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 280,
-    zIndex: 20,
-    borderRightWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 16,
-    paddingBottom: 32,
-  },
-  sidebarHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingBottom: 20,
-    paddingHorizontal: 4,
-  },
-  sidebarBrand: { fontSize: 22, letterSpacing: -0.5 },
-  sidebarRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 13,
-    borderRadius: 10,
-    gap: 14,
-    marginBottom: 2,
-  },
-  sidebarLabel: { flex: 1, fontSize: 16 },
-  badge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10, minWidth: 22, alignItems: "center" },
-  badgeText: { fontSize: 11, color: "#FFFFFF" },
   main: { flex: 1 },
   topHeader: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
+    paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  hamburger: { gap: 5, width: 22, position: "relative" },
-  hamburgerLine: { height: 2, width: 22, borderRadius: 1 },
-  menuBadge: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: "#FAF8F5",
-  },
-  folderTitle: { flex: 1, fontSize: 22, letterSpacing: -0.5 },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
+  hamburger: { width: 28, height: 22, justifyContent: "space-between", paddingVertical: 1 },
+  hamburgerLine: { height: 2, width: 24, borderRadius: 2 },
+  menuBadge: { position: "absolute", top: 0, right: 0, width: 8, height: 8, borderRadius: 4 },
+  folderTitle: { fontSize: 20, letterSpacing: -0.3 },
+  headerRight: { width: 40, alignItems: "flex-end" },
   tabsContainer: { borderBottomWidth: StyleSheet.hairlineWidth },
-  tabsList: { paddingHorizontal: 16, gap: 0 },
+  tabsList: { paddingHorizontal: 12, gap: 4 },
   tab: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    marginRight: 20,
     gap: 6,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
   },
   tabText: { fontSize: 14 },
-  tabBadge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8, minWidth: 18, alignItems: "center" },
+  tabBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+    minWidth: 18,
+    alignItems: "center",
+  },
   tabBadgeText: { fontSize: 10 },
-  emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingBottom: 100 },
-  emptyTitle: { fontSize: 20, marginTop: 8 },
-  emptySubtitle: { fontSize: 15 },
+  emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
+  emptyTitle: { fontSize: 18 },
+  emptySubtitle: { fontSize: 14 },
 });

@@ -4,7 +4,6 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -17,6 +16,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import InboxPage from "@/components/pages/InboxPage";
+import SidebarPage from "@/components/pages/SidebarPage";
+import type { EmailFolder } from "@/context/EmailContext";
 import { useEmails } from "@/context/EmailContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -24,12 +25,13 @@ import CalendarScreen from "./calendar";
 import SearchScreen from "./search";
 import SettingsScreen from "./settings";
 
+// Page 0 = Sidebar, 1 = Inbox, 2 = Search, 3 = Calendar, 4 = Settings
 const NAV = [
-  { key: "inbox",    label: "Mail",     icon: "inbox",    page: 0 },
-  { key: "search",   label: "Search",   icon: "search",   page: 1 },
+  { key: "inbox",    label: "Mail",     icon: "inbox",    page: 1 },
+  { key: "search",   label: "Search",   icon: "search",   page: 2 },
   { key: "compose",  label: "Compose",  icon: "edit-2",   page: -1 },
-  { key: "calendar", label: "Calendar", icon: "calendar", page: 2 },
-  { key: "settings", label: "Settings", icon: "settings", page: 3 },
+  { key: "calendar", label: "Calendar", icon: "calendar", page: 3 },
+  { key: "settings", label: "Settings", icon: "settings", page: 4 },
 ] as const;
 
 export default function MainScreen() {
@@ -41,11 +43,10 @@ export default function MainScreen() {
   const { unreadCount } = useEmails();
 
   const scrollRef = useRef<ScrollView>(null);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1); // start on inbox
+  const [currentFolder, setCurrentFolder] = useState<EmailFolder>("inbox");
   const [tabsScrolling, setTabsScrolling] = useState(false);
-  // Tracks whether inbox category tabs have been scrolled to their rightmost end.
-  // While false on inbox page, the pager is locked so left swipes scroll tabs instead.
+  // When false on inbox, pager is locked so left swipes scroll tabs instead.
   const [tabsAtEnd, setTabsAtEnd] = useState(false);
 
   const isIOS = Platform.OS === "ios";
@@ -53,24 +54,14 @@ export default function MainScreen() {
   const NAV_HEIGHT = isWeb ? 84 : 60 + insets.bottom;
   const pageHeight = height - NAV_HEIGHT;
 
-  // Ref to call InboxPage's openSidebar imperatively
-  const drawerOpenFn = useRef<(() => void) | null>(null);
-  const currentPageRef = useRef(currentPage);
-  useEffect(() => { currentPageRef.current = currentPage; }, [currentPage]);
-
-  // Left-edge swipe → open drawer (only works on inbox page)
-  const edgePan = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gs) =>
-        currentPageRef.current === 0 &&
-        gs.dx > 20 &&
-        gs.dx > Math.abs(gs.dy) * 1.5,
-      onPanResponderGrant: () => {
-        drawerOpenFn.current?.();
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      },
-    })
-  ).current;
+  // Scroll to page 1 (inbox) on first render — avoids flashing sidebar
+  useEffect(() => {
+    const t = setTimeout(() => {
+      scrollRef.current?.scrollTo({ x: width, y: 0, animated: false });
+    }, 0);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function goToPage(index: number, animated = true) {
     scrollRef.current?.scrollTo({ x: index * width, animated });
@@ -79,20 +70,16 @@ export default function MainScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      {/* ── Left-edge drawer swipe zone (inbox page only) ── */}
-      {currentPage === 0 && !sidebarOpen && (
-        <View
-          style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 28, zIndex: 100 }}
-          {...edgePan.panHandlers}
-        />
-      )}
 
       {/* ── Horizontal pager ── */}
       <ScrollView
         ref={scrollRef}
         horizontal
         pagingEnabled
-        scrollEnabled={!sidebarOpen && !tabsScrolling && (tabsAtEnd || currentPage !== 0)}
+        // Pager is locked while on inbox with tabs not yet scrolled to end.
+        // Left swipes are handled by InboxPage's PanResponder (scroll tabs or open sidebar).
+        // Programmatic goToPage() calls always work regardless of scrollEnabled.
+        scrollEnabled={!tabsScrolling && (tabsAtEnd || currentPage !== 1)}
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={32}
         decelerationRate="fast"
@@ -103,28 +90,40 @@ export default function MainScreen() {
         }}
         style={{ flex: 1 }}
       >
-        {/* Page 0 — Inbox */}
+        {/* Page 0 — Sidebar */}
         <View style={{ width, height: pageHeight }}>
-          <InboxPage
-            onSidebarChange={setSidebarOpen}
-            onGoToSettings={() => goToPage(3)}
-            onTabsScrollStateChange={setTabsScrolling}
-            registerOpenDrawer={(fn) => { drawerOpenFn.current = fn; }}
-            onTabsAtEndChange={setTabsAtEnd}
+          <SidebarPage
+            currentFolder={currentFolder}
+            onSelectFolder={(folder) => {
+              setCurrentFolder(folder);
+              goToPage(1);
+            }}
+            onClose={() => goToPage(1)}
           />
         </View>
 
-        {/* Page 1 — Search */}
+        {/* Page 1 — Inbox */}
+        <View style={{ width, height: pageHeight }}>
+          <InboxPage
+            currentFolder={currentFolder}
+            onGoToSettings={() => goToPage(4)}
+            onTabsScrollStateChange={setTabsScrolling}
+            onTabsAtEndChange={setTabsAtEnd}
+            onOpenSidebar={() => goToPage(0)}
+          />
+        </View>
+
+        {/* Page 2 — Search */}
         <View style={{ width, height: pageHeight }}>
           <SearchScreen />
         </View>
 
-        {/* Page 2 — Calendar */}
+        {/* Page 3 — Calendar */}
         <View style={{ width, height: pageHeight }}>
           <CalendarScreen />
         </View>
 
-        {/* Page 3 — Settings */}
+        {/* Page 4 — Settings */}
         <View style={{ width, height: pageHeight }}>
           <SettingsScreen />
         </View>
