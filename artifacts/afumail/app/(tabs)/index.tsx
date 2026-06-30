@@ -54,6 +54,7 @@ export default function MainScreen() {
   const [currentPage, setCurrentPage] = useState(1);
   const [currentFolder, setCurrentFolder] = useState<EmailFolder>("inbox");
   const [tabsScrolling, setTabsScrolling] = useState(false);
+  const [tabsAtStart, setTabsAtStart] = useState(true);
   const [tabsAtEnd, setTabsAtEnd] = useState(false);
 
   const isIOS = Platform.OS === "ios";
@@ -92,7 +93,14 @@ export default function MainScreen() {
         ref={scrollRef}
         horizontal
         pagingEnabled
-        scrollEnabled={!tabsScrolling && (tabsAtEnd || currentPage !== 1)}
+        scrollEnabled={
+          !tabsScrolling && (
+            currentPage !== 1 ||        // not inbox → always scrollable
+            (tabsAtStart && tabsAtEnd) || // tabs fit on screen → always scrollable
+            tabsAtStart ||              // at leftmost → right-swipe opens sidebar
+            tabsAtEnd                   // at rightmost → left-swipe opens search
+          )
+        }
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={16}
         decelerationRate="fast"
@@ -120,6 +128,7 @@ export default function MainScreen() {
             currentFolder={currentFolder}
             onGoToSettings={() => goToPage(4)}
             onTabsScrollStateChange={setTabsScrolling}
+            onTabsAtStartChange={setTabsAtStart}
             onTabsAtEndChange={setTabsAtEnd}
             onOpenSidebar={() => goToPage(0)}
           />

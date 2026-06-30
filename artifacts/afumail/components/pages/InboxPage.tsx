@@ -45,6 +45,7 @@ interface Props {
   currentFolder: EmailFolder;
   onGoToSettings?: () => void;
   onTabsScrollStateChange?: (isScrolling: boolean) => void;
+  onTabsAtStartChange?: (atStart: boolean) => void;
   onTabsAtEndChange?: (atEnd: boolean) => void;
   onOpenSidebar?: () => void;
 }
@@ -53,6 +54,7 @@ export default function InboxPage({
   currentFolder,
   onGoToSettings,
   onTabsScrollStateChange,
+  onTabsAtStartChange,
   onTabsAtEndChange,
   onOpenSidebar,
 }: Props) {
@@ -77,9 +79,19 @@ export default function InboxPage({
   const tabsScrollXRef    = useRef(0);
   const tabsMaxScrollRef  = useRef(0);
   const tabsAtEndRef      = useRef(false);
+  const tabsAtStartRef    = useRef(true); // starts at leftmost position
 
-  const onTabsAtEndChangeRef = useRef(onTabsAtEndChange);
-  useEffect(() => { onTabsAtEndChangeRef.current = onTabsAtEndChange; }, [onTabsAtEndChange]);
+  const onTabsAtEndChangeRef   = useRef(onTabsAtEndChange);
+  const onTabsAtStartChangeRef = useRef(onTabsAtStartChange);
+  useEffect(() => { onTabsAtEndChangeRef.current   = onTabsAtEndChange;   }, [onTabsAtEndChange]);
+  useEffect(() => { onTabsAtStartChangeRef.current = onTabsAtStartChange; }, [onTabsAtStartChange]);
+
+  // Report initial positions on mount
+  useEffect(() => {
+    onTabsAtStartChangeRef.current?.(true);
+    onTabsAtEndChangeRef.current?.(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onOpenSidebarRef = useRef(onOpenSidebar);
   useEffect(() => { onOpenSidebarRef.current = onOpenSidebar; }, [onOpenSidebar]);
@@ -153,12 +165,19 @@ export default function InboxPage({
                 const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
                 tabsScrollXRef.current   = contentOffset.x;
                 tabsMaxScrollRef.current = Math.max(0, contentSize.width - layoutMeasurement.width);
+
                 const atEnd =
                   tabsMaxScrollRef.current <= 0 ||
                   contentOffset.x >= tabsMaxScrollRef.current - 4;
+                const atStart = contentOffset.x <= 4;
+
                 if (atEnd !== tabsAtEndRef.current) {
                   tabsAtEndRef.current = atEnd;
                   onTabsAtEndChangeRef.current?.(atEnd);
+                }
+                if (atStart !== tabsAtStartRef.current) {
+                  tabsAtStartRef.current = atStart;
+                  onTabsAtStartChangeRef.current?.(atStart);
                 }
               }}
               onScrollBeginDrag={() => notifyTabsScrolling(true)}
