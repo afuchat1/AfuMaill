@@ -1,36 +1,43 @@
 import { router } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-  Easing,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withTiming,
+  withSpring,
 } from "react-native-reanimated";
 
-const DURATION = 300;
-const EASE = Easing.out(Easing.cubic);
+/**
+ * Spring config that matches the main drawer / email-detail panel in index.tsx.
+ * Using withSpring instead of withTiming gives the same physics-based feel as
+ * the sidebar swipe and the email panel overlay.
+ */
+const SPRING = { damping: 28, stiffness: 300, mass: 0.9 };
+
+/**
+ * Drives BOTH the entrance (slide in from the right on mount) and the exit
+ * (slide out to the right — via swipe-to-dismiss OR a programmatic goBack
+ * call) with the exact same spring curve used by the sidebar drawer and the
+ * email detail panel, on every platform.
+ *
+ * Screens should call the `goBack` function handed to them instead of
+ * `router.back()` directly so button-tap exits animate identically to swipe
+ * exits.
+ */
 
 interface Props {
   children: (goBack: () => void) => React.ReactNode;
 }
 
-/**
- * Drives BOTH the entrance (slide in from the right on mount) and the exit
- * (slide out to the right — via swipe-to-dismiss OR a programmatic goBack
- * call) with the exact same timing/easing curve, on every platform
- * (including web, where native stack gestures don't apply). Screens should
- * call the `goBack` function handed to them instead of `router.back()`
- * directly so button-tap exits animate identically to swipe exits.
- */
 export function SwipeBackView({ children }: Props) {
   const { width } = useWindowDimensions();
   const panX = useSharedValue(width);
+  const isClosing = useRef(false);
 
   useEffect(() => {
-    panX.value = withTiming(0, { duration: DURATION, easing: EASE });
+    panX.value = withSpring(0, SPRING);
   }, []);
 
   function finish() {
@@ -38,7 +45,9 @@ export function SwipeBackView({ children }: Props) {
   }
 
   function goBack() {
-    panX.value = withTiming(width, { duration: DURATION, easing: EASE }, (finished) => {
+    if (isClosing.current) return;
+    isClosing.current = true;
+    panX.value = withSpring(width, SPRING, (finished) => {
       if (finished) runOnJS(finish)();
     });
   }
@@ -46,17 +55,23 @@ export function SwipeBackView({ children }: Props) {
   const pan = Gesture.Pan()
     .activeOffsetX([8, Infinity])
     .failOffsetY([-14, 14])
+    .onBegin(() => {
+      isClosing.current = false;
+    })
     .onUpdate((e) => {
       panX.value = Math.max(0, e.translationX);
     })
     .onEnd((e) => {
-      const committed = e.translationX > width * 0.32 || e.velocityX > 500;
-      if (committed) {
-        panX.value = withTiming(width, { duration: DURATION, easing: EASE }, (finished) => {
+      const committed =
+        e.translationX > width * 0.32 || e.velocityX > 500;
+
+      if (committed && !isClosing.current) {
+        isClosing.current = true;
+        panX.value = withSpring(width, SPRING, (finished) => {
           if (finished) runOnJS(finish)();
         });
       } else {
-        panX.value = withTiming(0, { duration: DURATION, easing: EASE });
+        panX.value = withSpring(0, SPRING);
       }
     });
 
