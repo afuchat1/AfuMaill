@@ -38,9 +38,10 @@ function formatTime(timestamp: string): string {
 interface EmailRowProps {
   email: Email;
   currentFolder: EmailFolder;
+  onOpenEmail?: (id: string) => void;
 }
 
-export function EmailRow({ email, currentFolder }: EmailRowProps) {
+export function EmailRow({ email, currentFolder, onOpenEmail }: EmailRowProps) {
   const colors = useColors();
   const { markAsRead, toggleStar, archiveEmail, moveToFolder } = useEmails();
 
@@ -119,9 +120,13 @@ export function EmailRow({ email, currentFolder }: EmailRowProps) {
   }));
 
   function handlePress() {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     markAsRead(email.id);
-    router.push(`/email/${email.id}`);
+    if (onOpenEmail) {
+      onOpenEmail(email.id);
+    } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      router.push(`/email/${email.id}`);
+    }
   }
 
   function handleStar() {

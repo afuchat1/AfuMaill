@@ -48,6 +48,7 @@ interface Props {
   onTabsAtStartChange?: (atStart: boolean) => void;
   onTabsAtEndChange?: (atEnd: boolean) => void;
   onOpenSidebar?: () => void;
+  onOpenEmail?: (id: string) => void;
 }
 
 export default function InboxPage({
@@ -57,6 +58,7 @@ export default function InboxPage({
   onTabsAtStartChange,
   onTabsAtEndChange,
   onOpenSidebar,
+  onOpenEmail,
 }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -257,7 +259,7 @@ export default function InboxPage({
           <FlatList
             data={displayedEmails}
             keyExtractor={(e) => e.id}
-            renderItem={({ item }) => <EmailRow email={item} currentFolder={currentFolder} />}
+            renderItem={({ item }) => <EmailRow email={item} currentFolder={currentFolder} onOpenEmail={onOpenEmail} />}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl

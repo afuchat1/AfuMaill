@@ -13,14 +13,16 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import EmailDetailPanel from "@/components/EmailDetailPanel";
 import InboxPage from "@/components/pages/InboxPage";
 import SidebarPage from "@/components/pages/SidebarPage";
 import type { EmailFolder } from "@/context/EmailContext";
@@ -42,6 +44,9 @@ const NAV = [
 const INDICATOR_SPRING = { damping: 22, stiffness: 280, mass: 0.7 };
 const PAGE_TO_NAV_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 3, 4: 4 };
 
+// Same spring used for the drawer (pager pages)
+const DRAWER_SPRING = { damping: 28, stiffness: 300, mass: 0.9 };
+
 export default function MainScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -56,6 +61,63 @@ export default function MainScreen() {
   const [tabsScrolling, setTabsScrolling] = useState(false);
   const [tabsAtStart, setTabsAtStart] = useState(true);
   const [tabsAtEnd, setTabsAtEnd] = useState(false);
+
+  // ── Email detail drawer ──────────────────────────────────────────────────
+  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
+  const [mountedEmailId,  setMountedEmailId]  = useState<string | null>(null); // stays mounted during spring-out
+
+  // panelX: email panel position (width = off-screen right, 0 = fully open)
+  // bgX:    main pager position (0 = normal, -width = fully pushed left)
+  // They track at 1:1 ratio — exactly like two pages in the horizontal pager.
+  const panelX = useSharedValue(width);
+  const bgX    = useSharedValue(0);
+
+  function openEmail(id: string) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setMountedEmailId(id);
+    setSelectedEmailId(id);
+    panelX.value = width; // ensure starts off-screen
+    bgX.value    = 0;
+    panelX.value = withSpring(0, DRAWER_SPRING);
+    bgX.value    = withSpring(-width, DRAWER_SPRING);
+  }
+
+  function closeEmail() {
+    setSelectedEmailId(null);
+    panelX.value = withSpring(width, DRAWER_SPRING, () => {
+      runOnJS(setMountedEmailId)(null);
+    });
+    bgX.value = withSpring(0, DRAWER_SPRING);
+  }
+
+  // Pan gesture on the email panel — mirrors the pager swipe-back exactly
+  const isClosing = useRef(false);
+
+  const emailPan = Gesture.Pan()
+    .activeOffsetX([8, Infinity])
+    .failOffsetY([-14, 14])
+    .onBegin(() => { isClosing.current = false; })
+    .onUpdate((e) => {
+      const x = Math.max(0, e.translationX);
+      panelX.value = x;
+      bgX.value    = x - width; // keeps 1:1 ratio
+    })
+    .onEnd((e) => {
+      const committed =
+        e.translationX > width * 0.32 || e.velocityX > 500;
+
+      if (committed && !isClosing.current) {
+        isClosing.current = true;
+        panelX.value = withSpring(width, DRAWER_SPRING, () => {
+          runOnJS(setMountedEmailId)(null);
+        });
+        bgX.value = withSpring(0, DRAWER_SPRING);
+        runOnJS(setSelectedEmailId)(null);
+      } else {
+        panelX.value = withSpring(0, DRAWER_SPRING);
+        bgX.value    = withSpring(-width, DRAWER_SPRING);
+      }
+    });
 
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
@@ -87,157 +149,166 @@ export default function MainScreen() {
     transform: [{ translateX: indicatorX.value - 12 }],
   }));
 
+  // Background pager animates left as email slides in — 1:1 drawer ratio
+  const bgTransformStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: bgX.value }],
+  }));
+
+  // Email panel slides in from the right
+  const panelStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: panelX.value }],
+  }));
+
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        scrollEnabled={
-          !tabsScrolling && (
-            currentPage !== 1 ||        // not inbox → always scrollable
-            (tabsAtStart && tabsAtEnd) || // tabs fit on screen → always scrollable
-            tabsAtStart ||              // at leftmost → right-swipe opens sidebar
-            tabsAtEnd                   // at rightmost → left-swipe opens search
-          )
-        }
-        showsHorizontalScrollIndicator={false}
-        scrollEventThrottle={16}
-        decelerationRate="fast"
-        bounces={false}
-        onMomentumScrollEnd={(e) => {
-          const x = e.nativeEvent.contentOffset.x;
-          const page = Math.round(x / width);
-          setCurrentPage(page);
-        }}
-        style={{ flex: 1 }}
-      >
-        <View style={{ width, height: pageHeight }}>
-          <SidebarPage
-            currentFolder={currentFolder}
-            onSelectFolder={(folder) => {
-              setCurrentFolder(folder);
-              goToPage(1);
-            }}
-            onClose={() => goToPage(1)}
-          />
-        </View>
+      {/* ── Main background (pager + nav bar) — moves left as email opens ── */}
+      <Animated.View style={[{ flex: 1 }, bgTransformStyle]}>
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          scrollEnabled={
+            !tabsScrolling && (
+              currentPage !== 1 ||
+              (tabsAtStart && tabsAtEnd) ||
+              tabsAtStart ||
+              tabsAtEnd
+            )
+          }
+          showsHorizontalScrollIndicator={false}
+          scrollEventThrottle={16}
+          decelerationRate="fast"
+          bounces={false}
+          onMomentumScrollEnd={(e) => {
+            const x = e.nativeEvent.contentOffset.x;
+            const page = Math.round(x / width);
+            setCurrentPage(page);
+          }}
+          style={{ flex: 1, height: pageHeight }}
+        >
+          <View style={{ width, height: pageHeight }}>
+            <SidebarPage
+              currentFolder={currentFolder}
+              onSelectFolder={(folder) => { setCurrentFolder(folder); goToPage(1); }}
+              onClose={() => goToPage(1)}
+            />
+          </View>
+          <View style={{ width, height: pageHeight }}>
+            <InboxPage
+              currentFolder={currentFolder}
+              onGoToSettings={() => goToPage(4)}
+              onTabsScrollStateChange={setTabsScrolling}
+              onTabsAtStartChange={setTabsAtStart}
+              onTabsAtEndChange={setTabsAtEnd}
+              onOpenSidebar={() => goToPage(0)}
+              onOpenEmail={openEmail}
+            />
+          </View>
+          <View style={{ width, height: pageHeight }}>
+            <SearchScreen />
+          </View>
+          <View style={{ width, height: pageHeight }}>
+            <CalendarScreen />
+          </View>
+          <View style={{ width, height: pageHeight }}>
+            <SettingsScreen />
+          </View>
+        </ScrollView>
 
-        <View style={{ width, height: pageHeight }}>
-          <InboxPage
-            currentFolder={currentFolder}
-            onGoToSettings={() => goToPage(4)}
-            onTabsScrollStateChange={setTabsScrolling}
-            onTabsAtStartChange={setTabsAtStart}
-            onTabsAtEndChange={setTabsAtEnd}
-            onOpenSidebar={() => goToPage(0)}
-          />
-        </View>
+        {/* Bottom nav bar — slides with the pager */}
+        <View
+          style={[
+            styles.navBar,
+            {
+              height: NAV_HEIGHT,
+              borderTopColor: colors.border,
+              backgroundColor: isIOS ? "transparent" : colors.card,
+            },
+          ]}
+        >
+          {isIOS && (
+            <BlurView
+              intensity={95}
+              tint={isDark ? "dark" : "light"}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
+          <View style={[styles.navInner, { paddingBottom: insets.bottom }]}>
+            <Animated.View
+              style={[styles.indicator, { backgroundColor: colors.primary }, indicatorStyle]}
+              pointerEvents="none"
+            />
+            {NAV.map((item) => {
+              const isCompose = item.key === "compose";
+              const active = !isCompose && currentPage === item.page;
 
-        <View style={{ width, height: pageHeight }}>
-          <SearchScreen />
-        </View>
+              if (isCompose) {
+                return (
+                  <Pressable
+                    key="compose"
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      router.push("/email/compose");
+                    }}
+                    style={styles.navItem}
+                  >
+                    <View style={[styles.composeFab, { backgroundColor: colors.primary }]}>
+                      <Feather name="edit-2" size={18} color={colors.primaryForeground} />
+                    </View>
+                  </Pressable>
+                );
+              }
 
-        <View style={{ width, height: pageHeight }}>
-          <CalendarScreen />
-        </View>
-
-        <View style={{ width, height: pageHeight }}>
-          <SettingsScreen />
-        </View>
-      </ScrollView>
-
-      {/* Bottom nav bar */}
-      <View
-        style={[
-          styles.navBar,
-          {
-            height: NAV_HEIGHT,
-            borderTopColor: colors.border,
-            backgroundColor: isIOS ? "transparent" : colors.card,
-          },
-        ]}
-      >
-        {isIOS && (
-          <BlurView
-            intensity={95}
-            tint={isDark ? "dark" : "light"}
-            style={StyleSheet.absoluteFill}
-          />
-        )}
-
-        <View style={[styles.navInner, { paddingBottom: insets.bottom }]}>
-          {/* Sliding active indicator */}
-          <Animated.View
-            style={[
-              styles.indicator,
-              { backgroundColor: colors.primary },
-              indicatorStyle,
-            ]}
-            pointerEvents="none"
-          />
-
-          {NAV.map((item) => {
-            const isCompose = item.key === "compose";
-            const active = !isCompose && currentPage === item.page;
-
-            if (isCompose) {
               return (
                 <Pressable
-                  key="compose"
+                  key={item.key}
                   onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    router.push("/email/compose");
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    goToPage(item.page);
                   }}
                   style={styles.navItem}
                 >
-                  <View style={[styles.composeFab, { backgroundColor: colors.primary }]}>
-                    <Feather name="edit-2" size={18} color={colors.primaryForeground} />
+                  <View style={{ position: "relative" }}>
+                    <Feather
+                      name={item.icon as any}
+                      size={22}
+                      color={active ? colors.primary : colors.mutedForeground}
+                    />
+                    {item.key === "inbox" && unreadCount > 0 && (
+                      <View
+                        style={[styles.unreadDot, { backgroundColor: colors.accent, borderColor: colors.card }]}
+                      />
+                    )}
                   </View>
+                  <Text
+                    style={[
+                      styles.navLabel,
+                      {
+                        color: active ? colors.primary : colors.mutedForeground,
+                        fontFamily: active ? "Inter_700Bold" : "Inter_500Medium",
+                      },
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
                 </Pressable>
               );
-            }
-
-            return (
-              <Pressable
-                key={item.key}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  goToPage(item.page);
-                }}
-                style={styles.navItem}
-              >
-                <View style={{ position: "relative" }}>
-                  <Feather
-                    name={item.icon as any}
-                    size={22}
-                    color={active ? colors.primary : colors.mutedForeground}
-                  />
-                  {item.key === "inbox" && unreadCount > 0 && (
-                    <View
-                      style={[
-                        styles.unreadDot,
-                        { backgroundColor: colors.accent, borderColor: colors.card },
-                      ]}
-                    />
-                  )}
-                </View>
-                <Text
-                  style={[
-                    styles.navLabel,
-                    {
-                      color: active ? colors.primary : colors.mutedForeground,
-                      fontFamily: active ? "Inter_700Bold" : "Inter_500Medium",
-                    },
-                  ]}
-                >
-                  {item.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+            })}
+          </View>
         </View>
-      </View>
+      </Animated.View>
+
+      {/* ── Email detail overlay — slides in from the right at 1:1 ratio ── */}
+      {mountedEmailId && (
+        <GestureDetector gesture={emailPan}>
+          <Animated.View style={[StyleSheet.absoluteFill, panelStyle]}>
+            <EmailDetailPanel
+              emailId={mountedEmailId}
+              onClose={closeEmail}
+            />
+          </Animated.View>
+        </GestureDetector>
+      )}
     </View>
   );
 }
