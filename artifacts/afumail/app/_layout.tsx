@@ -56,8 +56,8 @@ function RootLayoutNav() {
         name="email/compose"
         options={{
           headerShown: false,
-          presentation: "modal",
-          animation: "slide_from_bottom",
+          animation: "none",
+          gestureEnabled: false,
         }}
       />
       <Stack.Screen name="settings" options={{ headerShown: false, animation: "none", gestureEnabled: false }} />

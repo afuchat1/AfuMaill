@@ -13,6 +13,7 @@ import {
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { SwipeBackView } from "@/components/SwipeBackView";
 import { useAuth } from "@/context/AuthContext";
 import { useEmails } from "@/context/EmailContext";
 import { useColors } from "@/hooks/useColors";
@@ -34,6 +35,7 @@ export default function ComposeScreen() {
   const [sent, setSent] = useState(false);
 
   const bodyRef = useRef<TextInput>(null);
+  const goBackRef = useRef<() => void>(() => router.back());
 
   useEffect(() => {
     // Only auto-insert signature for new emails (not replies/forwards that already have body)
@@ -57,11 +59,15 @@ export default function ComposeScreen() {
     setSent(true);
     setIsSending(false);
     setTimeout(() => {
-      router.back();
+      goBackRef.current();
     }, 800);
   }
 
   return (
+    <SwipeBackView>
+      {(goBack) => {
+        goBackRef.current = goBack;
+        return (
     <View style={[styles.root, { backgroundColor: colors.card }]}>
       {/* Header */}
       <View
@@ -74,7 +80,7 @@ export default function ComposeScreen() {
           },
         ]}
       >
-        <Pressable onPress={() => router.back()} hitSlop={8}>
+        <Pressable onPress={goBack} hitSlop={8}>
           <Feather name="x" size={22} color={colors.foreground} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
@@ -227,6 +233,9 @@ export default function ComposeScreen() {
         </Pressable>
       </View>
     </View>
+        );
+      }}
+    </SwipeBackView>
   );
 }
 
