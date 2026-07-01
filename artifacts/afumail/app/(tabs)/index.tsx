@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
+import { BlurView, type BlurViewProps } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -32,6 +32,8 @@ import { useColors } from "@/hooks/useColors";
 import CalendarScreen from "./calendar";
 import SearchScreen from "./search";
 import SettingsScreen from "./settings";
+
+const Blur = BlurView as unknown as React.ComponentType<{ intensity?: number; tint?: string; style?: object; children?: React.ReactNode }>;
 
 const NAV = [
   { key: "inbox",    label: "Mail",     icon: "inbox",    page: 1 },
@@ -227,7 +229,7 @@ export default function MainScreen() {
           ]}
         >
           {isIOS && (
-            <BlurView
+            <Blur
               intensity={95}
               tint={isDark ? "dark" : "light"}
               style={StyleSheet.absoluteFill}

@@ -1,9 +1,9 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { Image } from "expo-image";
 import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -224,7 +224,7 @@ export default function LoginScreen() {
             <Image
               source={require("../../assets/images/logo.png")}
               style={styles.logo}
-              contentFit="contain"
+              resizeMode="contain"
             />
             <Text style={[styles.brandName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
               AfuMail

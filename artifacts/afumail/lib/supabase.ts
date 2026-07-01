@@ -176,6 +176,58 @@ export async function getEmailStats(userId: string): Promise<{
   return { total: data.length, byFolder };
 }
 
+export interface CalendarEvent {
+  id: string;
+  owner_id: string;
+  title: string;
+  event_date: string;
+  event_time: string | null;
+  duration: string | null;
+  color: string;
+  note: string;
+  created_at: string;
+}
+
+export async function getCalendarEvents(
+  userId: string,
+  year: number,
+  month: number
+): Promise<CalendarEvent[]> {
+  const startDate = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  const endMonth = month === 11 ? 1 : month + 2;
+  const endYear = month === 11 ? year + 1 : year;
+  const endDate = `${endYear}-${String(endMonth).padStart(2, "0")}-01`;
+
+  const { data, error } = await supabase
+    .from("calendar_events")
+    .select("*")
+    .eq("owner_id", userId)
+    .gte("event_date", startDate)
+    .lt("event_date", endDate)
+    .order("event_date");
+
+  if (error || !data) return [];
+  return data as CalendarEvent[];
+}
+
+export async function createCalendarEvent(
+  input: Omit<CalendarEvent, "id" | "created_at">
+): Promise<CalendarEvent> {
+  const { data, error } = await supabase
+    .from("calendar_events")
+    .insert(input)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as CalendarEvent;
+}
+
+export async function deleteCalendarEvent(id: string): Promise<void> {
+  const { error } = await supabase.from("calendar_events").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
 export async function resetPasswordByRecoveryEmail(
   recoveryInput: string
 ): Promise<{ error?: string }> {

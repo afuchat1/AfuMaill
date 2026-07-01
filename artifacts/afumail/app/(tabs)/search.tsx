@@ -188,7 +188,7 @@ export default function SearchScreen() {
         <FlatList
           data={results}
           keyExtractor={(e) => e.id}
-          renderItem={({ item }) => <EmailRow email={item} />}
+          renderItem={({ item }) => <EmailRow email={item} currentFolder={item.folder as import("@/context/EmailContext").EmailFolder} />}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: 20 }}

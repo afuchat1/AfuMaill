@@ -18,6 +18,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { EmailProvider } from "@/context/EmailContext";
 
+const GestureRoot = GestureHandlerRootView as React.ComponentType<{ style?: object; children?: React.ReactNode }>;
+
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
@@ -85,7 +87,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <GestureHandlerRootView style={{ flex: 1 }}>
+          <GestureRoot style={{ flex: 1 }}>
             <KeyboardProvider>
               <AuthProvider>
                 <EmailProvider>
@@ -93,7 +95,7 @@ export default function RootLayout() {
                 </EmailProvider>
               </AuthProvider>
             </KeyboardProvider>
-          </GestureHandlerRootView>
+          </GestureRoot>
         </QueryClientProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
