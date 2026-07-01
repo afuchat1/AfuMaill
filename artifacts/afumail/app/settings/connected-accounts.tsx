@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "@/components/Avatar";
+import { SwipeBackView } from "@/components/SwipeBackView";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -14,6 +15,7 @@ export default function ConnectedAccountsScreen() {
   const { user } = useAuth();
 
   return (
+    <SwipeBackView>
     <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
@@ -54,6 +56,7 @@ export default function ConnectedAccountsScreen() {
         </View>
       </View>
     </View>
+    </SwipeBackView>
   );
 }
 

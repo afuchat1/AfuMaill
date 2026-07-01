@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
+import { SwipeBackView } from "@/components/SwipeBackView";
 import { useColors } from "@/hooks/useColors";
 import { getEmailStats } from "@/lib/supabase";
 
@@ -48,6 +49,7 @@ export default function StorageScreen() {
   const usedPct = stats ? Math.min((stats.total / totalLimit) * 100, 100) : 0;
 
   return (
+    <SwipeBackView>
     <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
@@ -127,6 +129,7 @@ export default function StorageScreen() {
         </ScrollView>
       )}
     </View>
+    </SwipeBackView>
   );
 }
 

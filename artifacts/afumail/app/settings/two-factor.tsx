@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { SwipeBackView } from "@/components/SwipeBackView";
 import { useColors } from "@/hooks/useColors";
 import { supabase } from "@/lib/supabase";
 
@@ -90,6 +91,7 @@ export default function TwoFactorScreen() {
   }
 
   return (
+    <SwipeBackView>
     <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
@@ -198,6 +200,7 @@ export default function TwoFactorScreen() {
         </ScrollView>
       )}
     </View>
+    </SwipeBackView>
   );
 }
 

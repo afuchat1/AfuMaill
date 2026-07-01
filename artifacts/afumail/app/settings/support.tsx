@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { SwipeBackView } from "@/components/SwipeBackView";
 import { useColors } from "@/hooks/useColors";
 
 const FAQ = [
@@ -53,6 +54,7 @@ export default function SupportScreen() {
   }
 
   return (
+    <SwipeBackView>
     <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
@@ -120,6 +122,7 @@ export default function SupportScreen() {
         </Pressable>
       </ScrollView>
     </View>
+    </SwipeBackView>
   );
 }
 

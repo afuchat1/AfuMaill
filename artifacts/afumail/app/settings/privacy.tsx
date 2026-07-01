@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { SwipeBackView } from "@/components/SwipeBackView";
 import { useColors } from "@/hooks/useColors";
 import { getPreferences, setPref } from "@/lib/preferences";
 
@@ -48,6 +49,7 @@ export default function PrivacyScreen() {
   ];
 
   return (
+    <SwipeBackView>
     <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
@@ -94,6 +96,7 @@ export default function PrivacyScreen() {
         </Text>
       </ScrollView>
     </View>
+    </SwipeBackView>
   );
 }
 

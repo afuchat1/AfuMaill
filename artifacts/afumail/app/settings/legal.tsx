@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { SwipeBackView } from "@/components/SwipeBackView";
 import { useColors } from "@/hooks/useColors";
 
 const TABS = ["Terms of Service", "Privacy Policy"] as const;
@@ -94,6 +95,7 @@ export default function LegalScreen() {
   );
 
   return (
+    <SwipeBackView>
     <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
@@ -133,6 +135,7 @@ export default function LegalScreen() {
         </Text>
       </ScrollView>
     </View>
+    </SwipeBackView>
   );
 }
 
