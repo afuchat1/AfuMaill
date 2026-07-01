@@ -48,7 +48,7 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack>
+    <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false, animation: "fade" }} />
       <Stack.Screen name="email/[id]" options={{ headerShown: false, animation: "slide_from_right", gestureEnabled: false }} />
@@ -60,6 +60,7 @@ function RootLayoutNav() {
           animation: "slide_from_bottom",
         }}
       />
+      <Stack.Screen name="settings" options={{ headerShown: false, animation: "slide_from_right", gestureEnabled: false }} />
     </Stack>
   );
 }
