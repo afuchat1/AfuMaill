@@ -16,9 +16,10 @@ export default function ConnectedAccountsScreen() {
 
   return (
     <SwipeBackView>
+      {(goBack) => (
     <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
+        <Pressable onPress={goBack} hitSlop={8} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </Pressable>
         <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
@@ -56,6 +57,7 @@ export default function ConnectedAccountsScreen() {
         </View>
       </View>
     </View>
+      )}
     </SwipeBackView>
   );
 }
