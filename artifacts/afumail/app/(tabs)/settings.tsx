@@ -5,7 +5,6 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Appearance,
   Platform,
   Pressable,
   ScrollView,
@@ -40,7 +39,6 @@ export default function SettingsScreen() {
     pushNotifications: true,
     priorityNotifications: true,
     biometricLock: false,
-    darkMode: false,
     readReceipts: true,
     externalImages: true,
   });
@@ -78,13 +76,6 @@ export default function SettingsScreen() {
     const next = !prefs[key] as any;
     setPrefs((p) => ({ ...p, [key]: next }));
     await setPref(key, next);
-    if (key === "darkMode") {
-      try {
-        if (typeof (Appearance as any).setColorScheme === "function") {
-          (Appearance as any).setColorScheme(next ? "dark" : "light");
-        }
-      } catch {}
-    }
   }
 
   function handleRowPress(label: string) {
@@ -181,7 +172,6 @@ export default function SettingsScreen() {
     {
       title: "Appearance",
       rows: [
-        { label: "Dark Mode", icon: "moon", type: "toggle" as const, toggleKey: "darkMode" as keyof Preferences },
         { label: "Font Size", icon: "type", type: "nav" as const, value: prefs.fontSize },
         { label: "Email Density", icon: "align-justify", type: "nav" as const, value: prefs.emailDensity },
       ],

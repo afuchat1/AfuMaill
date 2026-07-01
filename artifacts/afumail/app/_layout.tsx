@@ -9,7 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { router, Stack, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -25,6 +25,7 @@ const queryClient = new QueryClient();
 function RootLayoutNav() {
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
+  const scheme = useColorScheme();
 
   useEffect(() => {
     if (isLoading) return;
@@ -37,9 +38,11 @@ function RootLayoutNav() {
   }, [isAuthenticated, isLoading, segments]);
 
   if (isLoading) {
+    const bg = scheme === "dark" ? "#0D0D0D" : "#FAF8F5";
+    const fg = scheme === "dark" ? "#F5F3F0" : "#1A1A1A";
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FAF8F5" }}>
-        <ActivityIndicator size="large" color="#1A1A1A" />
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: bg }}>
+        <ActivityIndicator size="large" color={fg} />
       </View>
     );
   }

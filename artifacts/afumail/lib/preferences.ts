@@ -11,7 +11,6 @@ export interface Preferences {
   pushNotifications: boolean;
   priorityNotifications: boolean;
   biometricLock: boolean;
-  darkMode: boolean;
   readReceipts: boolean;
   externalImages: boolean;
 }
@@ -25,7 +24,6 @@ const DEFAULTS: Preferences = {
   pushNotifications: true,
   priorityNotifications: true,
   biometricLock: false,
-  darkMode: false,
   readReceipts: true,
   externalImages: true,
 };
