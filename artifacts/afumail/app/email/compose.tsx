@@ -40,27 +40,35 @@ export default function ComposeScreen() {
   useEffect(() => {
     // Only auto-insert signature for new emails (not replies/forwards that already have body)
     if (!user || params.body) return;
-    getProfile(user.id).then((p) => {
-      if (p?.signature) {
-        setBody(`\n\n— \n${p.signature}`);
-      }
-    });
+    getProfile(user.id)
+      .then((p) => {
+        if (p?.signature) {
+          setBody(`\n\n— \n${p.signature}`);
+        }
+      })
+      .catch((err) => console.warn("Failed to load signature:", err));
   }, [user]);
 
   async function handleSend() {
     if (!to.trim()) return;
     setIsSending(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    await sendEmail(
-      { to: to.trim(), cc: cc.trim() || undefined, subject, body },
-      user?.email ?? "me@afuchat.com",
-      user?.name ?? "Me"
-    );
-    setSent(true);
-    setIsSending(false);
-    setTimeout(() => {
-      goBackRef.current();
-    }, 800);
+    try {
+      await sendEmail(
+        { to: to.trim(), cc: cc.trim() || undefined, subject, body },
+        user?.email ?? "me@afuchat.com",
+        user?.name ?? "Me"
+      );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSent(true);
+      setIsSending(false);
+      setTimeout(() => {
+        goBackRef.current();
+      }, 800);
+    } catch (err) {
+      console.warn("Failed to send email:", err);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setIsSending(false);
+    }
   }
 
   return (

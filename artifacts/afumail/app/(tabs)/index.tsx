@@ -387,10 +387,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
+    boxShadow: "0px 2px 6px rgba(0, 0, 0, 0.18)",
     elevation: 5,
   },
   unreadDot: {

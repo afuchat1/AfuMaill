@@ -30,20 +30,29 @@ export default function SignatureScreen() {
 
   useEffect(() => {
     if (!user) return;
-    getProfile(user.id).then((p) => {
-      setSignature(p?.signature ?? "");
-      setLoading(false);
-    });
+    getProfile(user.id)
+      .then((p) => {
+        setSignature(p?.signature ?? "");
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.warn("Failed to load signature:", err);
+        setLoading(false);
+      });
   }, [user]);
 
   async function handleSave() {
     if (!user) return;
     setSaving(true);
-    await saveSignature(user.id, signature);
+    try {
+      await saveSignature(user.id, signature);
+      setSaved(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.warn("Failed to save signature:", err);
+    }
     setSaving(false);
-    setSaved(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setTimeout(() => setSaved(false), 2000);
   }
 
   return (

@@ -129,7 +129,7 @@ function rowToEmail(row: any): Email {
 // ─── Welcome email seed ─────────────────────────────────────────────────────
 
 async function seedWelcomeEmail(ownerId: string, userEmail: string) {
-  await supabase.from("emails").insert({
+  const { error } = await supabase.from("emails").insert({
     owner_id: ownerId,
     from_name: "AfuChat Team",
     from_email: "team@afuchat.com",
@@ -146,6 +146,9 @@ async function seedWelcomeEmail(ownerId: string, userEmail: string) {
     category: "primary",
     folder: "inbox",
   });
+  if (error) {
+    console.warn("seedWelcomeEmail error:", error.message);
+  }
 }
 
 // ─── Provider ───────────────────────────────────────────────────────────────
@@ -230,7 +233,12 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
       setEmails((prev) =>
         prev.map((e) => (e.id === id ? { ...e, read: true } : e))
       );
-      await supabase.from("emails").update({ read: true }).eq("id", id);
+      try {
+        const { error } = await supabase.from("emails").update({ read: true }).eq("id", id);
+        if (error) console.warn("markAsRead error:", error.message);
+      } catch (err) {
+        console.warn("markAsRead exception:", err);
+      }
     },
     []
   );
@@ -243,19 +251,34 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
       setEmails((prev) =>
         prev.map((e) => (e.id === id ? { ...e, starred: next } : e))
       );
-      await supabase.from("emails").update({ starred: next }).eq("id", id);
+      try {
+        const { error } = await supabase.from("emails").update({ starred: next }).eq("id", id);
+        if (error) console.warn("toggleStar error:", error.message);
+      } catch (err) {
+        console.warn("toggleStar exception:", err);
+      }
     },
     [emails]
   );
 
   const markAsUnread = useCallback(async (id: string) => {
     setEmails((prev) => prev.map((e) => (e.id === id ? { ...e, read: false } : e)));
-    await supabase.from("emails").update({ read: false }).eq("id", id);
+    try {
+      const { error } = await supabase.from("emails").update({ read: false }).eq("id", id);
+      if (error) console.warn("markAsUnread error:", error.message);
+    } catch (err) {
+      console.warn("markAsUnread exception:", err);
+    }
   }, []);
 
   const moveToFolder = useCallback(async (id: string, folder: EmailFolder) => {
     setEmails((prev) => prev.map((e) => (e.id === id ? { ...e, folder } : e)));
-    await supabase.from("emails").update({ folder }).eq("id", id);
+    try {
+      const { error } = await supabase.from("emails").update({ folder }).eq("id", id);
+      if (error) console.warn("moveToFolder error:", error.message);
+    } catch (err) {
+      console.warn("moveToFolder exception:", err);
+    }
   }, []);
 
   const archiveEmail = useCallback(
@@ -263,7 +286,12 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
       setEmails((prev) =>
         prev.map((e) => (e.id === id ? { ...e, folder: "archived" } : e))
       );
-      await supabase.from("emails").update({ folder: "archived" }).eq("id", id);
+      try {
+        const { error } = await supabase.from("emails").update({ folder: "archived" }).eq("id", id);
+        if (error) console.warn("archiveEmail error:", error.message);
+      } catch (err) {
+        console.warn("archiveEmail exception:", err);
+      }
     },
     []
   );
@@ -271,15 +299,21 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
   const deleteEmail = useCallback(
     async (id: string) => {
       const email = emails.find((e) => e.id === id);
-      // If already in trash, permanently delete
-      if (email?.folder === "trash") {
-        setEmails((prev) => prev.filter((e) => e.id !== id));
-        await supabase.from("emails").delete().eq("id", id);
-      } else {
-        setEmails((prev) =>
-          prev.map((e) => (e.id === id ? { ...e, folder: "trash" } : e))
-        );
-        await supabase.from("emails").update({ folder: "trash" }).eq("id", id);
+      try {
+        // If already in trash, permanently delete
+        if (email?.folder === "trash") {
+          setEmails((prev) => prev.filter((e) => e.id !== id));
+          const { error } = await supabase.from("emails").delete().eq("id", id);
+          if (error) console.warn("deleteEmail error:", error.message);
+        } else {
+          setEmails((prev) =>
+            prev.map((e) => (e.id === id ? { ...e, folder: "trash" } : e))
+          );
+          const { error } = await supabase.from("emails").update({ folder: "trash" }).eq("id", id);
+          if (error) console.warn("deleteEmail error:", error.message);
+        }
+      } catch (err) {
+        console.warn("deleteEmail exception:", err);
       }
     },
     [emails]
@@ -308,30 +342,39 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
 
       const preview = data.body.slice(0, 140).replace(/\n/g, " ");
 
-      const { data: inserted, error } = await supabase
-        .from("emails")
-        .insert({
-          owner_id: user.id,
-          from_name: fromName,
-          from_email: fromEmail,
-          to_emails: toAddresses,
-          cc_emails: ccAddresses,
-          subject: data.subject || "(No Subject)",
-          body: data.body,
-          preview,
-          timestamp: new Date().toISOString(),
-          read: true,
-          starred: false,
-          pinned: false,
-          attachments: [],
-          category: "primary",
-          folder: "sent",
-        })
-        .select()
-        .single();
+      try {
+        const { data: inserted, error } = await supabase
+          .from("emails")
+          .insert({
+            owner_id: user.id,
+            from_name: fromName,
+            from_email: fromEmail,
+            to_emails: toAddresses,
+            cc_emails: ccAddresses,
+            subject: data.subject || "(No Subject)",
+            body: data.body,
+            preview,
+            timestamp: new Date().toISOString(),
+            read: true,
+            starred: false,
+            pinned: false,
+            attachments: [],
+            category: "primary",
+            folder: "sent",
+          })
+          .select()
+          .single();
 
-      if (!error && inserted) {
-        setEmails((prev) => [rowToEmail(inserted), ...prev]);
+        if (error) {
+          console.warn("sendEmail error:", error.message);
+          throw error;
+        }
+        if (inserted) {
+          setEmails((prev) => [rowToEmail(inserted), ...prev]);
+        }
+      } catch (err) {
+        console.warn("sendEmail exception:", err);
+        throw err;
       }
     },
     [user?.id]

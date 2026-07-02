@@ -39,10 +39,15 @@ export default function StorageScreen() {
 
   useEffect(() => {
     if (!user) return;
-    getEmailStats(user.id).then((s) => {
-      setStats(s);
-      setLoading(false);
-    });
+    getEmailStats(user.id)
+      .then((s) => {
+        setStats(s);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.warn("Failed to load email stats:", err);
+        setLoading(false);
+      });
   }, [user]);
 
   const totalLimit = 500;

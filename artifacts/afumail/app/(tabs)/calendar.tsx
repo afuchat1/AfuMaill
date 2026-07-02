@@ -534,10 +534,7 @@ const styles = StyleSheet.create({
   colorSwatchSelected: {
     borderWidth: 2.5,
     borderColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
+    boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.3)",
     elevation: 3,
   },
   createBtn: { borderRadius: 100, paddingVertical: 15, alignItems: "center", marginTop: 4 },

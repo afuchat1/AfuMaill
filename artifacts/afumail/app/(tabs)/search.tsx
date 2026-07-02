@@ -35,11 +35,13 @@ export default function SearchScreen() {
 
   // Load recent searches from AsyncStorage on mount
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
-      if (raw) {
-        try { setRecentSearches(JSON.parse(raw)); } catch {}
-      }
-    });
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((raw) => {
+        if (raw) {
+          try { setRecentSearches(JSON.parse(raw)); } catch {}
+        }
+      })
+      .catch((err) => console.warn("Failed to load recent searches:", err));
   }, []);
 
   function saveRecent(term: string) {
@@ -47,13 +49,17 @@ export default function SearchScreen() {
     if (!trimmed) return;
     const next = [trimmed, ...recentSearches.filter((s) => s !== trimmed)].slice(0, MAX_RECENT);
     setRecentSearches(next);
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch((err) =>
+      console.warn("Failed to save recent searches:", err)
+    );
   }
 
   function clearRecent() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRecentSearches([]);
-    AsyncStorage.removeItem(STORAGE_KEY);
+    AsyncStorage.removeItem(STORAGE_KEY).catch((err) =>
+      console.warn("Failed to clear recent searches:", err)
+    );
   }
 
   function submitSearch() {

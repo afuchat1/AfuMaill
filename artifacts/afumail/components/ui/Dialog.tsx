@@ -61,12 +61,12 @@ export function Dialog({ visible, onClose, children }: DialogProps) {
   if (!mounted) return null;
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      <Animated.View style={[styles.overlay, overlayStyle]} pointerEvents="auto">
+    <View style={[StyleSheet.absoluteFill, { pointerEvents: "box-none" }]}>
+      <Animated.View style={[styles.overlay, overlayStyle, { pointerEvents: "auto" }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
       </Animated.View>
-      <Animated.View style={[styles.cardWrapper, cardStyle]} pointerEvents="box-none">
-        <View style={styles.cardInner} pointerEvents="auto">
+      <Animated.View style={[styles.cardWrapper, cardStyle, { pointerEvents: "box-none" }]}>
+        <View style={[styles.cardInner, { pointerEvents: "auto" }]}>
           {children}
         </View>
       </Animated.View>

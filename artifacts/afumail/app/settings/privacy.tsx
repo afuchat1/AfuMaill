@@ -17,18 +17,24 @@ export default function PrivacyScreen() {
   const [externalImages, setExternalImages] = useState(true);
 
   useEffect(() => {
-    getPreferences().then((p) => {
-      setReadReceipts(p.readReceipts);
-      setExternalImages(p.externalImages);
-    });
+    getPreferences()
+      .then((p) => {
+        setReadReceipts(p.readReceipts);
+        setExternalImages(p.externalImages);
+      })
+      .catch((err) => console.warn("Failed to load privacy preferences:", err));
   }, []);
 
   async function toggle(key: "readReceipts" | "externalImages", current: boolean) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const next = !current;
-    await setPref(key, next);
-    if (key === "readReceipts") setReadReceipts(next);
-    else setExternalImages(next);
+    try {
+      await setPref(key, next);
+      if (key === "readReceipts") setReadReceipts(next);
+      else setExternalImages(next);
+    } catch (err) {
+      console.warn("Failed to save privacy preference:", err);
+    }
   }
 
   const rows = [

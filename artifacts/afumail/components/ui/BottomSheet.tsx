@@ -25,6 +25,7 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const overlayOpacity = useSharedValue(0);
   const animating = useRef(false);
+  const pendingCallback = useRef<(() => void) | undefined>(undefined);
 
   function openSheet() {
     animating.current = false;
@@ -32,18 +33,21 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
     translateY.value = withSpring(0, OPEN_SPRING);
   }
 
-  function closeSheet(callback?: () => void) {
+  function closeSheet(shouldNotify: boolean) {
     if (animating.current) return;
     animating.current = true;
+    pendingCallback.current = shouldNotify ? onClose : undefined;
     overlayOpacity.value = withTiming(0, { duration: 180 });
     translateY.value = withSpring(SCREEN_HEIGHT, CLOSE_SPRING, () => {
-      runOnJS(finishClose)(callback);
+      runOnJS(finishClose)();
     });
   }
 
-  function finishClose(callback?: () => void) {
+  function finishClose() {
     setModalVisible(false);
     animating.current = false;
+    const callback = pendingCallback.current;
+    pendingCallback.current = undefined;
     callback?.();
   }
 
@@ -54,12 +58,16 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
       overlayOpacity.value = 0;
       requestAnimationFrame(openSheet);
     } else {
-      closeSheet();
+      closeSheet(false);
     }
   }, [visible]);
 
   function handleOverlayPress() {
-    closeSheet(onClose);
+    closeSheet(true);
+  }
+
+  function handleGestureDismiss() {
+    closeSheet(true);
   }
 
   const pan = Gesture.Pan()
@@ -72,10 +80,7 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
     })
     .onEnd((e) => {
       if (e.translationY > 80 || e.velocityY > 500) {
-        overlayOpacity.value = withTiming(0, { duration: 160 });
-        translateY.value = withSpring(SCREEN_HEIGHT, CLOSE_SPRING, () => {
-          runOnJS(finishClose)(onClose);
-        });
+        runOnJS(handleGestureDismiss)();
       } else {
         overlayOpacity.value = withTiming(1, { duration: 180 });
         translateY.value = withSpring(0, OPEN_SPRING);
@@ -98,7 +103,7 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
       animationType="none"
       onRequestClose={handleOverlayPress}
     >
-      <Animated.View style={[styles.overlay, overlayStyle]} pointerEvents="auto">
+      <Animated.View style={[styles.overlay, overlayStyle, { pointerEvents: "auto" }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={handleOverlayPress} />
       </Animated.View>
 

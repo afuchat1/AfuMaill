@@ -32,21 +32,30 @@ export default function VacationScreen() {
 
   useEffect(() => {
     if (!user) return;
-    getProfile(user.id).then((p) => {
-      setEnabled(p?.vacation_reply_enabled ?? false);
-      setMessage(p?.vacation_reply_message ?? "");
-      setLoading(false);
-    });
+    getProfile(user.id)
+      .then((p) => {
+        setEnabled(p?.vacation_reply_enabled ?? false);
+        setMessage(p?.vacation_reply_message ?? "");
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.warn("Failed to load vacation reply:", err);
+        setLoading(false);
+      });
   }, [user]);
 
   async function handleSave() {
     if (!user) return;
     setSaving(true);
-    await saveVacationReply(user.id, enabled, message);
+    try {
+      await saveVacationReply(user.id, enabled, message);
+      setSaved(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.warn("Failed to save vacation reply:", err);
+    }
     setSaving(false);
-    setSaved(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setTimeout(() => setSaved(false), 2000);
   }
 
   return (

@@ -61,14 +61,20 @@ export default function SettingsScreen() {
   const [quietEnd, setQuietEnd] = useState("07:00");
 
   useEffect(() => {
-    getPreferences().then(setPrefs);
+    getPreferences()
+      .then(setPrefs)
+      .catch((err) => console.warn("Failed to load preferences:", err));
     if (!user) return;
-    getProfile(user.id).then((p) => {
-      if (!p) return;
-      setPhoneNumber(p.phone_number ?? "");
-      setRecoveryEmail(p.recovery_email ?? "");
-    });
-    getEmailStats(user.id).then((s) => setEmailCount(s.total));
+    getProfile(user.id)
+      .then((p) => {
+        if (!p) return;
+        setPhoneNumber(p.phone_number ?? "");
+        setRecoveryEmail(p.recovery_email ?? "");
+      })
+      .catch((err) => console.warn("Failed to load profile:", err));
+    getEmailStats(user.id)
+      .then((s) => setEmailCount(s.total))
+      .catch((err) => console.warn("Failed to load email stats:", err));
   }, [user]);
 
   async function toggleSwitch(key: keyof Preferences) {
