@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -16,6 +16,7 @@ const SPRING = { damping: 28, stiffness: 300, mass: 0.9 };
  * Uses manualActivation so the native ScrollView always wins for vertical
  * scrolls — the pan gesture fails immediately if movement is more vertical
  * than horizontal, letting the scroll view take full control.
+ * All state is in shared values so worklets can access them on all platforms.
  */
 
 const EDGE_SLOP = 30;
@@ -27,7 +28,7 @@ interface Props {
 export function SwipeBackView({ children }: Props) {
   const { width } = useWindowDimensions();
   const panX = useSharedValue(width);
-  const isClosing = useRef(false);
+  const isClosing = useSharedValue(false);
 
   const startedFromEdge = useSharedValue(false);
   const initialX = useSharedValue(0);
@@ -42,8 +43,8 @@ export function SwipeBackView({ children }: Props) {
   }
 
   function goBack() {
-    if (isClosing.current) return;
-    isClosing.current = true;
+    if (isClosing.value) return;
+    isClosing.value = true;
     panX.value = withSpring(width, SPRING, (finished) => {
       if (finished) runOnJS(finish)();
     });
@@ -52,7 +53,7 @@ export function SwipeBackView({ children }: Props) {
   const pan = Gesture.Pan()
     .manualActivation(true)
     .onBegin((e) => {
-      isClosing.current = false;
+      isClosing.value = false;
       startedFromEdge.value = e.x <= EDGE_SLOP;
       initialX.value = e.x;
       initialY.value = e.y;
@@ -85,8 +86,8 @@ export function SwipeBackView({ children }: Props) {
       const committed =
         e.translationX > width * 0.32 || e.velocityX > 500;
 
-      if (committed && !isClosing.current) {
-        isClosing.current = true;
+      if (committed && !isClosing.value) {
+        isClosing.value = true;
         panX.value = withSpring(width, SPRING, (finished) => {
           if (finished) runOnJS(finish)();
         });
@@ -95,7 +96,7 @@ export function SwipeBackView({ children }: Props) {
       }
     })
     .onFinalize(() => {
-      if (!isClosing.current) {
+      if (!isClosing.value) {
         panX.value = withSpring(0, SPRING);
       }
     });

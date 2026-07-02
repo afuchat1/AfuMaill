@@ -48,6 +48,7 @@ const PAGE_TO_NAV_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 3, 4: 4 };
 
 // Same spring used for the drawer (pager pages)
 const DRAWER_SPRING = { damping: 28, stiffness: 300, mass: 0.9 };
+const PANEL_EDGE_SLOP = 30;
 
 export default function MainScreen() {
   const colors = useColors();
@@ -92,30 +93,64 @@ export default function MainScreen() {
     bgX.value = withSpring(0, DRAWER_SPRING);
   }
 
-  // Pan gesture on the email panel — mirrors the pager swipe-back exactly
-  const isClosing = useRef(false);
+  // Pan gesture on the email panel — left-edge only, vertical scrolls pass through
+  // Use shared values throughout so worklets (UI thread) can access them on all platforms
+  const isClosing   = useSharedValue(false);
+  const panFromEdge = useSharedValue(false);
+  const panInitX    = useSharedValue(0);
+  const panInitY    = useSharedValue(0);
 
   const emailPan = Gesture.Pan()
-    .activeOffsetX([8, Infinity])
-    .failOffsetY([-14, 14])
-    .onBegin(() => { isClosing.current = false; })
+    .manualActivation(true)
+    .onBegin((e) => {
+      isClosing.value  = false;
+      panFromEdge.value = e.x <= PANEL_EDGE_SLOP;
+      panInitX.value   = e.x;
+      panInitY.value   = e.y;
+    })
+    .onTouchesMove((e, stateManager) => {
+      const touch = e.changedTouches[0];
+      if (!touch) return;
+
+      if (!panFromEdge.value) {
+        stateManager.fail();
+        return;
+      }
+
+      const dx = touch.x - panInitX.value;
+      const dy = touch.y - panInitY.value;
+
+      if (Math.abs(dy) > Math.abs(dx) + 3) {
+        stateManager.fail();
+        return;
+      }
+
+      if (dx > 8) {
+        stateManager.activate();
+      }
+    })
     .onUpdate((e) => {
       const x = Math.max(0, e.translationX);
       panelX.value = x;
-      bgX.value    = x - width; // keeps 1:1 ratio
+      bgX.value    = x - width;
     })
     .onEnd((e) => {
-      const committed =
-        e.translationX > width * 0.32 || e.velocityX > 500;
+      const committed = e.translationX > width * 0.32 || e.velocityX > 500;
 
-      if (committed && !isClosing.current) {
-        isClosing.current = true;
+      if (committed && !isClosing.value) {
+        isClosing.value = true;
         panelX.value = withSpring(width, DRAWER_SPRING, () => {
           runOnJS(setMountedEmailId)(null);
         });
         bgX.value = withSpring(0, DRAWER_SPRING);
         runOnJS(setSelectedEmailId)(null);
       } else {
+        panelX.value = withSpring(0, DRAWER_SPRING);
+        bgX.value    = withSpring(-width, DRAWER_SPRING);
+      }
+    })
+    .onFinalize(() => {
+      if (!isClosing.value) {
         panelX.value = withSpring(0, DRAWER_SPRING);
         bgX.value    = withSpring(-width, DRAWER_SPRING);
       }
