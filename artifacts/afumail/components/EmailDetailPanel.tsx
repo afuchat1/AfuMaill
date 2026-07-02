@@ -424,14 +424,14 @@ const styles = StyleSheet.create({
   attachInfo: { flex: 1, gap: 2 },
   attachName: { fontSize: 14 },
   attachSize: { fontSize: 12 },
-  downloadBtn: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  downloadBtn: { width: 32, height: 32, borderRadius: 100, alignItems: "center", justifyContent: "center" },
   replyBar: {
     flexDirection: "row", paddingHorizontal: 12, paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth, gap: 6,
   },
   replyButton: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderRadius: 12, paddingVertical: 11, gap: 5,
+    borderWidth: 1, borderRadius: 100, paddingVertical: 11, gap: 5,
   },
   replyBtnText: { fontSize: 13 },
   toast: {
@@ -452,6 +452,6 @@ const styles = StyleSheet.create({
   },
   sheetIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   sheetLabel: { flex: 1, fontSize: 15 },
-  sheetCancel: { borderRadius: 14, paddingVertical: 14, alignItems: "center", marginTop: 4 },
+  sheetCancel: { borderRadius: 100, paddingVertical: 14, alignItems: "center", marginTop: 4 },
   sheetCancelText: { fontSize: 15 },
 });

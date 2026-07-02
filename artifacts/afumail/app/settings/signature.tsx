@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   saveBtn: {
     paddingHorizontal: 18,
     paddingVertical: 9,
-    borderRadius: 20,
+    borderRadius: 100,
     alignItems: "center",
     justifyContent: "center",
     minWidth: 64,

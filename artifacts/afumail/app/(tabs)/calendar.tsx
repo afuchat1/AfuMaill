@@ -395,6 +395,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
-  createBtn: { borderRadius: 14, paddingVertical: 15, alignItems: "center" },
+  createBtn: { borderRadius: 100, paddingVertical: 15, alignItems: "center" },
   createBtnText: { fontSize: 15 },
 });

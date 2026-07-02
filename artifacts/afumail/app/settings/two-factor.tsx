@@ -239,12 +239,12 @@ const styles = StyleSheet.create({
   factorLabel: { fontSize: 14 },
   removeBtn: {
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 100,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   primaryBtn: {
-    borderRadius: 14,
+    borderRadius: 100,
     paddingVertical: 15,
     alignItems: "center",
     justifyContent: "center",

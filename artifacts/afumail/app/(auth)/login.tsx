@@ -678,7 +678,7 @@ const styles = StyleSheet.create({
     paddingLeft: 2,
   },
   primaryBtn: {
-    borderRadius: 12,
+    borderRadius: 100,
     paddingVertical: 15,
     alignItems: "center",
     justifyContent: "center",
@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
   primaryBtnText: { fontSize: 16 },
   secondaryBtn: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 100,
     paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
