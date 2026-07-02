@@ -342,26 +342,21 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
 
       const preview = data.body.slice(0, 140).replace(/\n/g, " ");
 
-      // Send via Resend through the API server (real external delivery)
-      const apiBase = process.env["EXPO_PUBLIC_API_URL"] ?? "http://localhost:8080/api";
-      const sendRes = await fetch(`${apiBase}/email/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      // Send via Resend through the Supabase Edge Function (real external delivery)
+      const { error: fnError } = await supabase.functions.invoke("send-email", {
+        body: {
           to: toAddresses.map((a) => a.email),
           cc: ccAddresses.map((a) => a.email),
           subject: data.subject || "(No Subject)",
           body: data.body,
           fromEmail,
           fromName,
-        }),
+        },
       });
 
-      if (!sendRes.ok) {
-        const errBody = await sendRes.json().catch(() => ({})) as { error?: string };
-        const msg = errBody.error ?? `Send failed (${sendRes.status})`;
-        console.warn("sendEmail API error:", msg);
-        throw new Error(msg);
+      if (fnError) {
+        console.warn("sendEmail Edge Function error:", fnError.message);
+        throw new Error(fnError.message);
       }
 
       // Save a copy to the sent folder in Supabase

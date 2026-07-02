@@ -59,4 +59,3 @@ timeoutMs = 20000
 [userenv]
 
 [userenv.shared]
-EXPO_PUBLIC_API_URL = "https://2b5134c8-090f-4a15-8338-0a0528a92d82-8080.worf.replit.dev/api"
