@@ -14,16 +14,20 @@ interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isPasswordRecovery: boolean;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  clearPasswordRecovery: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  isPasswordRecovery: false,
   logout: async () => {},
   refreshUser: async () => {},
+  clearPasswordRecovery: () => {},
 });
 
 async function loadProfile(userId: string): Promise<AuthUser | null> {
@@ -46,6 +50,7 @@ async function loadProfile(userId: string): Promise<AuthUser | null> {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   async function hydrate(session: Session | null) {
     try {
@@ -67,7 +72,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    // Check existing session on mount
     supabase.auth
       .getSession()
       .then(({ data: { session } }) => {
@@ -81,10 +85,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
-    // Listen to auth state changes
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (mounted) hydrate(session);
+      (event, session) => {
+        if (!mounted) return;
+        if (event === "PASSWORD_RECOVERY") {
+          setIsPasswordRecovery(true);
+          hydrate(session);
+        } else {
+          hydrate(session);
+        }
       }
     );
 
@@ -107,14 +116,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  function clearPasswordRecovery() {
+    setIsPasswordRecovery(false);
+  }
+
   return (
     <AuthContext.Provider
       value={{
         user,
         isAuthenticated: !!user,
         isLoading,
+        isPasswordRecovery,
         logout,
         refreshUser,
+        clearPasswordRecovery,
       }}
     >
       {children}

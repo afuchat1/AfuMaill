@@ -8,7 +8,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: true,
   },
 });
 
@@ -19,6 +19,7 @@ export interface Profile {
   email: string;
   phone_number: string | null;
   recovery_email: string | null;
+  notification_email: string | null;
   signature: string;
   vacation_reply_enabled: boolean;
   vacation_reply_message: string;
@@ -45,7 +46,8 @@ export async function registerUser(
   email: string,
   password: string,
   username: string,
-  fullName: string
+  fullName: string,
+  notificationEmail?: string
 ): Promise<{ error?: string; userId?: string }> {
   const { data, error: signUpError } = await supabase.auth.signUp({
     email,
@@ -64,10 +66,23 @@ export async function registerUser(
     email,
     phone_number: null,
     recovery_email: null,
+    notification_email: notificationEmail ?? null,
   });
 
   if (profileError) return { error: profileError.message };
   return { userId };
+}
+
+export async function sendPasswordReset(username: string): Promise<{ error?: string }> {
+  const slug = username.trim().toLowerCase().replace(/@afuchat\.com$/, "");
+  const { error } = await supabase.functions.invoke("reset-password", {
+    body: {
+      username: slug,
+      redirectTo: "https://2b5134c8-090f-4a15-8338-0a0528a92d82-00-6dt8bsijmz36.worf.replit.dev",
+    },
+  });
+  if (error) return { error: error.message };
+  return {};
 }
 
 export async function savePhoneNumber(
@@ -279,20 +294,11 @@ export async function saveRecentSearches(
 export async function resetPasswordByRecoveryEmail(
   recoveryInput: string
 ): Promise<{ error?: string }> {
-  const normalized = recoveryInput.trim().toLowerCase();
-  const full = normalized.includes("@") ? normalized : `${normalized}@afuchat.com`;
+  return sendPasswordReset(recoveryInput);
+}
 
-  const { data, error: findError } = await supabase
-    .from("profiles")
-    .select("email")
-    .eq("recovery_email", full)
-    .maybeSingle();
-
-  if (findError || !data) {
-    return { error: "No account is linked to that recovery email." };
-  }
-
-  const { error } = await supabase.auth.resetPasswordForEmail(data.email as string);
+export async function setNewPassword(password: string): Promise<{ error?: string }> {
+  const { error } = await supabase.auth.updateUser({ password });
   if (error) return { error: error.message };
   return {};
 }

@@ -16,11 +16,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
-import { isUsernameAvailable, registerUser, resetPasswordByRecoveryEmail, savePhoneNumber, signInUser } from "@/lib/supabase";
+import { isUsernameAvailable, registerUser, savePhoneNumber, sendPasswordReset, signInUser } from "@/lib/supabase";
 import { useColors } from "@/hooks/useColors";
 
 type Mode = "login" | "register" | "forgot";
-type RegisterStep = 1 | 2 | 3 | 4;
+type RegisterStep = 1 | 2 | 3 | 4 | 5;
 
 function slugify(text: string) {
   return text
@@ -56,6 +56,7 @@ export default function LoginScreen() {
   const [username, setUsername] = useState("");
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
+  const [notificationEmail, setNotificationEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [registerLoading, setRegisterLoading] = useState(false);
@@ -134,18 +135,7 @@ export default function LoginScreen() {
     }
   }
 
-  // ─── Register step 2 → 3 ─────────────────────────────────
-  function handleStep2Next() {
-    if (usernameAvailable !== true) {
-      setRegisterError("Please confirm your username is available first.");
-      return;
-    }
-    setRegisterError("");
-    setStep(3);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }
-
-  // ─── Register step 3 → step 4 ────────────────────────────
+  // ─── Register step 4 → step 5 ────────────────────────────
   async function handleRegister() {
     if (!password.trim()) {
       setRegisterError("Please create a password.");
@@ -167,7 +157,13 @@ export default function LoginScreen() {
     const email = `${username.trim().toLowerCase()}@afuchat.com`;
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
 
-    const { error, userId } = await registerUser(email, password, username.trim().toLowerCase(), fullName);
+    const { error, userId } = await registerUser(
+      email,
+      password,
+      username.trim().toLowerCase(),
+      fullName,
+      notificationEmail.trim().toLowerCase()
+    );
 
     if (error) {
       setRegisterError(error);
@@ -179,10 +175,10 @@ export default function LoginScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setNewUserId(userId ?? null);
     setRegisterLoading(false);
-    setStep(4);
+    setStep(5);
   }
 
-  // ─── Step 4: phone number → finish ────────────────────────
+  // ─── Step 5: phone number → finish ────────────────────────
   async function handleFinishWithPhone(skip: boolean) {
     setPhoneLoading(true);
     if (!skip && phoneNumber.trim() && newUserId) {
@@ -196,13 +192,13 @@ export default function LoginScreen() {
   // ─── Forgot password ─────────────────────────────────────────
   async function handleForgotPassword() {
     if (!forgotRecovery.trim()) {
-      setForgotError("Please enter your recovery email or username.");
+      setForgotError("Please enter your AfuMail username.");
       return;
     }
     setForgotLoading(true);
     setForgotError("");
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const { error } = await resetPasswordByRecoveryEmail(forgotRecovery.trim());
+    const { error } = await sendPasswordReset(forgotRecovery.trim());
     if (error) {
       setForgotError(error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -237,9 +233,41 @@ export default function LoginScreen() {
     setLoginError("");
   }
 
+  // ─── Register step 2 → 3 ─────────────────────────────────
+  function handleStep2Next() {
+    if (usernameAvailable !== true) {
+      setRegisterError("Please confirm your username is available first.");
+      return;
+    }
+    setRegisterError("");
+    setStep(3);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }
+
+  // ─── Register step 3 → 4 ─────────────────────────────────
+  function handleStep3Next() {
+    const email = notificationEmail.trim().toLowerCase();
+    if (!email) {
+      setRegisterError("Please enter your real email address.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setRegisterError("Please enter a valid email address.");
+      return;
+    }
+    if (email.endsWith("@afuchat.com")) {
+      setRegisterError("Please use a real external email (e.g. Gmail, Outlook).");
+      return;
+    }
+    setRegisterError("");
+    setStep(4);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }
+
   function goBack() {
     if (step === 2) setStep(1);
     else if (step === 3) setStep(2);
+    else if (step === 4) setStep(3);
     setRegisterError("");
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }
@@ -358,7 +386,7 @@ export default function LoginScreen() {
                     Reset email sent
                   </Text>
                   <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    A password reset link has been sent to the account linked to that recovery email. Check your inbox.
+                    A password reset link has been sent to your recovery email. Check your inbox and click the link.
                   </Text>
                   <Pressable
                     onPress={switchToLogin}
@@ -375,14 +403,14 @@ export default function LoginScreen() {
                     Reset password
                   </Text>
                   <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    Enter the recovery email linked to your account. We'll send a reset link there.
+                    Enter your AfuMail username. We'll send a reset link to the recovery email you registered with.
                   </Text>
 
                   <View style={styles.fields}>
                     <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
                         style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-                        placeholder="Recovery email or username"
+                        placeholder="Your username (e.g. john)"
                         placeholderTextColor={colors.mutedForeground}
                         value={forgotRecovery}
                         onChangeText={(t) => { setForgotRecovery(t); setForgotError(""); }}
@@ -611,8 +639,53 @@ export default function LoginScreen() {
                 </>
               )}
 
-              {/* ── STEP 3: Password ──────────────────────── */}
+              {/* ── STEP 3: Recovery email ────────────────── */}
               {step === 3 && (
+                <>
+                  <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                    Recovery email
+                  </Text>
+                  <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                    Enter your real email address. We'll only use it to send password reset links — it won't be your AfuMail address.
+                  </Text>
+
+                  <View style={styles.fields}>
+                    <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
+                      <TextInput
+                        style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+                        placeholder="you@gmail.com"
+                        placeholderTextColor={colors.mutedForeground}
+                        value={notificationEmail}
+                        onChangeText={(t) => { setNotificationEmail(t); setRegisterError(""); }}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        keyboardType="email-address"
+                        returnKeyType="done"
+                        onSubmitEditing={handleStep3Next}
+                      />
+                    </View>
+
+                    {!!registerError && (
+                      <Text style={[styles.errorText, { color: colors.destructive, fontFamily: "Inter_400Regular" }]}>
+                        {registerError}
+                      </Text>
+                    )}
+
+                    <Pressable
+                      onPress={handleStep3Next}
+                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? "#333" : colors.primary }]}
+                    >
+                      <Text style={[styles.primaryBtnText, { color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }]}>
+                        Next
+                      </Text>
+                      <Feather name="arrow-right" size={16} color={colors.primaryForeground} />
+                    </Pressable>
+                  </View>
+                </>
+              )}
+
+              {/* ── STEP 4: Password ──────────────────────── */}
+              {step === 4 && (
                 <>
                   <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
                     Create a password
@@ -674,8 +747,8 @@ export default function LoginScreen() {
                 </>
               )}
 
-              {/* ── STEP 4: Phone number ──────────────────── */}
-              {step === 4 && (
+              {/* ── STEP 5: Phone number ──────────────────── */}
+              {step === 5 && (
                 <>
                   <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
                     Add a phone number
@@ -727,7 +800,7 @@ export default function LoginScreen() {
                 </>
               )}
 
-              {step < 4 && (
+              {step < 5 && (
                 <Pressable style={styles.switchRow} onPress={switchToLogin}>
                   <Text style={[styles.switchText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
                     Already have an account?{" "}

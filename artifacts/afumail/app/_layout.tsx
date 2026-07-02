@@ -25,19 +25,23 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isPasswordRecovery } = useAuth();
   const segments = useSegments();
   const scheme = useColorScheme();
 
   useEffect(() => {
     if (isLoading) return;
+    if (isPasswordRecovery) {
+      router.replace("/(auth)/set-new-password");
+      return;
+    }
     const inAuthGroup = segments[0] === "(auth)";
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/(auth)/login");
     } else if (isAuthenticated && inAuthGroup) {
       router.replace("/(tabs)");
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, isPasswordRecovery, segments]);
 
   if (isLoading) {
     const bg = scheme === "dark" ? "#0D0D0D" : "#FAF8F5";
