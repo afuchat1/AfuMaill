@@ -342,6 +342,29 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
 
       const preview = data.body.slice(0, 140).replace(/\n/g, " ");
 
+      // Send via Resend through the API server (real external delivery)
+      const apiBase = process.env["EXPO_PUBLIC_API_URL"] ?? "http://localhost:8080/api";
+      const sendRes = await fetch(`${apiBase}/email/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: toAddresses.map((a) => a.email),
+          cc: ccAddresses.map((a) => a.email),
+          subject: data.subject || "(No Subject)",
+          body: data.body,
+          fromEmail,
+          fromName,
+        }),
+      });
+
+      if (!sendRes.ok) {
+        const errBody = await sendRes.json().catch(() => ({})) as { error?: string };
+        const msg = errBody.error ?? `Send failed (${sendRes.status})`;
+        console.warn("sendEmail API error:", msg);
+        throw new Error(msg);
+      }
+
+      // Save a copy to the sent folder in Supabase
       try {
         const { data: inserted, error } = await supabase
           .from("emails")
@@ -366,15 +389,12 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
           .single();
 
         if (error) {
-          console.warn("sendEmail error:", error.message);
-          throw error;
-        }
-        if (inserted) {
+          console.warn("sendEmail Supabase error:", error.message);
+        } else if (inserted) {
           setEmails((prev) => [rowToEmail(inserted), ...prev]);
         }
       } catch (err) {
-        console.warn("sendEmail exception:", err);
-        throw err;
+        console.warn("sendEmail Supabase exception:", err);
       }
     },
     [user?.id]
