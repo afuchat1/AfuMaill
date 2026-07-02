@@ -75,11 +75,15 @@ export async function registerUser(
 
 export async function sendPasswordReset(username: string): Promise<{ error?: string }> {
   const slug = username.trim().toLowerCase().replace(/@afuchat\.com$/, "");
+
+  // Use the current page origin on web; fall back to the env-supplied domain on native
+  const redirectTo =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : `https://${process.env.EXPO_PUBLIC_DOMAIN ?? "lqowocmjmhbkoxlwyxku.supabase.co"}`;
+
   const { error } = await supabase.functions.invoke("reset-password", {
-    body: {
-      username: slug,
-      redirectTo: "https://2b5134c8-090f-4a15-8338-0a0528a92d82-00-6dt8bsijmz36.worf.replit.dev",
-    },
+    body: { username: slug, redirectTo },
   });
   if (error) return { error: error.message };
   return {};
