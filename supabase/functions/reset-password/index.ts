@@ -24,41 +24,67 @@ Deno.serve(async (req) => {
 
     const slug = (username as string).toLowerCase().trim().replace(/^@/, "").replace(/@afuchat\.com$/, "");
 
-    // 1. Look up profile by username via PostgREST
-    const profileRes = await fetch(
-      `${projectUrl}/rest/v1/profiles?username=eq.${encodeURIComponent(slug)}&select=email,notification_email,full_name`,
-      {
-        headers: {
-          Authorization: `Bearer ${serviceRoleKey}`,
-          apikey: serviceRoleKey,
-          "Content-Type": "application/json",
-        },
+    // Helper: fetch a profile row by a PostgREST filter string
+    async function fetchProfile(filter: string): Promise<{
+      id?: string;
+      email?: string;
+      notification_email?: string | null;
+      recovery_email?: string | null;
+      full_name?: string | null;
+      username?: string;
+    } | null> {
+      const res = await fetch(
+        `${projectUrl}/rest/v1/profiles?${filter}&select=id,email,notification_email,recovery_email,full_name,username&limit=1`,
+        {
+          headers: {
+            Authorization: `Bearer ${serviceRoleKey}`,
+            apikey: serviceRoleKey,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (!res.ok) return null;
+      const rows = await res.json() as Array<Record<string, string | null>>;
+      return rows[0] ?? null;
+    }
+
+    // 1. Look up the requesting user by username
+    const profile = await fetchProfile(`username=eq.${encodeURIComponent(slug)}`);
+    if (!profile) {
+      // Return generic ok to avoid username enumeration
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 2. Resolve which external email to send the reset to:
+    //    - First choice: notification_email on their own profile
+    //    - Second choice: notification_email of the linked recovery_email account
+    let deliveryEmail: string | null = profile.notification_email ?? null;
+    let displayName = profile.full_name ?? slug;
+
+    if (!deliveryEmail && profile.recovery_email) {
+      // recovery_email is stored as a full afuchat.com address — look up that account
+      const recoveryProfile = await fetchProfile(
+        `email=eq.${encodeURIComponent(profile.recovery_email)}`
+      );
+      if (recoveryProfile?.notification_email) {
+        deliveryEmail = recoveryProfile.notification_email;
+        // Keep the original user's display name for the email
       }
-    );
+    }
 
-    if (!profileRes.ok) {
-      // Return generic ok to avoid enumeration
+    if (!deliveryEmail) {
+      // Still nothing — return generic ok (avoid enumeration)
+      console.warn("reset-password: no delivery email found for", slug);
       return new Response(JSON.stringify({ ok: true }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const profiles = await profileRes.json() as Array<{
-      email: string;
-      notification_email: string | null;
-      full_name: string | null;
-    }>;
-
-    const profile = profiles[0];
-    if (!profile || !profile.notification_email) {
-      return new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // 2. Generate password reset link via Supabase Auth Admin API
+    // 3. Generate password reset link via Supabase Auth Admin API
     const generateRes = await fetch(
       `${projectUrl}/auth/v1/admin/generate_link`,
       {
@@ -93,9 +119,8 @@ Deno.serve(async (req) => {
     }
 
     const resetLink = generateData.action_link;
-    const displayName = profile.full_name ?? slug;
 
-    // 3. Send via Resend to the user's real notification email
+    // 4. Send via Resend to the resolved delivery email
     const sendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -104,7 +129,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         from: "AfuMail <noreply@afuchat.com>",
-        to: [profile.notification_email],
+        to: [deliveryEmail],
         subject: "Reset your AfuMail password",
         html: `
           <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#fff;">

@@ -101,6 +101,25 @@ export async function savePhoneNumber(
   return {};
 }
 
+export async function saveNotificationEmail(
+  userId: string,
+  email: string
+): Promise<{ error?: string }> {
+  const trimmed = email.trim().toLowerCase();
+  if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    return { error: "Please enter a valid email address." };
+  }
+  if (trimmed.endsWith("@afuchat.com")) {
+    return { error: "Please use a real external email (e.g. Gmail, Outlook)." };
+  }
+  const { error } = await supabase
+    .from("profiles")
+    .update({ notification_email: trimmed || null })
+    .eq("id", userId);
+  if (error) return { error: error.message };
+  return {};
+}
+
 export async function saveRecoveryEmail(
   userId: string,
   recoveryUsername: string
