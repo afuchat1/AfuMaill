@@ -98,9 +98,11 @@ Deno.serve(async (req) => {
     const toAddresses = toList.map(parseAddress);
     const ccAddresses = ccList.map(parseAddress);
 
-    // Prefer text body; fall back to HTML-stripped
-    const body = textBody || htmlToText(htmlBody);
-    const preview = body.slice(0, 140).replace(/\n/g, " ");
+    // Prefer HTML for rich rendering; fall back to plain text
+    // preview is always plain text for inbox list
+    const body = htmlBody || textBody;
+    const plainForPreview = textBody || htmlToText(htmlBody);
+    const preview = plainForPreview.slice(0, 140).replace(/\n/g, " ");
 
     const category = guessCategory(fromAddr.email, subject);
 

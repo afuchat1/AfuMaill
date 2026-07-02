@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
 
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./supabase-config";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -75,18 +75,29 @@ export async function registerUser(
 
 export async function sendPasswordReset(username: string): Promise<{ error?: string }> {
   const slug = username.trim().toLowerCase().replace(/@afuchat\.com$/, "");
+  if (!slug) return { error: "Please enter your AfuMail username." };
 
-  // Use the current page origin on web; fall back to the env-supplied domain on native
   const redirectTo =
     typeof window !== "undefined" && window.location?.origin
       ? window.location.origin
       : `https://${process.env.EXPO_PUBLIC_DOMAIN ?? "lqowocmjmhbkoxlwyxku.supabase.co"}`;
 
-  const { error } = await supabase.functions.invoke("reset-password", {
-    body: { username: slug, redirectTo },
-  });
-  if (error) return { error: error.message };
-  return {};
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/reset-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ username: slug, redirectTo }),
+    });
+    const data = await res.json() as { ok?: boolean; error?: string };
+    if (!res.ok) return { error: data.error ?? "Failed to send reset email. Please try again." };
+    return {};
+  } catch {
+    return { error: "Network error. Please check your connection and try again." };
+  }
 }
 
 export async function savePhoneNumber(
