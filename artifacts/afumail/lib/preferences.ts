@@ -1,6 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const PREF_KEY = "@afumail:preferences";
+import { getPreferencesRaw, savePreferencesRaw } from "./supabase";
 
 export interface Preferences {
   fontSize: "Small" | "Medium" | "Large";
@@ -28,20 +26,19 @@ const DEFAULTS: Preferences = {
   externalImages: true,
 };
 
-export async function getPreferences(): Promise<Preferences> {
-  try {
-    const raw = await AsyncStorage.getItem(PREF_KEY);
-    if (!raw) return { ...DEFAULTS };
-    return { ...DEFAULTS, ...JSON.parse(raw) };
-  } catch {
-    return { ...DEFAULTS };
-  }
+export async function getPreferences(userId: string): Promise<Preferences> {
+  if (!userId) return { ...DEFAULTS };
+  const raw = await getPreferencesRaw(userId);
+  return { ...DEFAULTS, ...raw } as Preferences;
 }
 
 export async function setPref<K extends keyof Preferences>(
+  userId: string,
   key: K,
   value: Preferences[K]
 ): Promise<void> {
-  const current = await getPreferences();
-  await AsyncStorage.setItem(PREF_KEY, JSON.stringify({ ...current, [key]: value }));
+  if (!userId) return;
+  const current = await getPreferences(userId);
+  const { error } = await savePreferencesRaw(userId, { ...current, [key]: value });
+  if (error) throw new Error(error);
 }

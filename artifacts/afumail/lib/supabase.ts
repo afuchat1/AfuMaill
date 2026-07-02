@@ -22,6 +22,8 @@ export interface Profile {
   signature: string;
   vacation_reply_enabled: boolean;
   vacation_reply_message: string;
+  preferences: Record<string, unknown> | null;
+  recent_searches: string[] | null;
   created_at: string;
 }
 
@@ -226,6 +228,52 @@ export async function createCalendarEvent(
 export async function deleteCalendarEvent(id: string): Promise<void> {
   const { error } = await supabase.from("calendar_events").delete().eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+export async function getPreferencesRaw(
+  userId: string
+): Promise<Record<string, unknown>> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("preferences")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error || !data) return {};
+  return (data.preferences as Record<string, unknown>) ?? {};
+}
+
+export async function savePreferencesRaw(
+  userId: string,
+  preferences: Record<string, unknown>
+): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ preferences })
+    .eq("id", userId);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function getRecentSearches(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("recent_searches")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error || !data) return [];
+  return (data.recent_searches as string[]) ?? [];
+}
+
+export async function saveRecentSearches(
+  userId: string,
+  searches: string[]
+): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ recent_searches: searches })
+    .eq("id", userId);
+  if (error) return { error: error.message };
+  return {};
 }
 
 export async function resetPasswordByRecoveryEmail(

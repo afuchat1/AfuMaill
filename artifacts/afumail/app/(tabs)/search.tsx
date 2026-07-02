@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useMemo, useState } from "react";
@@ -14,17 +13,19 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmailRow } from "@/components/EmailRow";
+import { useAuth } from "@/context/AuthContext";
 import type { Email } from "@/context/EmailContext";
 import { useEmails } from "@/context/EmailContext";
 import { useColors } from "@/hooks/useColors";
+import { getRecentSearches, saveRecentSearches } from "@/lib/supabase";
 
-const STORAGE_KEY = "@afumail:recent_searches";
 const MAX_RECENT = 8;
 const SEARCH_FILTERS = ["All", "Unread", "Starred", "Attachments"];
 
 export default function SearchScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const { emails } = useEmails();
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
@@ -33,33 +34,32 @@ export default function SearchScreen() {
   const isWeb = Platform.OS === "web";
   const topPad = isWeb ? 67 : insets.top;
 
-  // Load recent searches from AsyncStorage on mount
+  // Load recent searches from Supabase on mount
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => {
-        if (raw) {
-          try { setRecentSearches(JSON.parse(raw)); } catch {}
-        }
-      })
+    if (!user) return;
+    getRecentSearches(user.id)
+      .then(setRecentSearches)
       .catch((err) => console.warn("Failed to load recent searches:", err));
-  }, []);
+  }, [user]);
 
   function saveRecent(term: string) {
+    if (!user) return;
     const trimmed = term.trim();
     if (!trimmed) return;
     const next = [trimmed, ...recentSearches.filter((s) => s !== trimmed)].slice(0, MAX_RECENT);
     setRecentSearches(next);
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch((err) =>
-      console.warn("Failed to save recent searches:", err)
-    );
+    saveRecentSearches(user.id, next).then(({ error }) => {
+      if (error) console.warn("Failed to save recent searches:", error);
+    }).catch((err) => console.warn("Failed to save recent searches:", err));
   }
 
   function clearRecent() {
+    if (!user) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRecentSearches([]);
-    AsyncStorage.removeItem(STORAGE_KEY).catch((err) =>
-      console.warn("Failed to clear recent searches:", err)
-    );
+    saveRecentSearches(user.id, []).then(({ error }) => {
+      if (error) console.warn("Failed to clear recent searches:", error);
+    }).catch((err) => console.warn("Failed to clear recent searches:", err));
   }
 
   function submitSearch() {

@@ -61,10 +61,10 @@ export default function SettingsScreen() {
   const [quietEnd, setQuietEnd] = useState("07:00");
 
   useEffect(() => {
-    getPreferences()
+    if (!user) return;
+    getPreferences(user.id)
       .then(setPrefs)
       .catch((err) => console.warn("Failed to load preferences:", err));
-    if (!user) return;
     getProfile(user.id)
       .then((p) => {
         if (!p) return;
@@ -78,10 +78,15 @@ export default function SettingsScreen() {
   }, [user]);
 
   async function toggleSwitch(key: keyof Preferences) {
+    if (!user) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const next = !prefs[key] as any;
     setPrefs((p) => ({ ...p, [key]: next }));
-    await setPref(key, next);
+    try {
+      await setPref(user.id, key, next);
+    } catch (err) {
+      console.warn("Failed to save preference:", err);
+    }
   }
 
   function handleRowPress(label: string) {
@@ -133,31 +138,51 @@ export default function SettingsScreen() {
   }
 
   async function pickFontSize(v: Preferences["fontSize"]) {
-    await setPref("fontSize", v);
-    setPrefs((p) => ({ ...p, fontSize: v }));
+    if (!user) return;
+    try {
+      await setPref(user.id, "fontSize", v);
+      setPrefs((p) => ({ ...p, fontSize: v }));
+    } catch (err) {
+      console.warn("Failed to save font size:", err);
+    }
     setFontSizeModal(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }
 
   async function pickDensity(v: Preferences["emailDensity"]) {
-    await setPref("emailDensity", v);
-    setPrefs((p) => ({ ...p, emailDensity: v }));
+    if (!user) return;
+    try {
+      await setPref(user.id, "emailDensity", v);
+      setPrefs((p) => ({ ...p, emailDensity: v }));
+    } catch (err) {
+      console.warn("Failed to save email density:", err);
+    }
     setDensityModal(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }
 
   async function saveQuietHours() {
-    await setPref("quietHoursStart", quietStart);
-    await setPref("quietHoursEnd", quietEnd);
-    await setPref("quietHoursEnabled", true);
-    setPrefs((p) => ({ ...p, quietHoursStart: quietStart, quietHoursEnd: quietEnd, quietHoursEnabled: true }));
+    if (!user) return;
+    try {
+      await setPref(user.id, "quietHoursStart", quietStart);
+      await setPref(user.id, "quietHoursEnd", quietEnd);
+      await setPref(user.id, "quietHoursEnabled", true);
+      setPrefs((p) => ({ ...p, quietHoursStart: quietStart, quietHoursEnd: quietEnd, quietHoursEnabled: true }));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err) {
+      console.warn("Failed to save quiet hours:", err);
+    }
     setQuietModal(false);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }
 
   async function disableQuietHours() {
-    await setPref("quietHoursEnabled", false);
-    setPrefs((p) => ({ ...p, quietHoursEnabled: false }));
+    if (!user) return;
+    try {
+      await setPref(user.id, "quietHoursEnabled", false);
+      setPrefs((p) => ({ ...p, quietHoursEnabled: false }));
+    } catch (err) {
+      console.warn("Failed to disable quiet hours:", err);
+    }
     setQuietModal(false);
   }
 

@@ -6,30 +6,34 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-nat
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { SwipeBackView } from "@/components/SwipeBackView";
+import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { getPreferences, setPref } from "@/lib/preferences";
 
 export default function PrivacyScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
 
   const [readReceipts, setReadReceipts] = useState(true);
   const [externalImages, setExternalImages] = useState(true);
 
   useEffect(() => {
-    getPreferences()
+    if (!user) return;
+    getPreferences(user.id)
       .then((p) => {
         setReadReceipts(p.readReceipts);
         setExternalImages(p.externalImages);
       })
       .catch((err) => console.warn("Failed to load privacy preferences:", err));
-  }, []);
+  }, [user]);
 
   async function toggle(key: "readReceipts" | "externalImages", current: boolean) {
+    if (!user) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const next = !current;
     try {
-      await setPref(key, next);
+      await setPref(user.id, key, next);
       if (key === "readReceipts") setReadReceipts(next);
       else setExternalImages(next);
     } catch (err) {

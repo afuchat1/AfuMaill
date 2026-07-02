@@ -78,7 +78,7 @@ You have the right to:
 - Export your data
 
 8. COOKIES & LOCAL STORAGE
-AfuMail uses AsyncStorage on your device to save preferences and session data. No third-party tracking cookies are used.
+AfuMail stores your preferences, search history, and session data securely in your Supabase account, synced across your devices. A minimal local cache is used only to keep your session signed in. No third-party tracking cookies are used.
 
 9. CHILDREN'S PRIVACY
 AfuMail is not intended for users under 13 years of age. We do not knowingly collect data from children.

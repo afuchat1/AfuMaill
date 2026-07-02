@@ -5,12 +5,18 @@
 
 -- 1. Profiles table
 CREATE TABLE IF NOT EXISTS public.profiles (
-  id          UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  username    TEXT UNIQUE NOT NULL,
-  full_name   TEXT NOT NULL,
-  email       TEXT UNIQUE NOT NULL,
-  created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  id              UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  username        TEXT UNIQUE NOT NULL,
+  full_name       TEXT NOT NULL,
+  email           TEXT UNIQUE NOT NULL,
+  preferences     JSONB NOT NULL DEFAULT '{}'::jsonb,
+  recent_searches JSONB NOT NULL DEFAULT '[]'::jsonb,
+  created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- If the profiles table already existed before this update, run:
+-- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
+-- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS recent_searches JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
