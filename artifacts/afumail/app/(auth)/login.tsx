@@ -307,6 +307,12 @@ export default function LoginScreen() {
                   />
                 </View>
 
+                <Pressable style={styles.forgotRow} onPress={switchToForgot}>
+                  <Text style={[styles.forgotText, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>
+                    Forgot password?
+                  </Text>
+                </Pressable>
+
                 {!!loginError && (
                   <Text style={[styles.errorText, { color: colors.destructive, fontFamily: "Inter_400Regular" }]}>
                     {loginError}
@@ -324,15 +330,6 @@ export default function LoginScreen() {
                   }
                 </Pressable>
               </View>
-
-              <Pressable style={styles.switchRow} onPress={switchToForgot}>
-                <Text style={[styles.switchText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                  Forgot password?{" "}
-                  <Text style={[styles.switchLink, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>
-                    Reset it
-                  </Text>
-                </Text>
-              </Pressable>
 
               <Pressable style={styles.switchRow} onPress={switchToRegister}>
                 <Text style={[styles.switchText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
@@ -774,6 +771,7 @@ const styles = StyleSheet.create({
   inputWrap: {
     borderWidth: 1,
     borderRadius: 100,
+    overflow: "hidden",
   },
   input: {
     fontSize: 16,
@@ -786,6 +784,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 100,
     paddingRight: 12,
+    overflow: "hidden",
   },
   usernameInput: {
     flex: 1,
@@ -832,6 +831,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+  },
+  forgotRow: {
+    alignSelf: "flex-end",
+    marginTop: -4,
+  },
+  forgotText: {
+    fontSize: 13,
   },
   backBtn: {
     padding: 4,
