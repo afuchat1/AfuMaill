@@ -769,7 +769,6 @@ const styles = StyleSheet.create({
   cardSubtitle: { fontSize: 15, lineHeight: 22, marginTop: -12 },
   fields: { gap: 12 },
   inputWrap: {
-    borderWidth: 1,
     borderRadius: 100,
     overflow: "hidden",
   },
@@ -781,7 +780,6 @@ const styles = StyleSheet.create({
   usernameRow: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
     borderRadius: 100,
     paddingRight: 12,
     overflow: "hidden",
