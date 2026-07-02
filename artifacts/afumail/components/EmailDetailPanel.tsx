@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { WebView } from "react-native-webview";
 
 import { Avatar } from "@/components/Avatar";
 import { BottomSheet } from "@/components/ui/BottomSheet";
@@ -67,6 +68,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
   const [actionsVisible, setActionsVisible] = useState(false);
   const [moveVisible,    setMoveVisible]    = useState(false);
   const [toast,          setToast]          = useState<string | null>(null);
+  const [webHeight,      setWebHeight]      = useState(300);
 
   useEffect(() => {
     if (email && !email.read) markAsRead(email.id);
@@ -151,6 +153,33 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
   if (!email) return null;
 
   const isWeb = Platform.OS === "web";
+  const isHtml = /^\s*</.test(email.body ?? "");
+
+  const htmlDoc = isHtml
+    ? `<!DOCTYPE html><html><head>
+        <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+        <style>
+          * { box-sizing: border-box; }
+          html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+          body { padding: 8px 0; }
+          a { word-break: break-all; }
+          img { max-width: 100%; height: auto; }
+        </style>
+      </head><body>${email.body}</body></html>`
+    : "";
+
+  const heightScript = `
+    (function() {
+      function sendHeight() {
+        var h = document.documentElement.scrollHeight || document.body.scrollHeight;
+        window.ReactNativeWebView.postMessage(String(h));
+      }
+      document.addEventListener('DOMContentLoaded', sendHeight);
+      window.addEventListener('load', sendHeight);
+      setTimeout(sendHeight, 400);
+    })();
+    true;
+  `;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -248,10 +277,29 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
         </View>
 
         {/* Body */}
-        <View style={styles.bodySection}>
-          <Text style={[styles.body, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
-            {email.body}
-          </Text>
+        <View style={[styles.bodySection, isHtml && { paddingHorizontal: 12, paddingTop: 12 }]}>
+          {isHtml ? (
+            <WebView
+              source={{ html: htmlDoc }}
+              scrollEnabled={false}
+              style={{ height: webHeight, width: "100%" }}
+              injectedJavaScript={heightScript}
+              onMessage={(e) => {
+                const h = Number(e.nativeEvent.data);
+                if (!isNaN(h) && h > 0) setWebHeight(h + 32);
+              }}
+              showsVerticalScrollIndicator={false}
+              originWhitelist={["*"]}
+              javaScriptEnabled
+            />
+          ) : (
+            <Text
+              selectable
+              style={[styles.body, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+            >
+              {email.body}
+            </Text>
+          )}
         </View>
 
         {/* Attachments */}

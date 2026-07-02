@@ -149,7 +149,8 @@ Deno.serve(async (req) => {
     This link expires in 1 hour. If you didn't expect this, simply ignore this message.
   </p>
   <hr style="border:none;border-top:1px solid #eee;margin:24px 0;" />
-  <p style="color:#ccc;font-size:12px;margin:0;">AfuMail &mdash; afuchat.com</p>
+  <p style="color:#aaa;font-size:12px;margin:0 0 2px;">AfuMail &mdash; <a href="https://mail.afuchat.com" style="color:#1B6EF3;text-decoration:none;">mail.afuchat.com</a></p>
+  <p style="color:#ccc;font-size:11px;margin:0;">AfuChat Technologies Limited &bull; Entebbe, Kittoro, Uganda</p>
 </div>`;
 
     // 4. Deliver the reset email directly into the recovery user's AfuMail inbox
@@ -168,7 +169,7 @@ Deno.serve(async (req) => {
         to_emails: [{ name: recoveryUser.full_name ?? recoveryUser.username, email: profile.recovery_email }],
         cc_emails: [],
         subject: `Password reset for ${slug}@afuchat.com`,
-        body: `${body}\n\n---\n${resetLink}`,
+        body: htmlBody,
         preview,
         timestamp: now,
         read: false,

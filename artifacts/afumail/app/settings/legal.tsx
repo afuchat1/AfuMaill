@@ -12,10 +12,10 @@ type Tab = (typeof TABS)[number];
 
 const TERMS = `Last updated: June 30, 2026
 
-Welcome to AfuMail. By using this application, you agree to the following terms.
+Welcome to AfuMail, a product of AfuChat Technologies Limited (Entebbe, Kittoro, Uganda). By using this application, you agree to the following terms.
 
 1. ACCEPTANCE OF TERMS
-By accessing or using AfuMail, you agree to be bound by these Terms of Service and all applicable laws and regulations.
+By accessing or using AfuMail (mail.afuchat.com), you agree to be bound by these Terms of Service and all applicable laws and regulations of Uganda and any jurisdiction in which you operate.
 
 2. USE OF SERVICE
 AfuMail is a closed email network for @afuchat.com accounts. You may only send and receive messages with other AfuMail users. You agree not to use the service for spam, harassment, or any unlawful purpose.
@@ -24,7 +24,7 @@ AfuMail is a closed email network for @afuchat.com accounts. You may only send a
 You are responsible for maintaining the confidentiality of your account credentials. Notify us immediately if you suspect unauthorized use of your account.
 
 4. CONTENT
-You retain ownership of content you create. By using AfuMail, you grant us a limited license to store and transmit your content to deliver the service.
+You retain ownership of content you create. By using AfuMail, you grant AfuChat Technologies Limited a limited license to store and transmit your content solely to deliver the service.
 
 5. TERMINATION
 We reserve the right to suspend or terminate accounts that violate these terms without prior notice.
@@ -33,23 +33,26 @@ We reserve the right to suspend or terminate accounts that violate these terms w
 AfuMail is provided "as is" without warranties of any kind. We do not guarantee uptime or uninterrupted access.
 
 7. LIMITATION OF LIABILITY
-To the maximum extent permitted by law, AfuMail shall not be liable for any indirect, incidental, or consequential damages arising from your use of the service.
+To the maximum extent permitted by Ugandan law, AfuChat Technologies Limited shall not be liable for any indirect, incidental, or consequential damages arising from your use of the service.
 
 8. CHANGES TO TERMS
 We may update these terms from time to time. Continued use of AfuMail after changes constitutes acceptance of the new terms.
 
 9. CONTACT
-For questions about these terms, contact us at legal@afuchat.com.`;
+AfuChat Technologies Limited
+Entebbe, Kittoro, Uganda
+Website: mail.afuchat.com
+For legal enquiries: legal@afuchat.com`;
 
 const PRIVACY = `Last updated: June 30, 2026
 
-AfuMail ("we", "us") is committed to protecting your privacy. This policy explains how we collect, use, and protect your information.
+AfuChat Technologies Limited ("we", "us") operates AfuMail (mail.afuchat.com). This policy explains how we collect, use, and protect your information.
 
 1. INFORMATION WE COLLECT
 - Account information: name, username, email address
 - Messages: content of emails you send and receive
 - Optional recovery information: phone number, recovery email address
-- App preferences stored locally on your device
+- App preferences stored securely in your account
 
 2. HOW WE USE YOUR INFORMATION
 We use your information solely to:
@@ -59,7 +62,7 @@ We use your information solely to:
 - Improve app performance and reliability
 
 3. DATA STORAGE
-Your data is stored on Supabase (our database provider) with row-level security. Only you can access your own emails and profile data.
+Your data is stored in secure cloud infrastructure with row-level security. Only you can access your own emails and profile data. No employee of AfuChat Technologies Limited can read your emails without your explicit consent.
 
 4. DATA SHARING
 We do not sell, trade, or share your personal information with third parties. We do not use your email content for advertising purposes.
@@ -68,23 +71,26 @@ We do not sell, trade, or share your personal information with third parties. We
 Your data is retained as long as your account is active. You may request deletion of your account and associated data at any time by contacting support.
 
 6. SECURITY
-We implement industry-standard security measures including encrypted connections (TLS), row-level security policies, and secure authentication.
+We implement industry-standard security measures including encrypted connections (TLS), row-level access controls, and secure multi-factor authentication.
 
 7. YOUR RIGHTS
-You have the right to:
+Under applicable Ugandan and international data protection law, you have the right to:
 - Access your personal data
 - Correct inaccurate data
 - Request deletion of your data
 - Export your data
 
 8. COOKIES & LOCAL STORAGE
-AfuMail stores your preferences, search history, and session data securely in your Supabase account, synced across your devices. A minimal local cache is used only to keep your session signed in. No third-party tracking cookies are used.
+AfuMail stores your preferences, search history, and session data securely in your account, synced across your devices. A minimal local cache is used only to keep your session signed in. No third-party tracking cookies are used.
 
 9. CHILDREN'S PRIVACY
 AfuMail is not intended for users under 13 years of age. We do not knowingly collect data from children.
 
 10. CONTACT
-For privacy-related questions, contact privacy@afuchat.com.`;
+AfuChat Technologies Limited
+Entebbe, Kittoro, Uganda
+Website: mail.afuchat.com
+Privacy enquiries: privacy@afuchat.com`;
 
 export default function LegalScreen() {
   const colors = useColors();
