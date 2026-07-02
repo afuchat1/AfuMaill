@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 100,
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 100,
   },
   modalActions: { flexDirection: "row", gap: 10, marginTop: 4 },
   modalCancelBtn: {

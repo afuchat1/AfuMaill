@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   sheetTitle: { fontSize: 18, letterSpacing: -0.3 },
   input: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 100,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,

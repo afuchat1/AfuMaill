@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
   fields: { gap: 12 },
   inputWrap: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 100,
   },
   input: {
     fontSize: 16,
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 100,
     paddingRight: 12,
   },
   usernameInput: {

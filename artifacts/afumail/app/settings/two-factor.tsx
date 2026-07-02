@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   },
   inputWrap: {
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 100,
     overflow: "hidden",
   },
 });
