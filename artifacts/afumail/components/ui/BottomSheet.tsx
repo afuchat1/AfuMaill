@@ -105,7 +105,8 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
       <GestureDetector gesture={pan}>
         <Animated.View style={[styles.sheetContainer, sheetStyle]}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            behavior="padding"
+            keyboardVerticalOffset={0}
             style={styles.keyboardAvoid}
           >
             {children}

@@ -1,12 +1,13 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -29,6 +30,22 @@ const EVENT_COLORS = [
   "#4F46E5", "#0891B2", "#059669", "#D97706",
   "#DC2626", "#7C3AED", "#DB2777", "#2563EB",
 ];
+
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const MINUTES = [0, 15, 30, 45];
+const DURATIONS = ["30 min", "1 hr", "1.5 hr", "2 hr", "3 hr"];
+
+function formatHour(h: number): string {
+  if (h === 0) return "12 AM";
+  if (h === 12) return "12 PM";
+  return h < 12 ? `${h} AM` : `${h - 12} PM`;
+}
+
+function formatTime(hour: number, minute: number): string {
+  const h = hour % 12 === 0 ? 12 : hour % 12;
+  const ampm = hour < 12 ? "AM" : "PM";
+  return `${h}:${String(minute).padStart(2, "0")} ${ampm}`;
+}
 
 function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
@@ -55,10 +72,14 @@ export default function CalendarScreen() {
 
   const [createVisible, setCreateVisible] = useState(false);
   const [newTitle, setNewTitle] = useState("");
-  const [newTime, setNewTime] = useState("");
-  const [newDuration, setNewDuration] = useState("");
+  const [isAllDay, setIsAllDay] = useState(false);
+  const [selectedHour, setSelectedHour] = useState(9);
+  const [selectedMinute, setSelectedMinute] = useState(0);
+  const [selectedDuration, setSelectedDuration] = useState<string | null>(null);
   const [newColor, setNewColor] = useState(EVENT_COLORS[0]);
   const [saving, setSaving] = useState(false);
+
+  const hourScrollRef = useRef<ScrollView>(null);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -79,6 +100,20 @@ export default function CalendarScreen() {
   useEffect(() => {
     loadEvents();
   }, [year, month, user?.id]);
+
+  useEffect(() => {
+    if (createVisible) {
+      setNewTitle("");
+      setIsAllDay(false);
+      setSelectedHour(9);
+      setSelectedMinute(0);
+      setSelectedDuration(null);
+      setNewColor(EVENT_COLORS[0]);
+      setTimeout(() => {
+        hourScrollRef.current?.scrollTo({ x: 9 * 68, animated: false });
+      }, 100);
+    }
+  }, [createVisible]);
 
   function prevMonth() {
     setViewDate(new Date(year, month - 1, 1));
@@ -102,21 +137,18 @@ export default function CalendarScreen() {
     if (!user || !newTitle.trim()) return;
     setSaving(true);
     try {
+      const timeStr = isAllDay ? null : formatTime(selectedHour, selectedMinute);
       const ev = await createCalendarEvent({
         owner_id: user.id,
         title: newTitle.trim(),
         event_date: selectedDateISO,
-        event_time: newTime.trim() || null,
-        duration: newDuration.trim() || null,
+        event_time: timeStr,
+        duration: selectedDuration,
         color: newColor,
         note: "",
       });
       setEvents((prev) => [...prev, ev]);
       setCreateVisible(false);
-      setNewTitle("");
-      setNewTime("");
-      setNewDuration("");
-      setNewColor(EVENT_COLORS[0]);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {}
     setSaving(false);
@@ -158,7 +190,7 @@ export default function CalendarScreen() {
           {calendarDays.map((day, idx) => {
             const isToday = isCurrentMonth && day === today.getDate();
             const isSelected = day === selectedDay;
-            const hasEvent = day !== null && daysWithEvents.has(day) && isCurrentMonth;
+            const hasEvent = day !== null && daysWithEvents.has(day);
 
             return (
               <Pressable
@@ -250,55 +282,152 @@ export default function CalendarScreen() {
 
       {/* ── Create Event Bottom Sheet ── */}
       <BottomSheet visible={createVisible} onClose={() => setCreateVisible(false)}>
-        <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <ScrollView
+          style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24 }}
+          contentContainerStyle={[styles.sheet, { paddingBottom: insets.bottom + 32 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
           <Text style={[styles.sheetTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
             New Event — {MONTHS[month]} {selectedDay}
           </Text>
 
+          {/* Title */}
           <TextInput
-            style={[styles.input, { color: colors.foreground, backgroundColor: colors.secondary, borderColor: colors.border, fontFamily: "Inter_400Regular" }]}
+            style={[styles.titleInput, { color: colors.foreground, backgroundColor: colors.secondary, fontFamily: "Inter_400Regular" }]}
             placeholder="Event title"
             placeholderTextColor={colors.mutedForeground}
             value={newTitle}
             onChangeText={setNewTitle}
-            autoFocus
+            returnKeyType="done"
           />
 
-          <View style={styles.inputRow}>
-            <TextInput
-              style={[styles.input, styles.inputHalf, { color: colors.foreground, backgroundColor: colors.secondary, borderColor: colors.border, fontFamily: "Inter_400Regular" }]}
-              placeholder="Time (e.g. 2:00 PM)"
-              placeholderTextColor={colors.mutedForeground}
-              value={newTime}
-              onChangeText={setNewTime}
-            />
-            <TextInput
-              style={[styles.input, styles.inputHalf, { color: colors.foreground, backgroundColor: colors.secondary, borderColor: colors.border, fontFamily: "Inter_400Regular" }]}
-              placeholder="Duration (e.g. 1 hr)"
-              placeholderTextColor={colors.mutedForeground}
-              value={newDuration}
-              onChangeText={setNewDuration}
+          {/* All day toggle */}
+          <View style={[styles.allDayRow, { borderColor: colors.border }]}>
+            <Feather name="sun" size={16} color={colors.mutedForeground} />
+            <Text style={[styles.pickerLabel, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>All day</Text>
+            <Switch
+              value={isAllDay}
+              onValueChange={(v) => { setIsAllDay(v); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+              trackColor={{ false: colors.border, true: colors.accent }}
+              thumbColor="#FFFFFF"
             />
           </View>
+
+          {/* Time picker */}
+          {!isAllDay && (
+            <View style={styles.pickerSection}>
+              <View style={styles.pickerHeader}>
+                <Feather name="clock" size={14} color={colors.mutedForeground} />
+                <Text style={[styles.pickerLabel, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Time</Text>
+              </View>
+
+              {/* Hour strip */}
+              <ScrollView
+                ref={hourScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chipRow}
+              >
+                {HOURS.map((h) => (
+                  <Pressable
+                    key={h}
+                    onPress={() => { setSelectedHour(h); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                    style={[
+                      styles.chip,
+                      { backgroundColor: selectedHour === h ? colors.primary : colors.secondary },
+                    ]}
+                  >
+                    <Text style={[
+                      styles.chipText,
+                      { color: selectedHour === h ? colors.primaryForeground : colors.foreground, fontFamily: selectedHour === h ? "Inter_600SemiBold" : "Inter_400Regular" },
+                    ]}>
+                      {formatHour(h)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              {/* Minute chips */}
+              <View style={styles.chipRow}>
+                {MINUTES.map((m) => (
+                  <Pressable
+                    key={m}
+                    onPress={() => { setSelectedMinute(m); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                    style={[
+                      styles.chip,
+                      { backgroundColor: selectedMinute === m ? colors.accent : colors.secondary },
+                    ]}
+                  >
+                    <Text style={[
+                      styles.chipText,
+                      { color: selectedMinute === m ? "#FFFFFF" : colors.foreground, fontFamily: selectedMinute === m ? "Inter_600SemiBold" : "Inter_400Regular" },
+                    ]}>
+                      :{String(m).padStart(2, "0")}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Duration picker */}
+          {!isAllDay && (
+            <View style={styles.pickerSection}>
+              <View style={styles.pickerHeader}>
+                <Feather name="clock" size={14} color={colors.mutedForeground} />
+                <Text style={[styles.pickerLabel, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Duration</Text>
+              </View>
+              <View style={[styles.chipRow, { flexWrap: "wrap" }]}>
+                {DURATIONS.map((d) => (
+                  <Pressable
+                    key={d}
+                    onPress={() => {
+                      setSelectedDuration(selectedDuration === d ? null : d);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                    style={[
+                      styles.chip,
+                      { backgroundColor: selectedDuration === d ? colors.accent : colors.secondary },
+                    ]}
+                  >
+                    <Text style={[
+                      styles.chipText,
+                      { color: selectedDuration === d ? "#FFFFFF" : colors.foreground, fontFamily: selectedDuration === d ? "Inter_600SemiBold" : "Inter_400Regular" },
+                    ]}>
+                      {d}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* Color picker */}
-          <View style={styles.colorRow}>
-            {EVENT_COLORS.map((c) => (
-              <Pressable
-                key={c}
-                onPress={() => setNewColor(c)}
-                style={[
-                  styles.colorSwatch,
-                  { backgroundColor: c },
-                  newColor === c && styles.colorSwatchSelected,
-                ]}
-              >
-                {newColor === c && <Feather name="check" size={12} color="#FFFFFF" />}
-              </Pressable>
-            ))}
+          <View style={styles.pickerSection}>
+            <View style={styles.pickerHeader}>
+              <Feather name="droplet" size={14} color={colors.mutedForeground} />
+              <Text style={[styles.pickerLabel, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Color</Text>
+            </View>
+            <View style={styles.colorRow}>
+              {EVENT_COLORS.map((c) => (
+                <Pressable
+                  key={c}
+                  onPress={() => { setNewColor(c); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  style={[
+                    styles.colorSwatch,
+                    { backgroundColor: c },
+                    newColor === c && styles.colorSwatchSelected,
+                  ]}
+                >
+                  {newColor === c && <Feather name="check" size={14} color="#FFFFFF" />}
+                </Pressable>
+              ))}
+            </View>
           </View>
 
+          {/* Create button */}
           <Pressable
             onPress={handleCreateEvent}
             disabled={saving || !newTitle.trim()}
@@ -315,7 +444,7 @@ export default function CalendarScreen() {
               </Text>
             )}
           </Pressable>
-        </View>
+        </ScrollView>
       </BottomSheet>
     </View>
   );
@@ -341,7 +470,7 @@ const styles = StyleSheet.create({
   eventsSection: { paddingHorizontal: 16, paddingTop: 20, gap: 10 },
   eventsSectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   sectionLabel: { fontSize: 12, textTransform: "uppercase", letterSpacing: 0.8 },
-  addEventBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
+  addEventBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 100 },
   addEventText: { fontSize: 13, color: "#FFFFFF" },
   noEvents: { alignItems: "center", paddingVertical: 32, gap: 8 },
   noEventsText: { fontSize: 15 },
@@ -358,31 +487,47 @@ const styles = StyleSheet.create({
   eventContent: { flex: 1, paddingVertical: 14, gap: 3 },
   eventTitle: { fontSize: 15 },
   eventTime: { fontSize: 13 },
+
   sheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    borderWidth: 1,
-    borderBottomWidth: 0,
     padding: 20,
-    paddingBottom: 40,
-    gap: 14,
+    gap: 16,
   },
-  sheetHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 8 },
+  sheetHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 4 },
   sheetTitle: { fontSize: 18, letterSpacing: -0.3 },
-  input: {
-    borderWidth: 1,
+
+  titleInput: {
     borderRadius: 100,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
     fontSize: 15,
   },
-  inputRow: { flexDirection: "row", gap: 10 },
-  inputHalf: { flex: 1 },
+
+  allDayRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 4,
+  },
+
+  pickerSection: { gap: 10 },
+  pickerHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pickerLabel: { fontSize: 13 },
+
+  chipRow: { flexDirection: "row", gap: 8 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 100,
+  },
+  chipText: { fontSize: 13 },
+
   colorRow: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
   colorSwatch: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -395,6 +540,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
-  createBtn: { borderRadius: 100, paddingVertical: 15, alignItems: "center" },
+  createBtn: { borderRadius: 100, paddingVertical: 15, alignItems: "center", marginTop: 4 },
   createBtnText: { fontSize: 15 },
 });
