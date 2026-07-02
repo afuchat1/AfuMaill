@@ -278,7 +278,7 @@ export default function LoginScreen() {
               </Text>
 
               <View style={styles.fields}>
-                <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                   <TextInput
                     style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
                     placeholder="Username or email"
@@ -293,7 +293,7 @@ export default function LoginScreen() {
                   />
                 </View>
 
-                <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                   <TextInput
                     ref={passwordRef}
                     style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
@@ -379,7 +379,7 @@ export default function LoginScreen() {
                   </Text>
 
                   <View style={styles.fields}>
-                    <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                    <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
                         style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
                         placeholder="Recovery email or username"
@@ -450,7 +450,7 @@ export default function LoginScreen() {
                   </Text>
 
                   <View style={styles.fields}>
-                    <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                    <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
                         style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
                         placeholder="First name"
@@ -464,7 +464,7 @@ export default function LoginScreen() {
                       />
                     </View>
 
-                    <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                    <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
                         ref={lastNameRef}
                         style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
@@ -513,7 +513,7 @@ export default function LoginScreen() {
 
                   <View style={styles.fields}>
                     {/* Username input row */}
-                    <View style={[styles.usernameRow, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                    <View style={[styles.usernameRow, { backgroundColor: colors.secondary }]}>
                       <TextInput
                         style={[styles.usernameInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
                         placeholder="username"
@@ -625,7 +625,7 @@ export default function LoginScreen() {
                   </Text>
 
                   <View style={styles.fields}>
-                    <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                    <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
                         style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
                         placeholder="Password (min. 6 characters)"
@@ -638,7 +638,7 @@ export default function LoginScreen() {
                       />
                     </View>
 
-                    <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                    <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
                         ref={confirmRef}
                         style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
@@ -685,7 +685,7 @@ export default function LoginScreen() {
                   </Text>
 
                   <View style={styles.fields}>
-                    <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                    <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
                         style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
                         placeholder="+1 555 000 0000"
