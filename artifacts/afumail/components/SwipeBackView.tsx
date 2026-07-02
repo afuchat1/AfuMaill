@@ -9,23 +9,16 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 
-/**
- * Spring config that matches the main drawer / email-detail panel in index.tsx.
- * Using withSpring instead of withTiming gives the same physics-based feel as
- * the sidebar swipe and the email panel overlay.
- */
 const SPRING = { damping: 28, stiffness: 300, mass: 0.9 };
 
 /**
- * Drives BOTH the entrance (slide in from the right on mount) and the exit
- * (slide out to the right — via swipe-to-dismiss OR a programmatic goBack
- * call) with the exact same spring curve used by the sidebar drawer and the
- * email detail panel, on every platform.
- *
- * Screens should call the `goBack` function handed to them instead of
- * `router.back()` directly so button-tap exits animate identically to swipe
- * exits.
+ * Swipe-to-go-back view that only activates from the left edge (~30px).
+ * Uses manualActivation so the native ScrollView always wins for vertical
+ * scrolls — the pan gesture fails immediately if movement is more vertical
+ * than horizontal, letting the scroll view take full control.
  */
+
+const EDGE_SLOP = 30;
 
 interface Props {
   children: (goBack: () => void) => React.ReactNode;
@@ -35,6 +28,10 @@ export function SwipeBackView({ children }: Props) {
   const { width } = useWindowDimensions();
   const panX = useSharedValue(width);
   const isClosing = useRef(false);
+
+  const startedFromEdge = useSharedValue(false);
+  const initialX = useSharedValue(0);
+  const initialY = useSharedValue(0);
 
   useEffect(() => {
     panX.value = withSpring(0, SPRING);
@@ -53,10 +50,33 @@ export function SwipeBackView({ children }: Props) {
   }
 
   const pan = Gesture.Pan()
-    .activeOffsetX([8, Infinity])
-    .failOffsetY([-14, 14])
-    .onBegin(() => {
+    .manualActivation(true)
+    .onBegin((e) => {
       isClosing.current = false;
+      startedFromEdge.value = e.x <= EDGE_SLOP;
+      initialX.value = e.x;
+      initialY.value = e.y;
+    })
+    .onTouchesMove((e, stateManager) => {
+      const touch = e.changedTouches[0];
+      if (!touch) return;
+
+      if (!startedFromEdge.value) {
+        stateManager.fail();
+        return;
+      }
+
+      const dx = touch.x - initialX.value;
+      const dy = touch.y - initialY.value;
+
+      if (Math.abs(dy) > Math.abs(dx) + 3) {
+        stateManager.fail();
+        return;
+      }
+
+      if (dx > 8) {
+        stateManager.activate();
+      }
     })
     .onUpdate((e) => {
       panX.value = Math.max(0, e.translationX);
@@ -71,6 +91,11 @@ export function SwipeBackView({ children }: Props) {
           if (finished) runOnJS(finish)();
         });
       } else {
+        panX.value = withSpring(0, SPRING);
+      }
+    })
+    .onFinalize(() => {
+      if (!isClosing.current) {
         panX.value = withSpring(0, SPRING);
       }
     });
