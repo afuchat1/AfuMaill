@@ -21,7 +21,7 @@ import { Dialog } from "@/components/ui/Dialog";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { getPreferences, Preferences, setPref } from "@/lib/preferences";
-import { getEmailStats, getProfile, saveNotificationEmail, savePhoneNumber, saveRecoveryEmail } from "@/lib/supabase";
+import { getEmailStats, getProfile, savePhoneNumber, saveRecoveryEmail } from "@/lib/supabase";
 
 export default function SettingsScreen() {
   const colors = useColors();
@@ -46,12 +46,10 @@ export default function SettingsScreen() {
   const [emailCount, setEmailCount] = useState<number | null>(null);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [recoveryEmail, setRecoveryEmail] = useState("");
-  const [notificationEmail, setNotificationEmail] = useState("");
   const [saving, setSaving] = useState(false);
 
   const [phoneModal, setPhoneModal] = useState(false);
   const [recoveryModal, setRecoveryModal] = useState(false);
-  const [notificationModal, setNotificationModal] = useState(false);
   const [fontSizeModal, setFontSizeModal] = useState(false);
   const [densityModal, setDensityModal] = useState(false);
   const [quietModal, setQuietModal] = useState(false);
@@ -59,8 +57,6 @@ export default function SettingsScreen() {
   const [phoneInput, setPhoneInput] = useState("");
   const [recoveryInput, setRecoveryInput] = useState("");
   const [recoveryError, setRecoveryError] = useState("");
-  const [notificationInput, setNotificationInput] = useState("");
-  const [notificationError, setNotificationError] = useState("");
   const [quietStart, setQuietStart] = useState("22:00");
   const [quietEnd, setQuietEnd] = useState("07:00");
 
@@ -74,7 +70,6 @@ export default function SettingsScreen() {
         if (!p) return;
         setPhoneNumber(p.phone_number ?? "");
         setRecoveryEmail(p.recovery_email ?? "");
-        setNotificationEmail(p.notification_email ?? "");
       })
       .catch((err) => console.warn("Failed to load profile:", err));
     getEmailStats(user.id)
@@ -139,18 +134,6 @@ export default function SettingsScreen() {
       : "";
     setRecoveryEmail(full);
     setRecoveryModal(false);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  }
-
-  async function handleSaveNotificationEmail() {
-    if (!user) return;
-    setNotificationError("");
-    setSaving(true);
-    const { error } = await saveNotificationEmail(user.id, notificationInput);
-    setSaving(false);
-    if (error) { setNotificationError(error); return; }
-    setNotificationEmail(notificationInput.trim().toLowerCase());
-    setNotificationModal(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }
 
@@ -323,27 +306,6 @@ export default function SettingsScreen() {
                 <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
               </View>
             </Pressable>
-            <View style={[styles.separator, { backgroundColor: colors.border }]} />
-            <Pressable
-              onPress={() => { setNotificationInput(notificationEmail); setNotificationError(""); setNotificationModal(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-              style={({ pressed }) => [styles.settingRow, { backgroundColor: pressed ? colors.secondary : "transparent" }]}
-            >
-              <View style={styles.iconWrap}>
-                <Feather name="send" size={21} color={colors.foreground} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.rowLabel, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Reset Link Email</Text>
-                <Text style={{ fontSize: 11, color: colors.mutedForeground, fontFamily: "Inter_400Regular", marginTop: 1 }}>
-                  External email where password resets are sent
-                </Text>
-              </View>
-              <View style={styles.navRight}>
-                <Text style={[styles.infoText, { color: notificationEmail ? colors.mutedForeground : colors.destructive, fontFamily: "Inter_400Regular" }]}>
-                  {notificationEmail || "Not set"}
-                </Text>
-                <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
-              </View>
-            </Pressable>
           </View>
         </View>
 
@@ -467,40 +429,6 @@ export default function SettingsScreen() {
               <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.foreground }}>Cancel</Text>
             </Pressable>
             <Pressable onPress={handleSaveRecoveryEmail} disabled={saving} style={[styles.modalSaveBtn, { backgroundColor: colors.primary, opacity: saving ? 0.7 : 1 }]}>
-              {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground }}>Save</Text>}
-            </Pressable>
-          </View>
-        </View>
-      </Dialog>
-
-      {/* ── Notification Email Dialog ── */}
-      <Dialog visible={notificationModal} onClose={() => setNotificationModal(false)}>
-        <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Reset Link Email</Text>
-          <Text style={[styles.modalSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Your real email address (Gmail, Outlook, etc.) where password reset links will be sent.
-          </Text>
-          <View style={[styles.modalInput, { borderColor: colors.border, backgroundColor: colors.background }]}>
-            <TextInput
-              style={[{ flex: 1, fontSize: 16, color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-              placeholder="you@gmail.com"
-              placeholderTextColor={colors.mutedForeground}
-              value={notificationInput}
-              onChangeText={(t) => { setNotificationInput(t); setNotificationError(""); }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoFocus
-            />
-          </View>
-          {!!notificationError && (
-            <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: colors.destructive }}>{notificationError}</Text>
-          )}
-          <View style={styles.modalActions}>
-            <Pressable onPress={() => setNotificationModal(false)} style={[styles.modalCancelBtn, { borderColor: colors.border }]}>
-              <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.foreground }}>Cancel</Text>
-            </Pressable>
-            <Pressable onPress={handleSaveNotificationEmail} disabled={saving} style={[styles.modalSaveBtn, { backgroundColor: colors.primary, opacity: saving ? 0.7 : 1 }]}>
               {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground }}>Save</Text>}
             </Pressable>
           </View>
