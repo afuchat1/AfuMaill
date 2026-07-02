@@ -16,10 +16,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
-import { isUsernameAvailable, registerUser, savePhoneNumber, signInUser } from "@/lib/supabase";
+import { isUsernameAvailable, registerUser, resetPasswordByRecoveryEmail, savePhoneNumber, signInUser } from "@/lib/supabase";
 import { useColors } from "@/hooks/useColors";
 
-type Mode = "login" | "register";
+type Mode = "login" | "register" | "forgot";
 type RegisterStep = 1 | 2 | 3 | 4;
 
 function slugify(text: string) {
@@ -43,6 +43,12 @@ export default function LoginScreen() {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
+
+  // Forgot password fields
+  const [forgotRecovery, setForgotRecovery] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+  const [forgotSuccess, setForgotSuccess] = useState(false);
 
   // Register fields
   const [firstName, setFirstName] = useState("");
@@ -187,11 +193,41 @@ export default function LoginScreen() {
     setPhoneLoading(false);
   }
 
+  // ─── Forgot password ─────────────────────────────────────────
+  async function handleForgotPassword() {
+    if (!forgotRecovery.trim()) {
+      setForgotError("Please enter your recovery email or username.");
+      return;
+    }
+    setForgotLoading(true);
+    setForgotError("");
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const { error } = await resetPasswordByRecoveryEmail(forgotRecovery.trim());
+    if (error) {
+      setForgotError(error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } else {
+      setForgotSuccess(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    setForgotLoading(false);
+  }
+
+  function switchToForgot() {
+    setMode("forgot");
+    setForgotRecovery("");
+    setForgotError("");
+    setForgotSuccess(false);
+  }
+
   function switchToLogin() {
     setMode("login");
     setStep(1);
     setRegisterError("");
     setLoginError("");
+    setForgotRecovery("");
+    setForgotError("");
+    setForgotSuccess(false);
   }
 
   function switchToRegister() {
@@ -289,6 +325,15 @@ export default function LoginScreen() {
                 </Pressable>
               </View>
 
+              <Pressable style={styles.switchRow} onPress={switchToForgot}>
+                <Text style={[styles.switchText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  Forgot password?{" "}
+                  <Text style={[styles.switchLink, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>
+                    Reset it
+                  </Text>
+                </Text>
+              </Pressable>
+
               <Pressable style={styles.switchRow} onPress={switchToRegister}>
                 <Text style={[styles.switchText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
                   No account?{" "}
@@ -297,6 +342,91 @@ export default function LoginScreen() {
                   </Text>
                 </Text>
               </Pressable>
+            </View>
+          )}
+
+          {/* ── FORGOT PASSWORD MODE ─────────────────────── */}
+          {mode === "forgot" && (
+            <View style={styles.card}>
+              <Pressable onPress={switchToLogin} hitSlop={8} style={styles.backBtn}>
+                <Feather name="arrow-left" size={18} color={colors.foreground} />
+              </Pressable>
+
+              {forgotSuccess ? (
+                <>
+                  <View style={[styles.successIcon, { backgroundColor: colors.success + "20" }]}>
+                    <Feather name="check-circle" size={32} color={colors.success} />
+                  </View>
+                  <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                    Reset email sent
+                  </Text>
+                  <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                    A password reset link has been sent to the account linked to that recovery email. Check your inbox.
+                  </Text>
+                  <Pressable
+                    onPress={switchToLogin}
+                    style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? "#333" : colors.primary }]}
+                  >
+                    <Text style={[styles.primaryBtnText, { color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }]}>
+                      Back to Sign In
+                    </Text>
+                  </Pressable>
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                    Reset password
+                  </Text>
+                  <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                    Enter the recovery email linked to your account. We'll send a reset link there.
+                  </Text>
+
+                  <View style={styles.fields}>
+                    <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                      <TextInput
+                        style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+                        placeholder="Recovery email or username"
+                        placeholderTextColor={colors.mutedForeground}
+                        value={forgotRecovery}
+                        onChangeText={(t) => { setForgotRecovery(t); setForgotError(""); }}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        keyboardType="email-address"
+                        returnKeyType="done"
+                        onSubmitEditing={handleForgotPassword}
+                      />
+                    </View>
+
+                    {!!forgotError && (
+                      <Text style={[styles.errorText, { color: colors.destructive, fontFamily: "Inter_400Regular" }]}>
+                        {forgotError}
+                      </Text>
+                    )}
+
+                    <Pressable
+                      onPress={handleForgotPassword}
+                      disabled={forgotLoading}
+                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? "#333" : colors.primary, opacity: forgotLoading ? 0.7 : 1 }]}
+                    >
+                      {forgotLoading
+                        ? <ActivityIndicator color={colors.primaryForeground} size="small" />
+                        : <Text style={[styles.primaryBtnText, { color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }]}>
+                            Send Reset Link
+                          </Text>
+                      }
+                    </Pressable>
+                  </View>
+
+                  <Pressable style={styles.switchRow} onPress={switchToLogin}>
+                    <Text style={[styles.switchText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                      Remember your password?{" "}
+                      <Text style={[styles.switchLink, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>
+                        Sign in
+                      </Text>
+                    </Text>
+                  </Pressable>
+                </>
+              )}
             </View>
           )}
 
@@ -712,5 +842,13 @@ const styles = StyleSheet.create({
   },
   skipText: {
     fontSize: 14,
+  },
+  successIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
   },
 });
