@@ -1,11 +1,9 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -51,10 +49,10 @@ serve(async (req) => {
     const data = await res.json();
 
     if (!res.ok) {
-      return new Response(JSON.stringify({ error: (data as { message?: string }).message ?? "Failed to send email." }), {
-        status: res.status,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: (data as { message?: string }).message ?? "Failed to send email." }),
+        { status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     return new Response(JSON.stringify(data), {
