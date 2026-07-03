@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-20", "web", "bash"]
 
 [deployment]
 router = "application"
@@ -36,6 +36,18 @@ waitForPort = 5000
 [workflows.workflow.metadata]
 outputType = "console"
 
+[[workflows.workflow]]
+name = "artifacts/api-server: API Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/api-server && PORT=8080 pnpm run dev"
+waitForPort = 8080
+
+[workflows.workflow.metadata]
+outputType = "console"
+
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
@@ -57,10 +69,9 @@ SUPABASE_DB_URL = "postgresql://postgres.lqowocmjmhbkoxlwyxku:AfuMail_Db2026!Sec
 SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxxb3dvY21qbWhia294bHd5eGt1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjgyODU3OSwiZXhwIjoyMDk4NDA0NTc5fQ.ldRetWlHSnVgS81qurmI4ttdyrLbAqZ-Z3JW6xscfzs"
 SUPABASE_URL = "https://lqowocmjmhbkoxlwyxku.supabase.co"
 
-[[ports]]
-localPort = 3000
-externalPort = 80
+[nix]
+channel = "stable-25_05"
 
 [[ports]]
-localPort = 5000
-externalPort = 5000
+localPort = 8080
+externalPort = 8080
