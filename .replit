@@ -37,8 +37,8 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "until nc -z 127.0.0.1 8099 2>/dev/null; do sleep 1; done; echo 'Expo dev server ready on 8099'"
-waitForPort = 8099
+args = "cd artifacts/afumail && PORT=5000 node server/web-proxy.js"
+waitForPort = 5000
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
