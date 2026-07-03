@@ -4,7 +4,7 @@
  */
 const http = require("http");
 
-const TARGET_PORT = 8099;
+const TARGET_PORT = 8099; // Expo Web server runs on port 8099
 const PROXY_PORT = parseInt(process.env.PORT || "3000", 10);
 
 const server = http.createServer((clientReq, clientRes) => {
@@ -32,6 +32,28 @@ const server = http.createServer((clientReq, clientRes) => {
   clientReq.pipe(proxy, { end: true });
 });
 
-server.listen(PROXY_PORT, "0.0.0.0", () => {
+let retryTimer = null;
+
+function startListening() {
+  retryTimer = null;
+  server.listen(PROXY_PORT, "0.0.0.0");
+}
+
+server.on("listening", () => {
   console.log(`Web proxy listening on port ${PROXY_PORT} → forwarding to ${TARGET_PORT}`);
 });
+
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    // Only schedule one retry at a time — never bind if a timer is already pending
+    if (!retryTimer) {
+      console.log(`Port ${PROXY_PORT} busy, retrying in 2s…`);
+      retryTimer = setTimeout(startListening, 2000);
+    }
+  } else {
+    console.error("Fatal server error:", err.message);
+    process.exit(1);
+  }
+});
+
+startListening();

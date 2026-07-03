@@ -26,7 +26,7 @@ args = "artifacts/afumail: expo"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "AfuMail Web"
+args = "AfuMail Website"
 
 [[workflows.workflow]]
 name = "artifacts/afumail: expo"
@@ -41,16 +41,16 @@ waitForPort = 5000
 outputType = "webview"
 
 [[workflows.workflow]]
-name = "AfuMail Web"
+name = "AfuMail Website"
 author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd artifacts/afumail && PORT=3000 node server/web-proxy.js"
 waitForPort = 3000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"

@@ -19,12 +19,17 @@ pnpm --filter @workspace/api-server run dev
 ```
 Use the **artifacts/api-server: API Server** workflow in Replit.
 
-### Mobile / Web app (Expo, port 8099)
+### Mobile app (Expo, port 5000 preview)
 ```
 pnpm --filter @workspace/afumail run dev
 ```
-Use the **artifacts/afumail: expo** workflow in Replit.
-Press `w` for web preview, or scan the QR code with Expo Go for mobile.
+Use the **artifacts/afumail: expo** workflow in Replit (mobile phone frame preview).
+Scan the QR code with Expo Go for native mobile.
+
+### Website (desktop web, port 3000 → external port 80)
+Use the **AfuMail Website** workflow in Replit.
+Proxies port 3000 → Expo Web at port 8099. Shows in desktop layout.
+`artifacts/afumail/server/web-proxy.js` handles the forwarding with EADDRINUSE retry.
 
 ### Other commands
 - `pnpm run typecheck` — full typecheck across all packages
