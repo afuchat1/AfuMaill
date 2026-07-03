@@ -49,15 +49,19 @@ startExpo();
 
 // ── 2. HTTP proxy: LISTEN_PORT → EXPO_PORT ───────────────────────────────────
 const server = http.createServer((clientReq, clientRes) => {
+  // Strip origin/referer so Expo's CorsMiddleware doesn't reject the request
+  // when running behind Replit's proxy domain.
+  const fwdHeaders = { ...clientReq.headers };
+  delete fwdHeaders["origin"];
+  delete fwdHeaders["referer"];
+  fwdHeaders["host"] = `127.0.0.1:${EXPO_PORT}`;
+
   const opts = {
     hostname: "127.0.0.1",
     port: EXPO_PORT,
     path: clientReq.url,
     method: clientReq.method,
-    headers: {
-      ...clientReq.headers,
-      host: `127.0.0.1:${EXPO_PORT}`,
-    },
+    headers: fwdHeaders,
   };
 
   const proxy = http.request(opts, (proxyRes) => {
