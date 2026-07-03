@@ -2,8 +2,38 @@
   "name": "@workspace/website",
   "version": "1.0.0",
   "private": true,
+  "main": "expo-router/entry",
   "scripts": {
-    "dev": "node ../afumail/server/serve.js",
-    "start": "node ../afumail/server/serve.js"
+    "dev": "node server/serve.js",
+    "build": "expo export --platform web",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@expo-google-fonts/inter": "^0.4.0",
+    "@expo/vector-icons": "^15.0.3",
+    "@tanstack/react-query": "catalog:",
+    "@types/react": "~19.2.17",
+    "@types/react-dom": "~19.2.3",
+    "@workspace/api-client-react": "workspace:*",
+    "babel-plugin-react-compiler": "^19.0.0-beta-e993439-20250117",
+    "expo": "~55.0.27",
+    "expo-constants": "~55.0.16",
+    "expo-font": "~55.0.8",
+    "expo-linking": "~55.0.7",
+    "expo-router": "~55.0.1",
+    "expo-status-bar": "~55.0.6",
+    "expo-web-browser": "~55.0.17",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.83.6",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.23.0",
+    "react-native-web": "^0.21.0",
+    "typescript": "~5.9.2",
+    "zod": "catalog:"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.2"
   }
 }

@@ -1,4 +1,4 @@
-kind = "web"
+kind = "mobile"
 previewPath = "/"
 title = "AfuMail"
 version = "1.0.0"
@@ -12,15 +12,11 @@ version = "1.0.0"
 [[services]]
 ensurePreviewReachable = "/status"
 name = "expo"
-paths = [ "/" ]
+paths = ["/"]
 localPort = 8099
 
 [services.development]
 run = "pnpm --filter @workspace/afumail run dev"
-
-[services.production]
-build = [ "pnpm", "--filter", "@workspace/afumail", "run", "build" ]
-run = [ "pnpm", "--filter", "@workspace/afumail", "run", "serve" ]
 
 [services.env]
 PORT = "8099"

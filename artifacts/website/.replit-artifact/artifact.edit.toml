@@ -1,7 +1,8 @@
 kind = "web"
 previewPath = "/"
-title = "AfuMail Website"
+title = "Website"
 version = "1.0.0"
+id = "artifacts/website"
 
 [[services]]
 localPort = 3000
@@ -9,7 +10,7 @@ name = "Website"
 paths = ["/"]
 
 [services.development]
-run = "node artifacts/afumail/server/serve.js"
+run = "pnpm --filter @workspace/website run dev"
 
 [services.env]
 PORT = "3000"
