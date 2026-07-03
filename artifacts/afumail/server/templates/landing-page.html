@@ -1,460 +1,1552 @@
-<!doctype html>
-<html>
-  <head>
-    <title>APP_NAME_PLACEHOLDER</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='180' height='180' rx='36' fill='%23FF3C00'/%3E%3C/svg%3E" />
-    <style>
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        margin: 0;
-        padding: 32px 20px;
-        text-align: center;
-        background: #fff;
-        color: #222;
-        line-height: 1.5;
-        min-height: 100vh;
-      }
-      .wrapper {
-        max-width: 480px;
-        margin: 0 auto;
-      }
-      h1 {
-        font-size: 26px;
-        font-weight: 600;
-        margin: 0;
-        color: #111;
-      }
-      .subtitle {
-        font-size: 15px;
-        color: #666;
-        margin-top: 8px;
-        margin-bottom: 32px;
-      }
-      .loading {
-        display: none;
-        margin: 60px 0;
-      }
-      .spinner {
-        border: 2px solid #ddd;
-        border-top-color: #333;
-        border-radius: 50%;
-        width: 32px;
-        height: 32px;
-        animation: spin 0.8s linear infinite;
-        margin: 20px auto;
-      }
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-      .loading-text {
-        font-size: 16px;
-        color: #444;
-      }
-      .content {
-        display: block;
-      }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-      .steps-container {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-      }
+  <!-- Primary SEO -->
+  <title>AfuMail — Private Email for the Afu Community</title>
+  <meta name="description" content="AfuMail is a fast, private email platform built exclusively for the Afu community. Get your @afuchat.com address and connect securely with people you know." />
+  <meta name="keywords" content="AfuMail, afuchat, private email, secure email, community email, Afu" />
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <meta name="author" content="Afu" />
+  <link rel="canonical" href="https://mail.afuchat.com/" />
 
-      .step {
-        padding: 24px;
-        border: 1px solid #ddd;
-        border-radius: 12px;
-        text-align: center;
-        background: #fafafa;
-      }
-      .step-header {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        margin-bottom: 12px;
-      }
-      .step-number {
-        width: 28px;
-        height: 28px;
-        border: 1px solid #999;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        font-size: 14px;
-        flex-shrink: 0;
-        color: #555;
-      }
-      .step-title {
-        font-size: 18px;
-        font-weight: 600;
-        margin: 0;
-        color: #222;
-      }
-      .step-description {
-        font-size: 14px;
-        margin-bottom: 16px;
-        color: #666;
-      }
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://mail.afuchat.com/" />
+  <meta property="og:site_name" content="AfuMail" />
+  <meta property="og:title" content="AfuMail — Private Email for the Afu Community" />
+  <meta property="og:description" content="Fast, private email built exclusively for the Afu community. Get your @afuchat.com address today." />
+  <meta property="og:image" content="https://mail.afuchat.com/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="en_US" />
 
-      .store-buttons {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-      .store-button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 12px 20px;
-        font-size: 14px;
-        font-weight: 500;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        text-decoration: none;
-        color: #333;
-        background: #fff;
-        transition: all 0.15s;
-      }
-      .store-button:hover {
-        background: #f5f5f5;
-        border-color: #999;
-      }
-      .store-link {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        padding: 8px 0;
-        font-size: 13px;
-        font-weight: 400;
-        text-decoration: underline;
-        text-underline-offset: 2px;
-        color: #666;
-        background: none;
-        border: none;
-        transition: color 0.15s;
-      }
-      .store-link:hover {
-        color: #333;
-      }
-      .store-link .store-icon {
-        width: 14px;
-        height: 14px;
-      }
-      .store-icon {
-        width: 18px;
-        height: 18px;
-      }
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@afuchat" />
+  <meta name="twitter:title" content="AfuMail — Private Email for the Afu Community" />
+  <meta name="twitter:description" content="Fast, private email built exclusively for the Afu community. Get your @afuchat.com address today." />
+  <meta name="twitter:image" content="https://mail.afuchat.com/og-image.png" />
 
-      .qr-section {
-        background: #333;
-        color: #fff;
-        border-color: #333;
-      }
-      .qr-section .step-number {
-        border-color: rgba(255, 255, 255, 0.5);
-        color: #fff;
-      }
-      .qr-section .step-title {
-        color: #fff;
-      }
-      .qr-section .step-description {
-        color: rgba(255, 255, 255, 0.7);
-      }
-      .qr-code {
-        width: 180px;
-        height: 180px;
-        margin: 0 auto 16px;
-        background: #fff;
-        border-radius: 8px;
-        padding: 12px;
-      }
-      .qr-code canvas {
-        width: 100%;
-        height: 100%;
-      }
-      .open-button {
-        display: inline-block;
-        padding: 12px 24px;
-        font-size: 14px;
-        font-weight: 500;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 8px;
-        text-decoration: none;
-        color: #333;
-        background: #fff;
-        transition: opacity 0.15s;
-      }
-      .open-button:hover {
-        opacity: 0.9;
-      }
+  <!-- Mobile App Meta -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="AfuMail" />
+  <meta name="application-name" content="AfuMail" />
+  <meta name="theme-color" content="#FF3C00" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)" />
 
-      /* Desktop styles */
-      @media (min-width: 768px) {
-        body {
-          padding: 48px 32px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .wrapper {
-          max-width: 720px;
-        }
-        h1 {
-          font-size: 32px;
-          margin-bottom: 10px;
-        }
-        .subtitle {
-          font-size: 16px;
-          margin-bottom: 40px;
-        }
-        .steps-container {
-          flex-direction: row;
-          gap: 20px;
-          align-items: stretch;
-        }
-        .step {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          padding: 28px;
-        }
-        .step-description {
-          flex-grow: 1;
-        }
-        .store-buttons {
-          flex-direction: column;
-          gap: 10px;
-        }
-        .qr-code {
-          width: 200px;
-          height: 200px;
-        }
-      }
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='180' height='180' rx='36' fill='%23FF3C00'/%3E%3Cpath d='M36 60L90 102L144 60' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='36' y='54' width='108' height='72' rx='8' stroke='white' stroke-width='8' fill='none'/%3E%3C/svg%3E" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='180' height='180' rx='36' fill='%23FF3C00'/%3E%3C/svg%3E" />
 
-      /* Large desktop */
-      @media (min-width: 1024px) {
-        .wrapper {
-          max-width: 800px;
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://mail.afuchat.com/#website",
+        "url": "https://mail.afuchat.com/",
+        "name": "AfuMail",
+        "description": "Private email for the Afu community",
+        "publisher": { "@id": "https://mail.afuchat.com/#organization" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://mail.afuchat.com/#organization",
+        "name": "Afu",
+        "url": "https://mail.afuchat.com/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://mail.afuchat.com/logo.png"
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@afuchat.com",
+          "contactType": "customer support"
         }
-        h1 {
-          font-size: 36px;
-        }
-        .steps-container {
-          gap: 28px;
-        }
-        .step {
-          padding: 32px;
-        }
+      },
+      {
+        "@type": "MobileApplication",
+        "name": "AfuMail",
+        "operatingSystem": "iOS, Android",
+        "applicationCategory": "CommunicationApplication",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "description": "Private email built for the Afu community. Send, receive, and manage your @afuchat.com messages.",
+        "downloadUrl": [
+          "https://apps.apple.com/app/id982107779",
+          "https://play.google.com/store/apps/details?id=host.exp.exponent"
+        ]
       }
+    ]
+  }
+  </script>
 
-      /* Dark mode */
-      @media (prefers-color-scheme: dark) {
-        body {
-          background: #0d0d0d;
-          color: #e0e0e0;
-        }
-        h1 {
-          color: #f5f5f5;
-        }
-        .subtitle {
-          color: #999;
-        }
-        .spinner {
-          border-color: #444;
-          border-top-color: #ccc;
-        }
-        .loading-text {
-          color: #aaa;
-        }
-        .step {
-          border-color: #333;
-          background: #1a1a1a;
-        }
-        .step-number {
-          border-color: #666;
-          color: #bbb;
-        }
-        .step-title {
-          color: #f0f0f0;
-        }
-        .step-description {
-          color: #888;
-        }
-        .store-button {
-          border-color: #444;
-          color: #e0e0e0;
-          background: #222;
-        }
-        .store-button:hover {
-          background: #2a2a2a;
-          border-color: #666;
-        }
-        .store-link {
-          color: #888;
-        }
-        .store-link:hover {
-          color: #ccc;
-        }
-        .qr-section {
-          background: #111;
-          border-color: #333;
-        }
-        .qr-section .step-number {
-          border-color: rgba(255, 255, 255, 0.4);
-        }
-        .qr-section .step-description {
-          color: rgba(255, 255, 255, 0.6);
-        }
-        .open-button {
-          background: #f0f0f0;
-          color: #111;
-        }
-        .open-button:hover {
-          background: #e0e0e0;
-        }
+  <style>
+    /* ── Reset & tokens ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent:       #FF3C00;
+      --accent-light: #ff6633;
+      --bg:           #ffffff;
+      --bg-alt:       #f7f7f5;
+      --bg-card:      #fafaf8;
+      --text:         #111111;
+      --text-2:       #555555;
+      --text-3:       #888888;
+      --border:       #e5e5e2;
+      --radius:       16px;
+      --nav-h:        60px;
+      --font:         -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      --shadow-sm:    0 1px 4px rgba(0,0,0,.06), 0 2px 12px rgba(0,0,0,.04);
+      --shadow-md:    0 4px 24px rgba(0,0,0,.08), 0 1px 4px rgba(0,0,0,.04);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:       #0d0d0d;
+        --bg-alt:   #111111;
+        --bg-card:  #1a1a1a;
+        --text:     #f0f0f0;
+        --text-2:   #999999;
+        --text-3:   #666666;
+        --border:   #2a2a2a;
+        --shadow-sm: 0 1px 4px rgba(0,0,0,.3);
+        --shadow-md: 0 4px 24px rgba(0,0,0,.4);
       }
-    </style>
-  </head>
-  <body>
-    <div class="wrapper">
-      <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <div class="loading-text">Opening in Expo Go...</div>
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; height: auto; display: block; }
+    button { font-family: var(--font); cursor: pointer; border: none; background: none; }
+
+    /* ── Skip link (accessibility) ──────────────────────────── */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 16px;
+      padding: 8px 16px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 9999;
+      transition: top .2s;
+    }
+    .skip-link:focus { top: 16px; }
+
+    /* ── NAV ────────────────────────────────────────────────── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: var(--nav-h);
+      background: rgba(255,255,255,.92);
+      backdrop-filter: saturate(180%) blur(16px);
+      -webkit-backdrop-filter: saturate(180%) blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    @media (prefers-color-scheme: dark) {
+      .nav { background: rgba(13,13,13,.92); }
+    }
+
+    .nav-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 20px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
+      flex-shrink: 0;
+    }
+    .nav-logo-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .nav-logo-icon svg { width: 18px; height: 18px; }
+
+    .nav-links {
+      display: none;
+      list-style: none;
+      gap: 4px;
+    }
+    .nav-links a {
+      display: inline-flex;
+      align-items: center;
+      padding: 10px 12px;
+      font-size: 14px;
+      color: var(--text-2);
+      border-radius: 8px;
+      transition: color .15s, background .15s;
+      white-space: nowrap;
+      min-height: 44px;
+    }
+    .nav-links a:hover { color: var(--text); background: var(--bg-alt); }
+
+    .nav-cta {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .nav-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 10px;
+      transition: opacity .15s;
+      white-space: nowrap;
+    }
+    .nav-download:hover { opacity: .88; }
+
+    /* Hamburger */
+    .nav-burger {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      border-radius: 10px;
+      transition: background .15s;
+      flex-shrink: 0;
+    }
+    .nav-burger:hover { background: var(--bg-alt); }
+    .nav-burger span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: transform .25s, opacity .25s;
+      transform-origin: center;
+    }
+    .nav-burger[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-burger[aria-expanded="true"] span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+    .nav-burger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* Mobile drawer */
+    .nav-drawer {
+      display: none;
+      position: fixed;
+      inset: var(--nav-h) 0 0 0;
+      background: var(--bg);
+      z-index: 99;
+      padding: 24px 24px 40px;
+      overflow-y: auto;
+      border-top: 1px solid var(--border);
+      animation: slideDown .22s ease;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .nav-drawer.open { display: block; }
+    .nav-drawer ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 24px;
+    }
+    .nav-drawer ul a {
+      display: block;
+      padding: 14px 16px;
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--text);
+      border-radius: 12px;
+      transition: background .15s;
+    }
+    .nav-drawer ul a:hover { background: var(--bg-alt); }
+    .nav-drawer-cta {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .btn-primary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 15px 24px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 14px;
+      transition: opacity .15s;
+    }
+    .btn-primary:hover { opacity: .88; }
+    .btn-secondary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 24px;
+      background: var(--bg-alt);
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 500;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      transition: background .15s;
+    }
+    .btn-secondary:hover { background: var(--border); }
+
+    @media (min-width: 768px) {
+      .nav-burger { display: none; }
+      .nav-links { display: flex; }
+      .nav-cta { display: flex; }
+    }
+
+    /* ── HERO ───────────────────────────────────────────────── */
+    .hero {
+      padding: 56px 20px 48px;
+      text-align: center;
+      background: var(--bg);
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: rgba(255,60,0,.08);
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 100px;
+      margin-bottom: 20px;
+      letter-spacing: .2px;
+    }
+    .hero h1 {
+      font-size: clamp(32px, 7vw, 58px);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      color: var(--text);
+      margin-bottom: 20px;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero-desc {
+      font-size: clamp(16px, 2.5vw, 19px);
+      color: var(--text-2);
+      max-width: 520px;
+      margin: 0 auto 36px;
+      line-height: 1.65;
+    }
+    .hero-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 48px;
+    }
+    .hero-actions .btn-primary {
+      width: 100%;
+      max-width: 320px;
+      font-size: 17px;
+      padding: 17px 28px;
+      border-radius: 16px;
+    }
+    .hero-actions .btn-secondary {
+      width: 100%;
+      max-width: 320px;
+      font-size: 16px;
+    }
+    .hero-trust {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .hero-trust svg { color: var(--accent); }
+
+    /* Phone mockup */
+    .hero-visual {
+      margin: 0 auto;
+      max-width: 320px;
+      position: relative;
+    }
+    .phone-frame {
+      background: var(--text);
+      border-radius: 36px;
+      padding: 12px;
+      box-shadow: var(--shadow-md), 0 0 0 1px var(--border);
+      position: relative;
+    }
+    .phone-screen {
+      background: var(--bg-card);
+      border-radius: 26px;
+      overflow: hidden;
+      aspect-ratio: 9/19;
+      display: flex;
+      flex-direction: column;
+    }
+    .phone-status {
+      background: var(--text);
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+    }
+    .phone-status span { width: 12px; height: 12px; background: var(--bg); border-radius: 50%; display: block; }
+    .phone-notch { width: 80px; height: 18px; background: var(--text); border-radius: 0 0 14px 14px; margin: 0 auto; }
+    .phone-content { flex: 1; overflow: hidden; }
+    .phone-email-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .phone-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .phone-meta { flex: 1; min-width: 0; }
+    .phone-sender { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .phone-subject { font-size: 10px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .phone-time { font-size: 9px; color: var(--text-3); flex-shrink: 0; }
+    .phone-unread .phone-sender { font-weight: 700; }
+    .phone-unread-dot { width: 7px; height: 7px; background: var(--accent); border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+
+    @media (min-width: 768px) {
+      .hero { padding: 80px 32px 72px; }
+      .hero-actions { flex-direction: row; justify-content: center; }
+      .hero-actions .btn-primary,
+      .hero-actions .btn-secondary { width: auto; min-width: 180px; }
+      .hero-visual { max-width: 260px; }
+    }
+    @media (min-width: 1024px) {
+      .hero { display: grid; grid-template-columns: 1fr 1fr; align-items: center; text-align: left; gap: 40px; max-width: 1100px; margin: 0 auto; padding: 100px 40px; }
+      .hero-badge { margin-left: 0; }
+      .hero h1 { margin-left: 0; margin-right: 0; }
+      .hero-desc { margin-left: 0; }
+      .hero-actions { justify-content: flex-start; }
+      .hero-trust { justify-content: flex-start; }
+      .hero-visual { max-width: 300px; margin: 0; justify-self: end; }
+      .hero-text { }
+    }
+
+    /* ── SECTION UTILS ──────────────────────────────────────── */
+    .section {
+      padding: 56px 20px;
+    }
+    .section-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .section-label {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+    .section-title {
+      font-size: clamp(24px, 5vw, 38px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.15;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .section-desc {
+      font-size: 16px;
+      color: var(--text-2);
+      max-width: 520px;
+      line-height: 1.65;
+    }
+    @media (min-width: 768px) {
+      .section { padding: 80px 32px; }
+    }
+    @media (min-width: 1024px) {
+      .section { padding: 96px 40px; }
+    }
+
+    /* ── FEATURES ───────────────────────────────────────────── */
+    .features-bg { background: var(--bg-alt); }
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-top: 40px;
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      transition: box-shadow .2s, transform .2s;
+    }
+    .feature-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: rgba(255,60,0,.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      color: var(--accent);
+    }
+    .feature-icon svg { width: 24px; height: 24px; }
+    .feature-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .feature-body {
+      font-size: 14px;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+    @media (min-width: 600px) {
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 1024px) {
+      .features-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    }
+
+    /* ── HOW IT WORKS ───────────────────────────────────────── */
+    .steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-top: 40px;
+    }
+    .how-step {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      padding-bottom: 32px;
+      position: relative;
+    }
+    .how-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 19px;
+      top: 44px;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+    .how-num {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-2);
+      flex-shrink: 0;
+      background: var(--bg);
+      position: relative;
+      z-index: 1;
+    }
+    .how-step.active .how-num {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .how-content { padding-top: 8px; }
+    .how-title { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .how-body { font-size: 14px; color: var(--text-2); line-height: 1.6; }
+    @media (min-width: 768px) {
+      .steps-list { flex-direction: row; gap: 20px; }
+      .how-step { flex-direction: column; padding-bottom: 0; flex: 1; }
+      .how-step::after { display: none; }
+      .how-num { margin-bottom: 16px; }
+    }
+
+    /* ── DOWNLOAD / GET STARTED ─────────────────────────────── */
+    .download-bg { background: var(--text); color: #fff; }
+    .download-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 48px;
+      text-align: center;
+    }
+    .download-inner .section-label { color: rgba(255,255,255,.5); }
+    .download-inner .section-title { color: #fff; }
+    .download-inner .section-desc { color: rgba(255,255,255,.65); }
+
+    .store-row {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 360px;
+    }
+    .store-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 15px 24px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 14px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      transition: background .15s;
+      min-height: 54px;
+    }
+    .store-btn:hover { background: rgba(255,255,255,.18); }
+    .store-btn svg { width: 22px; height: 22px; flex-shrink: 0; }
+
+    .qr-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .qr-wrap {
+      width: 160px;
+      height: 160px;
+      background: #fff;
+      border-radius: 16px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .qr-wrap canvas, .qr-wrap svg { width: 100%; height: 100%; }
+    .qr-label { font-size: 13px; color: rgba(255,255,255,.55); max-width: 180px; line-height: 1.5; }
+    .open-expo-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 22px;
+      background: #fff;
+      color: #111;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 12px;
+      transition: opacity .15s;
+    }
+    .open-expo-btn:hover { opacity: .9; }
+
+    /* Loading state (mobile auto-redirect) */
+    .redirect-loading {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 40px 0;
+    }
+    .redirect-loading.visible { display: flex; }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(255,255,255,.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (min-width: 768px) {
+      .download-inner { flex-direction: row; text-align: left; align-items: flex-start; }
+      .download-text { flex: 1; }
+      .download-right { display: flex; gap: 32px; align-items: flex-start; flex-shrink: 0; }
+      .store-row { max-width: 260px; }
+    }
+    @media (min-width: 1024px) {
+      .download-inner { gap: 64px; }
+    }
+
+    /* ── SCOPES / DEVELOPER SECTION ────────────────────────── */
+    .dev-section-bg { background: var(--bg-alt); }
+    .dev-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-top: 40px;
+    }
+    .dev-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+    }
+    .dev-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .dev-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      text-transform: uppercase;
+    }
+    .badge-get  { background: rgba(34,197,94,.12); color: #16a34a; }
+    .badge-post { background: rgba(234,179,8,.12);  color: #b45309; }
+    .badge-del  { background: rgba(239,68,68,.12);  color: #dc2626; }
+    .dev-endpoint { font-size: 13px; font-family: "SF Mono", "Fira Code", monospace; color: var(--text); font-weight: 600; }
+    .dev-desc { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+    .dev-cta { margin-top: 32px; display: flex; flex-wrap: wrap; gap: 12px; }
+    @media (min-width: 600px) { .dev-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 900px) { .dev-grid { grid-template-columns: repeat(3, 1fr); } }
+
+    /* ── SECURITY CALLOUTS ──────────────────────────────────── */
+    .security-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      margin-top: 40px;
+    }
+    .security-item {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .security-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(255,60,0,.1);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .security-icon svg { width: 22px; height: 22px; }
+    .security-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .security-body { font-size: 14px; color: var(--text-2); line-height: 1.6; }
+    @media (min-width: 768px) { .security-grid { grid-template-columns: repeat(2, 1fr); gap: 28px; } }
+
+    /* ── FOOTER ─────────────────────────────────────────────── */
+    footer {
+      background: var(--bg-alt);
+      border-top: 1px solid var(--border);
+      padding: 40px 20px;
+    }
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 700;
+    }
+    .footer-brand-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .footer-brand-icon svg { width: 18px; height: 18px; }
+    .footer-tagline { font-size: 14px; color: var(--text-2); margin-top: 8px; }
+    .footer-links-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 28px;
+    }
+    .footer-links-col h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text-3); margin-bottom: 14px; }
+    .footer-links-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer-links-col a {
+      font-size: 14px;
+      color: var(--text-2);
+      transition: color .15s;
+      /* 44px min tap target on mobile via vertical padding */
+      display: inline-block;
+      padding: 6px 0;
+    }
+    .footer-links-col a:hover { color: var(--text); }
+    .footer-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .footer-bottom a { color: var(--text-2); }
+    .footer-bottom a:hover { color: var(--text); }
+    @media (min-width: 768px) {
+      footer { padding: 56px 32px; }
+      .footer-inner { flex-direction: row; gap: 48px; align-items: flex-start; }
+      .footer-brand-col { flex: 1; }
+      .footer-links-grid { grid-template-columns: repeat(2, 1fr); flex-shrink: 0; }
+      .footer-bottom { flex-direction: row; justify-content: space-between; }
+    }
+    @media (min-width: 1024px) {
+      .footer-links-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* ── ANNOUNCEMENT BANNER ────────────────────────────────── */
+    .banner {
+      background: var(--accent);
+      color: #fff;
+      text-align: center;
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      position: relative;
+    }
+    .banner a { color: #fff; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+    .banner-close {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      /* 44×44 tap target */
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,.75);
+      font-size: 20px;
+      line-height: 1;
+      border-radius: 8px;
+      background: none;
+      transition: color .15s, background .15s;
+    }
+    .banner-close:hover { color: #fff; background: rgba(255,255,255,.12); }
+
+    /* ── FOCUS / ACCESSIBILITY ──────────────────────────────── */
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+    a, button { -webkit-tap-highlight-color: transparent; }
+
+    /* ── UTILITY ────────────────────────────────────────────── */
+    .text-center { text-align: center; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <!-- Announcement banner -->
+  <div class="banner" id="banner" role="banner">
+    🎉 AfuMail is in early access — <a href="#download">Download the app</a> and be among the first to try it.
+    <button class="banner-close" id="banner-close" aria-label="Close announcement">×</button>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo" aria-label="AfuMail home">
+        <div class="nav-logo-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2"/>
+            <path d="m2 7 10 7 10-7"/>
+          </svg>
+        </div>
+        AfuMail
+      </a>
+
+      <ul class="nav-links" role="list">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how-it-works">How it works</a></li>
+        <li><a href="#security">Security</a></li>
+        <li><a href="#developers">Developers</a></li>
+      </ul>
+
+      <div class="nav-cta">
+        <a href="#download" class="nav-download">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Get the app
+        </a>
       </div>
 
-      <div class="content" id="content">
-        <h1>APP_NAME_PLACEHOLDER</h1>
-        <p class="subtitle">Preview this app on your phone</p>
+      <button class="nav-burger" id="nav-burger" aria-label="Open menu" aria-expanded="false" aria-controls="nav-drawer">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
 
-        <div class="steps-container">
-          <div class="step">
-            <div class="step-header">
-              <div class="step-number">1</div>
-              <h2 class="step-title">Download Expo Go</h2>
+  <!-- Mobile navigation drawer -->
+  <div class="nav-drawer" id="nav-drawer" role="dialog" aria-modal="true" aria-label="Navigation menu">
+    <ul role="list">
+      <li><a href="#features" class="nav-drawer-link">Features</a></li>
+      <li><a href="#how-it-works" class="nav-drawer-link">How it works</a></li>
+      <li><a href="#security" class="nav-drawer-link">Security</a></li>
+      <li><a href="#developers" class="nav-drawer-link">Developers</a></li>
+    </ul>
+    <div class="nav-drawer-cta">
+      <a href="#download" class="btn-primary nav-drawer-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Get the app
+      </a>
+      <a href="#how-it-works" class="btn-secondary nav-drawer-link">How it works</a>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <main id="main">
+
+    <!-- Hero -->
+    <section class="hero" aria-label="Hero">
+      <div class="hero-text">
+        <div class="hero-badge" aria-label="Early access">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          Early Access
+        </div>
+        <h1>Email that's<br/><span>just for you</span></h1>
+        <p class="hero-desc">
+          AfuMail is a private, fast email platform built exclusively for the Afu community.
+          Your own <strong>@afuchat.com</strong> address — clean inbox, zero noise.
+        </p>
+        <div class="hero-actions">
+          <a href="#download" class="btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download the app
+          </a>
+          <a href="#features" class="btn-secondary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            See features
+          </a>
+        </div>
+        <div class="hero-trust">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Private network · Row-level security · No third-party data sharing
+        </div>
+      </div>
+
+      <div class="hero-visual" aria-hidden="true">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <div class="phone-status">
+              <span></span>
+              <div class="phone-notch"></div>
+              <span></span>
             </div>
-            <p class="step-description">
-              Expo Go is a free app to test mobile apps
-            </p>
-            <div class="store-buttons" id="store-buttons">
-              <a
-                id="app-store-btn"
-                href="https://apps.apple.com/app/id982107779"
-                class="store-button"
-                target="_blank"
-              >
-                <svg class="store-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"
-                  />
-                </svg>
-                App Store
-              </a>
-              <a
-                id="play-store-btn"
-                href="https://play.google.com/store/apps/details?id=host.exp.exponent"
-                class="store-button"
-                target="_blank"
-              >
-                <svg class="store-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"
-                  />
-                </svg>
-                Google Play
-              </a>
+            <div class="phone-content">
+              <div class="phone-email-item phone-unread">
+                <div class="phone-avatar" style="background:#FF3C00">A</div>
+                <div class="phone-meta">
+                  <div class="phone-sender">alex@afuchat.com</div>
+                  <div class="phone-subject">Welcome to AfuMail 🎉</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                  <div class="phone-time">9:41</div>
+                  <div class="phone-unread-dot"></div>
+                </div>
+              </div>
+              <div class="phone-email-item phone-unread">
+                <div class="phone-avatar" style="background:#7C3AED">J</div>
+                <div class="phone-meta">
+                  <div class="phone-sender">jordan@afuchat.com</div>
+                  <div class="phone-subject">Re: Weekend plans?</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                  <div class="phone-time">8:15</div>
+                  <div class="phone-unread-dot"></div>
+                </div>
+              </div>
+              <div class="phone-email-item">
+                <div class="phone-avatar" style="background:#059669">M</div>
+                <div class="phone-meta">
+                  <div class="phone-sender">maya@afuchat.com</div>
+                  <div class="phone-subject">Meeting notes from today</div>
+                </div>
+                <div class="phone-time">Tue</div>
+              </div>
+              <div class="phone-email-item">
+                <div class="phone-avatar" style="background:#D97706">K</div>
+                <div class="phone-meta">
+                  <div class="phone-sender">kai@afuchat.com</div>
+                  <div class="phone-subject">Photo dump from the trip</div>
+                </div>
+                <div class="phone-time">Mon</div>
+              </div>
+              <div class="phone-email-item">
+                <div class="phone-avatar" style="background:#0284C7">S</div>
+                <div class="phone-meta">
+                  <div class="phone-sender">sam@afuchat.com</div>
+                  <div class="phone-subject">Your account is ready</div>
+                </div>
+                <div class="phone-time">Sun</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="section features-bg" id="features" aria-labelledby="features-title">
+      <div class="section-inner">
+        <span class="section-label">Features</span>
+        <h2 class="section-title" id="features-title">Everything email should be</h2>
+        <p class="section-desc">Built from the ground up for the Afu community — fast, clean, and fully private.</p>
+        <div class="features-grid" role="list">
+
+          <article class="feature-card" role="listitem">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <h3 class="feature-title">Private by default</h3>
+            <p class="feature-body">Your inbox is yours alone. Row-level security enforced at the database level — no one else can read your messages, not even admins.</p>
+          </article>
+
+          <article class="feature-card" role="listitem">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+            </div>
+            <h3 class="feature-title">Your own address</h3>
+            <p class="feature-body">Get a personal <strong>@afuchat.com</strong> address. Your username, your identity — recognisable and memorable to everyone in the community.</p>
+          </article>
+
+          <article class="feature-card" role="listitem">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+            </div>
+            <h3 class="feature-title">Lightning fast</h3>
+            <p class="feature-body">Optimised for speed on both iOS and Android. Messages load instantly — compose, send, and receive without waiting.</p>
+          </article>
+
+          <article class="feature-card" role="listitem">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <h3 class="feature-title">Works everywhere</h3>
+            <p class="feature-body">Native iOS and Android apps plus a web interface — your AfuMail goes wherever you do, perfectly synced across all your devices.</p>
+          </article>
+
+          <article class="feature-card" role="listitem">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </div>
+            <h3 class="feature-title">Built for community</h3>
+            <p class="feature-body">Closed network means zero spam. You only send and receive from people who are part of the Afu community — just like a real neighbourhood mailbox.</p>
+          </article>
+
+          <article class="feature-card" role="listitem">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+            </div>
+            <h3 class="feature-title">OAuth 2.1 sign-in</h3>
+            <p class="feature-body">Let trusted third-party apps use "Sign in with AfuMail" — PKCE-secured, scoped permissions, full token revocation. No passwords shared.</p>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section class="section" id="how-it-works" aria-labelledby="hiw-title">
+      <div class="section-inner">
+        <span class="section-label">Getting started</span>
+        <h2 class="section-title" id="hiw-title">Up and running in minutes</h2>
+        <p class="section-desc">Three simple steps to get your AfuMail account.</p>
+        <div class="steps-list" role="list">
+
+          <div class="how-step active" role="listitem">
+            <div class="how-num" aria-hidden="true">1</div>
+            <div class="how-content">
+              <h3 class="how-title">Download the app</h3>
+              <p class="how-body">Install AfuMail from the App Store or Google Play. The app is free — no subscription required.</p>
             </div>
           </div>
 
-          <div class="step qr-section">
-            <div class="step-header">
-              <div class="step-number">2</div>
-              <h2 class="step-title">Scan QR Code</h2>
+          <div class="how-step" role="listitem">
+            <div class="how-num" aria-hidden="true">2</div>
+            <div class="how-content">
+              <h3 class="how-title">Choose your username</h3>
+              <p class="how-body">Pick a username you like. You'll get <em>username@afuchat.com</em> as your permanent address.</p>
             </div>
-            <p class="step-description">Use your phone's camera or Expo Go</p>
-            <div class="qr-code" id="qr-code"></div>
-            <a href="exps://EXPS_URL_PLACEHOLDER" class="open-button"
-              >Open in Expo Go</a
-            >
           </div>
+
+          <div class="how-step" role="listitem">
+            <div class="how-num" aria-hidden="true">3</div>
+            <div class="how-content">
+              <h3 class="how-title">Start messaging</h3>
+              <p class="how-body">Send your first email to any other @afuchat.com address. Clean inbox, instant delivery, zero spam.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Download / QR -->
+    <section class="section download-bg" id="download" aria-labelledby="download-title">
+      <div class="download-inner">
+        <div class="download-text">
+          <span class="section-label">Download</span>
+          <h2 class="section-title" id="download-title">Get AfuMail on your phone</h2>
+          <p class="section-desc">Available on iOS and Android. Scan the QR code with your camera or choose your store.</p>
+
+          <div class="store-row" style="margin-top:28px">
+            <a id="app-store-btn" href="https://apps.apple.com/app/id982107779" class="store-btn" target="_blank" rel="noopener noreferrer" aria-label="Download on App Store">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+              App Store
+            </a>
+            <a id="play-store-btn" href="https://play.google.com/store/apps/details?id=host.exp.exponent" class="store-btn" target="_blank" rel="noopener noreferrer" aria-label="Get it on Google Play">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/></svg>
+              Google Play
+            </a>
+          </div>
+        </div>
+
+        <div class="download-right">
+          <!-- Redirect spinner (shown when auto-deep-linking on mobile) -->
+          <div class="redirect-loading" id="redirect-loading" aria-live="polite" aria-label="Opening AfuMail">
+            <div class="spinner" aria-hidden="true"></div>
+            <p style="color:rgba(255,255,255,.7);font-size:14px">Opening AfuMail…</p>
+          </div>
+
+          <!-- QR code block (hidden on mobile when redirecting) -->
+          <div class="qr-block" id="qr-block">
+            <div class="qr-wrap" id="qr-code" role="img" aria-label="QR code to open AfuMail in Expo Go">
+              <!-- Rendered by JS — fallback below for crawlers / noscript -->
+              <noscript>
+                <p style="font-size:12px;color:#555;text-align:center;padding:8px">
+                  Scan this link to open AfuMail:<br/>
+                  <a href="exps://EXPS_URL_PLACEHOLDER" style="color:#FF3C00;word-break:break-all">exps://EXPS_URL_PLACEHOLDER</a>
+                </p>
+              </noscript>
+            </div>
+            <p class="qr-label">Scan with your camera or Expo Go</p>
+            <a href="exps://EXPS_URL_PLACEHOLDER" id="open-expo-btn" class="open-expo-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Open in Expo Go
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Security -->
+    <section class="section" id="security" aria-labelledby="security-title">
+      <div class="section-inner">
+        <span class="section-label">Security</span>
+        <h2 class="section-title" id="security-title">Your data stays yours</h2>
+        <p class="section-desc">Security isn't an afterthought — it's built into every layer of AfuMail.</p>
+        <div class="security-grid" role="list">
+
+          <div class="security-item" role="listitem">
+            <div class="security-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div>
+              <h3 class="security-title">Row-level security</h3>
+              <p class="security-body">Every query is scoped to the authenticated user at the database level. No code path can accidentally expose another user's messages.</p>
+            </div>
+          </div>
+
+          <div class="security-item" role="listitem">
+            <div class="security-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+            <div>
+              <h3 class="security-title">Closed network</h3>
+              <p class="security-body">Emails only flow between @afuchat.com accounts. Spam and phishing from outside the network are structurally impossible.</p>
+            </div>
+          </div>
+
+          <div class="security-item" role="listitem">
+            <div class="security-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+            <div>
+              <h3 class="security-title">OAuth 2.1 with PKCE</h3>
+              <p class="security-body">Third-party apps never see your password. Our PKCE-secured OAuth flow keeps credentials on AfuMail — apps only get the scopes you approve.</p>
+            </div>
+          </div>
+
+          <div class="security-item" role="listitem">
+            <div class="security-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </div>
+            <div>
+              <h3 class="security-title">No tracking</h3>
+              <p class="security-body">We don't sell data, show ads, or profile our users. AfuMail is funded by the community, for the community.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Developers -->
+    <section class="section dev-section-bg" id="developers" aria-labelledby="dev-title">
+      <div class="section-inner">
+        <span class="section-label">Developers</span>
+        <h2 class="section-title" id="dev-title">Build on AfuMail</h2>
+        <p class="section-desc">Let users sign in with their AfuMail account. Our OAuth 2.1 / OIDC API is open for trusted developers in the community.</p>
+
+        <div class="dev-grid" role="list">
+
+          <div class="dev-card" role="listitem">
+            <div class="dev-card-header">
+              <span class="dev-badge badge-get">GET</span>
+              <span class="dev-endpoint">/api/oauth/authorize</span>
+            </div>
+            <p class="dev-desc">Start the authorization flow. Redirect your user here with client_id, scope, redirect_uri, and a PKCE challenge.</p>
+          </div>
+
+          <div class="dev-card" role="listitem">
+            <div class="dev-card-header">
+              <span class="dev-badge badge-post">POST</span>
+              <span class="dev-endpoint">/api/oauth/token</span>
+            </div>
+            <p class="dev-desc">Exchange an authorization code for access and refresh tokens. Supports the authorization_code and refresh_token grants.</p>
+          </div>
+
+          <div class="dev-card" role="listitem">
+            <div class="dev-card-header">
+              <span class="dev-badge badge-get">GET</span>
+              <span class="dev-endpoint">/api/oauth/userinfo</span>
+            </div>
+            <p class="dev-desc">Fetch the authenticated user's profile — name, username, and email — filtered by the scopes granted.</p>
+          </div>
+
+          <div class="dev-card" role="listitem">
+            <div class="dev-card-header">
+              <span class="dev-badge badge-post">POST</span>
+              <span class="dev-endpoint">/api/oauth/revoke</span>
+            </div>
+            <p class="dev-desc">Revoke an access or refresh token when the user signs out of your app. RFC 7009 compliant.</p>
+          </div>
+
+          <div class="dev-card" role="listitem">
+            <div class="dev-card-header">
+              <span class="dev-badge badge-get">GET</span>
+              <span class="dev-endpoint">/.well-known/openid-configuration</span>
+            </div>
+            <p class="dev-desc">OIDC discovery document. Standard-compliant OAuth libraries can auto-configure from this endpoint — no manual setup needed.</p>
+          </div>
+
+          <div class="dev-card" role="listitem">
+            <div class="dev-card-header">
+              <span class="dev-badge badge-get">GET</span>
+              <span class="dev-endpoint">/docs</span>
+            </div>
+            <p class="dev-desc">Full interactive developer documentation. Covers PKCE flow, request/response tables, code samples in JS, Python, and cURL.</p>
+          </div>
+
+        </div>
+
+        <div class="dev-cta">
+          <a href="BASE_URL_PLACEHOLDER/api/docs" class="btn-primary" target="_blank" rel="noopener noreferrer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Read the docs
+          </a>
+          <a href="mailto:support@afuchat.com?subject=AfuMail%20Developer%20Access" class="btn-secondary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Request API access
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer role="contentinfo">
+    <div class="footer-inner">
+      <div class="footer-brand-col">
+        <div class="footer-brand">
+          <div class="footer-brand-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
+          </div>
+          AfuMail
+        </div>
+        <p class="footer-tagline">Private email for the Afu community.</p>
+        <p class="footer-tagline" style="margin-top:4px">© <span id="footer-year">2026</span> Afu. All rights reserved.</p>
+      </div>
+
+      <div class="footer-links-grid">
+        <div class="footer-links-col">
+          <h4>Product</h4>
+          <ul role="list">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#how-it-works">How it works</a></li>
+            <li><a href="#download">Download</a></li>
+          </ul>
+        </div>
+        <div class="footer-links-col">
+          <h4>Developers</h4>
+          <ul role="list">
+            <li><a href="BASE_URL_PLACEHOLDER/api/docs" target="_blank" rel="noopener noreferrer">API Docs</a></li>
+            <li><a href="BASE_URL_PLACEHOLDER/api/oauth/.well-known/openid-configuration" target="_blank" rel="noopener noreferrer">OIDC Discovery</a></li>
+            <li><a href="#developers">OAuth Guide</a></li>
+          </ul>
+        </div>
+        <div class="footer-links-col">
+          <h4>Support</h4>
+          <ul role="list">
+            <li><a href="mailto:support@afuchat.com">Email Support</a></li>
+            <li><a href="#security">Privacy &amp; Security</a></li>
+          </ul>
         </div>
       </div>
     </div>
 
-    <script src="https://unpkg.com/qr-code-styling@1.6.0/lib/qr-code-styling.js"></script>
-    <script>
-      (function () {
-        const ua = navigator.userAgent;
-        const loadingEl = document.getElementById("loading");
-        const contentEl = document.getElementById("content");
+    <div style="max-width:1100px;margin:0 auto;padding:0 20px">
+      <div class="footer-bottom">
+        <span>Built with ❤️ for the Afu community</span>
+        <span>
+          <a href="mailto:support@afuchat.com">support@afuchat.com</a>
+        </span>
+      </div>
+    </div>
+  </footer>
 
-        const isAndroid = /Android/i.test(ua);
-        const isIOS =
-          /iPhone|iPad|iPod/i.test(ua) ||
-          (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  <!-- QR Code library — loaded async so it doesn't block initial render -->
+  <script src="https://unpkg.com/qr-code-styling@1.6.0/lib/qr-code-styling.js" async defer></script>
 
-        const deepLink = "exps://EXPS_URL_PLACEHOLDER";
+  <script>
+  (function () {
+    'use strict';
 
-        // Adjust store buttons based on platform
-        const appStoreBtn = document.getElementById("app-store-btn");
-        const playStoreBtn = document.getElementById("play-store-btn");
-        const storeButtonsContainer = document.getElementById("store-buttons");
+    // ── Update copyright year ──────────────────────────────────
+    var yearEl = document.getElementById('footer-year');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-        if (isIOS) {
-          playStoreBtn.className = "store-link";
-          storeButtonsContainer.appendChild(playStoreBtn);
-        } else if (isAndroid) {
-          appStoreBtn.className = "store-link";
-          storeButtonsContainer.insertBefore(playStoreBtn, appStoreBtn);
-        }
+    // ── Banner dismiss ─────────────────────────────────────────
+    var bannerClose = document.getElementById('banner-close');
+    var banner = document.getElementById('banner');
+    if (bannerClose && banner) {
+      bannerClose.addEventListener('click', function () {
+        banner.style.display = 'none';
+        try { sessionStorage.setItem('afumail_banner_dismissed', '1'); } catch(e){}
+      });
+      try {
+        if (sessionStorage.getItem('afumail_banner_dismissed')) banner.style.display = 'none';
+      } catch(e){}
+    }
 
-        const qrCode = new QRCodeStyling({
-          width: 400,
-          height: 400,
-          data: deepLink,
-          dotsOptions: {
-            color: "#333333",
-            type: "rounded",
-          },
-          backgroundOptions: {
-            color: "#ffffff",
-          },
-          cornersSquareOptions: {
-            type: "extra-rounded",
-          },
-          cornersDotOptions: {
-            type: "dot",
-          },
-          qrOptions: {
-            errorCorrectionLevel: "H",
-          },
+    // ── Hamburger nav ──────────────────────────────────────────
+    var burger = document.getElementById('nav-burger');
+    var drawer = document.getElementById('nav-drawer');
+    var drawerLinks = document.querySelectorAll('.nav-drawer-link');
+
+    function closeDrawer() {
+      drawer.classList.remove('open');
+      burger.setAttribute('aria-expanded', 'false');
+      burger.setAttribute('aria-label', 'Open menu');
+      document.body.style.overflow = '';
+    }
+
+    if (burger && drawer) {
+      burger.addEventListener('click', function () {
+        var isOpen = drawer.classList.toggle('open');
+        burger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        burger.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+        document.body.style.overflow = isOpen ? 'hidden' : '';
+      });
+
+      drawerLinks.forEach(function (link) {
+        link.addEventListener('click', closeDrawer);
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeDrawer();
+      });
+    }
+
+    // ── Platform detection ─────────────────────────────────────
+    var ua = navigator.userAgent;
+    var isAndroid = /Android/i.test(ua);
+    var isIOS = /iPhone|iPad|iPod/i.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    // Never auto-redirect crawlers/bots — they must be able to index the page.
+    // This list covers Googlebot, Bingbot, Twitterbot, Facebot, and generic
+    // headless/spider patterns that commonly use mobile UAs.
+    var isCrawler = /Googlebot|bingbot|Slurp|DuckDuckBot|Baiduspider|YandexBot|Sogou|facebookexternalhit|Twitterbot|LinkedInBot|WhatsApp|Slack|Discordbot|Prerender|HeadlessChrome|PhantomJS|Scrapy|wget|curl|python-requests|Go-http-client|Apache-HttpClient|spider|crawl|bot/i.test(ua);
+
+    var isMobile = (isIOS || isAndroid) && !isCrawler;
+
+    var deepLink = 'exps://EXPS_URL_PLACEHOLDER';
+
+    // Reorder store buttons by platform
+    var appStoreBtn  = document.getElementById('app-store-btn');
+    var playStoreBtn = document.getElementById('play-store-btn');
+    var storeRow     = appStoreBtn && appStoreBtn.parentElement;
+
+    if (storeRow) {
+      if (isIOS && playStoreBtn) {
+        // De-emphasise Play Store for iOS
+        playStoreBtn.style.opacity = '0.55';
+        playStoreBtn.style.fontSize = '13px';
+      } else if (isAndroid && appStoreBtn) {
+        // Move Play Store to top for Android
+        storeRow.insertBefore(playStoreBtn, appStoreBtn);
+        appStoreBtn.style.opacity = '0.55';
+        appStoreBtn.style.fontSize = '13px';
+      }
+    }
+
+    // ── QR code (desktop) ──────────────────────────────────────
+    function renderQR() {
+      if (typeof QRCodeStyling === 'undefined') {
+        // Retry once the async script loads
+        setTimeout(renderQR, 200);
+        return;
+      }
+      var qrContainer = document.getElementById('qr-code');
+      if (!qrContainer) return;
+      // Clear noscript text if any
+      qrContainer.innerHTML = '';
+      var qr = new QRCodeStyling({
+        width: 300,
+        height: 300,
+        data: deepLink,
+        dotsOptions: { color: '#111111', type: 'rounded' },
+        backgroundOptions: { color: '#ffffff' },
+        cornersSquareOptions: { type: 'extra-rounded' },
+        cornersDotOptions: { type: 'dot' },
+        qrOptions: { errorCorrectionLevel: 'H' }
+      });
+      qr.append(qrContainer);
+    }
+
+    // ── Mobile: auto redirect + show spinner ───────────────────
+    var redirectLoading = document.getElementById('redirect-loading');
+    var qrBlock         = document.getElementById('qr-block');
+
+    if (isMobile) {
+      // Show spinner, hide QR block
+      if (redirectLoading) redirectLoading.classList.add('visible');
+      if (qrBlock) qrBlock.style.display = 'none';
+
+      // Attempt deep link
+      window.location.href = deepLink;
+
+      // After a brief wait, show the QR/store section as fallback
+      setTimeout(function () {
+        if (redirectLoading) redirectLoading.classList.remove('visible');
+        if (qrBlock) qrBlock.style.display = '';
+        renderQR();
+      }, 1200);
+    } else {
+      // Desktop: render QR immediately when library is ready
+      renderQR();
+    }
+
+    // ── Smooth scroll for anchor links ─────────────────────────
+    document.querySelectorAll('a[href^="#"]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        var target = document.querySelector(el.getAttribute('href'));
+        if (!target) return;
+        e.preventDefault();
+        var navH = parseInt(getComputedStyle(document.documentElement)
+          .getPropertyValue('--nav-h'), 10) || 60;
+        var top = target.getBoundingClientRect().top + window.scrollY - navH - 8;
+        window.scrollTo({ top: top, behavior: 'smooth' });
+      });
+    });
+
+    // ── Intersection observer: animate sections in ─────────────
+    if ('IntersectionObserver' in window) {
+      var style = document.createElement('style');
+      style.textContent = '.anim-ready{opacity:0;transform:translateY(20px);transition:opacity .5s ease,transform .5s ease}.anim-in{opacity:1;transform:none}';
+      document.head.appendChild(style);
+
+      var targets = document.querySelectorAll(
+        '.feature-card, .how-step, .security-item, .dev-card'
+      );
+      targets.forEach(function (el) { el.classList.add('anim-ready'); });
+
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('anim-in');
+            observer.unobserve(entry.target);
+          }
         });
+      }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 
-        qrCode.append(document.getElementById("qr-code"));
+      targets.forEach(function (el) { observer.observe(el); });
+    }
 
-        if (isAndroid || isIOS) {
-          loadingEl.style.display = "block";
-          contentEl.style.display = "none";
-          window.location.href = deepLink;
-          setTimeout(function () {
-            loadingEl.style.display = "none";
-            contentEl.style.display = "block";
-          }, 500);
-        }
-      })();
-    </script>
-  </body>
+  })();
+  </script>
+</body>
 </html>

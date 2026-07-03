@@ -103,19 +103,27 @@ function tryServeStaticFile(urlPath, res) {
   return false;
 }
 
-function serveWebApp(res) {
+function serveWebApp(req, res) {
   const indexPath = path.join(WEB_DIST, "index.html");
   if (fs.existsSync(indexPath)) {
     const content = fs.readFileSync(indexPath);
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(content);
   } else {
-    res.writeHead(503, { "content-type": "text/plain" });
-    res.end("Web build not found. Run: pnpm build:web");
+    // No compiled web build — serve the marketing landing page instead
+    serveLandingPage(req, res, landingPageTemplate, appName);
   }
 }
 
 const appName = getAppName();
+
+// Load landing page template once at startup (reload on change in dev)
+let landingPageTemplate = "";
+try {
+  landingPageTemplate = fs.readFileSync(TEMPLATE_PATH, "utf-8");
+} catch {
+  landingPageTemplate = "<html><body><h1>AfuMail</h1><p>Template not found.</p></body></html>";
+}
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url || "/", `http://${req.headers.host}`);
@@ -129,6 +137,14 @@ const server = http.createServer((req, res) => {
   const platform = req.headers["expo-platform"];
   if ((pathname === "/" || pathname === "/manifest") && (platform === "ios" || platform === "android")) {
     return serveManifest(platform, res);
+  }
+
+  // Root path for web visitors with no web build → landing page directly
+  if (pathname === "/" && !platform) {
+    const hasWebBuild = fs.existsSync(path.join(WEB_DIST, "index.html"));
+    if (!hasWebBuild) {
+      return serveLandingPage(req, res, landingPageTemplate, appName);
+    }
   }
 
   // Try to serve an exact static file (JS chunks, fonts, images, favicon, etc.)
@@ -145,8 +161,8 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // All other paths (including routes with dots like /user/jane.doe) → SPA index
-  serveWebApp(res);
+  // All other paths (including routes with dots like /user/jane.doe) → SPA index or landing page
+  serveWebApp(req, res);
 });
 
 const port = parseInt(process.env.PORT || "3000", 10);
