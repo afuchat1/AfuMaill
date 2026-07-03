@@ -54,10 +54,16 @@ Deno.serve(async (req) => {
 
     const profile = profiles[0];
 
-    // Silent ok — avoid username enumeration
-    if (!profile || !profile.recovery_email) {
-      return new Response(JSON.stringify({ ok: true }), {
-        status: 200,
+    if (!profile) {
+      return new Response(JSON.stringify({ error: "No account found with that username." }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!profile.recovery_email) {
+      return new Response(JSON.stringify({ error: "No recovery email is set for this account. Please sign in and add one under Settings → Account." }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

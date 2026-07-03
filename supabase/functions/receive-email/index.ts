@@ -54,31 +54,23 @@ Deno.serve(async (req) => {
     const projectUrl = "https://lqowocmjmhbkoxlwyxku.supabase.co";
     const serviceRoleKey = Deno.env.get("SVC_ROLE_KEY") ?? "";
 
-    const payload = await req.json() as {
-      type?: string;
-      created_at?: string;
-      data?: {
-        from?: string;
-        to?: string | string[];
-        cc?: string | string[];
-        subject?: string;
-        html?: string;
-        text?: string;
-        attachments?: Array<{ filename?: string; size?: number; content_type?: string }>;
-      };
-    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const payload = await req.json() as any;
 
-    // Accept either direct payload or wrapped { type, data }
-    const isWrapped = payload.type === "email.received" && payload.data;
-    const emailData = isWrapped ? payload.data! : (payload as typeof payload.data)!;
+    // Accept either wrapped { type, data } or a direct email object
+    const isWrapped = payload?.type === "email.received" && payload?.data;
+    const emailData = isWrapped ? payload.data : payload;
 
     const rawFrom = emailData?.from ?? "";
     const rawTo = emailData?.to;
     const rawCc = emailData?.cc;
     const subject = emailData?.subject ?? "(No Subject)";
-    const htmlBody = emailData?.html ?? "";
-    const textBody = emailData?.text ?? "";
-    const attachments = emailData?.attachments ?? [];
+    // Resend may use html/text or body/plain variants depending on version
+    let htmlBody: string = emailData?.html ?? emailData?.body_html ?? emailData?.htmlBody ?? "";
+    let textBody: string = emailData?.text ?? emailData?.plain ?? emailData?.body_text ?? emailData?.textBody ?? "";
+    const emailId: string = emailData?.email_id ?? emailData?.id ?? "";
+    const attachments: Array<{ filename?: string; size?: number; content_type?: string }> =
+      emailData?.attachments ?? [];
 
     if (!rawFrom || !rawTo) {
       return new Response(JSON.stringify({ error: "Missing from or to." }), {
@@ -87,19 +79,38 @@ Deno.serve(async (req) => {
       });
     }
 
+    // If body is missing but we have an email_id, fetch full content from Resend
+    if (!htmlBody && !textBody && emailId) {
+      const resendKey = Deno.env.get("RESEND_API_KEY") ?? "";
+      if (resendKey) {
+        try {
+          const r = await fetch(`https://api.resend.com/emails/${emailId}`, {
+            headers: { Authorization: `Bearer ${resendKey}` },
+          });
+          if (r.ok) {
+            const detail = await r.json() as { html?: string; text?: string };
+            htmlBody = detail.html ?? "";
+            textBody = detail.text ?? "";
+          }
+        } catch (_) { /* ignore fetch errors */ }
+      }
+    }
+
     const fromAddr = parseAddress(rawFrom);
 
     // Normalise to/cc into string arrays
-    const toList: string[] = Array.isArray(rawTo) ? rawTo : [rawTo];
-    const ccList: string[] = rawCc
-      ? (Array.isArray(rawCc) ? rawCc : [rawCc])
+    const toRaw: string[] = Array.isArray(rawTo) ? rawTo : [rawTo as string];
+    const ccRaw: string[] = rawCc
+      ? (Array.isArray(rawCc) ? rawCc : [rawCc as string])
       : [];
+
+    const toList = toRaw;
+    const ccList = ccRaw;
 
     const toAddresses = toList.map(parseAddress);
     const ccAddresses = ccList.map(parseAddress);
 
-    // Prefer HTML for rich rendering; fall back to plain text
-    // preview is always plain text for inbox list
+    // Store HTML for rich rendering; plain text for preview
     const body = htmlBody || textBody;
     const plainForPreview = textBody || htmlToText(htmlBody);
     const preview = plainForPreview.slice(0, 140).replace(/\n/g, " ");

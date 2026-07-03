@@ -55,21 +55,19 @@ Deno.serve(async (req) => {
       email: e,
     }));
 
-    // 1. Deliver to internal @afuchat.com recipients directly (no Resend routing)
-    const internalAll = [
-      ...(to ?? []).filter((e: string) => e.endsWith("@afuchat.com")),
-      ...(cc ?? []).filter((e: string) => e.endsWith("@afuchat.com")),
-    ];
-    for (const recipientEmail of internalAll) {
-      const profileRes = await fetch(
-        `${PROJECT_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(recipientEmail)}&select=id`,
+    // Helper: look up owner_id by email address
+    async function getOwnerId(email: string): Promise<string | null> {
+      const r = await fetch(
+        `${PROJECT_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
         { headers: { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey } }
       );
-      if (!profileRes.ok) continue;
-      const profiles = await profileRes.json() as Array<{ id: string }>;
-      const profile = profiles[0];
-      if (!profile) continue;
+      if (!r.ok) return null;
+      const rows = await r.json() as Array<{ id: string }>;
+      return rows[0]?.id ?? null;
+    }
 
+    // Helper: insert a single email row
+    async function insertEmail(ownerId: string, folder: string, read: boolean) {
       await fetch(`${PROJECT_URL}/rest/v1/emails`, {
         method: "POST",
         headers: {
@@ -79,7 +77,7 @@ Deno.serve(async (req) => {
           Prefer: "return=minimal",
         },
         body: JSON.stringify({
-          owner_id: profile.id,
+          owner_id: ownerId,
           from_name: fromName ?? fromEmail,
           from_email: fromEmail,
           to_emails: toAddresses,
@@ -88,14 +86,31 @@ Deno.serve(async (req) => {
           body: body ?? "",
           preview,
           timestamp: now,
-          read: false,
+          read,
           starred: false,
           pinned: false,
           attachments: [],
           category,
-          folder: "inbox",
+          folder,
         }),
       });
+    }
+
+    // 1a. Store "sent" copy for the sender
+    if (fromEmail?.endsWith("@afuchat.com")) {
+      const senderId = await getOwnerId(fromEmail);
+      if (senderId) await insertEmail(senderId, "sent", true);
+    }
+
+    // 1b. Deliver to internal @afuchat.com recipients directly (no Resend routing)
+    const internalAll = [
+      ...(to ?? []).filter((e: string) => e.endsWith("@afuchat.com")),
+      ...(cc ?? []).filter((e: string) => e.endsWith("@afuchat.com")),
+    ];
+    for (const recipientEmail of internalAll) {
+      const recipientId = await getOwnerId(recipientEmail);
+      if (!recipientId) continue;
+      await insertEmail(recipientId, "inbox", false);
     }
 
     // 2. Send to external recipients via Resend (skip if none)
