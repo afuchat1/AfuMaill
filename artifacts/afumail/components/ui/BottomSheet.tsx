@@ -29,27 +29,32 @@ interface BottomSheetProps {
 
 export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
   const [modalVisible, setModalVisible] = useState(false);
+  // When false, the backdrop Pressable is removed from the tree instantly,
+  // so no tap can be swallowed while the close animation plays.
+  const [backdropActive, setBackdropActive] = useState(false);
+
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const overlayOpacity = useSharedValue(0);
 
-  // animating: true while a close animation is in flight
   const animating = useRef(false);
-  // alreadyClosed: set to true once we've kicked off a close, reset on open.
-  // Prevents the parent's visible=false re-render from triggering a second closeSheet.
   const alreadyClosed = useRef(false);
 
   function openSheet() {
     animating.current = false;
     alreadyClosed.current = false;
+    setBackdropActive(true);
     overlayOpacity.value = withTiming(1, { duration: 220 });
     translateY.value = withSpring(0, OPEN_SPRING);
   }
 
   function closeSheet(shouldNotify: boolean) {
-    // Guard: ignore if we're already closing
     if (animating.current || alreadyClosed.current) return;
     animating.current = true;
     alreadyClosed.current = true;
+
+    // ── Key fix: kill the backdrop immediately so the very next tap
+    //   goes straight to the content behind, not to an invisible overlay. ──
+    setBackdropActive(false);
 
     overlayOpacity.value = withTiming(0, { duration: 180 });
     translateY.value = withSpring(SCREEN_HEIGHT, CLOSE_SPRING, () => {
@@ -60,12 +65,9 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
 
   function finishClose(shouldNotify: boolean) {
     setModalVisible(false);
-    // Reset animating AFTER we call the callback so that any re-render
-    // triggered by the callback still sees animating=true and skips closeSheet.
     if (shouldNotify) {
       onClose();
     }
-    // Defer the reset so React's batched re-render from onClose() fires first
     Promise.resolve().then(() => {
       animating.current = false;
     });
@@ -73,7 +75,6 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
 
   useEffect(() => {
     if (visible) {
-      // Opening
       setModalVisible(true);
       translateY.value = SCREEN_HEIGHT;
       overlayOpacity.value = 0;
@@ -81,16 +82,10 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
       animating.current = false;
       requestAnimationFrame(openSheet);
     } else {
-      // External close request — only act if we haven't already started closing
       closeSheet(false);
     }
   }, [visible]);
 
-  function handleOverlayPress() {
-    closeSheet(true);
-  }
-
-  // Pan gesture for native drag-to-dismiss (skip on web to avoid pointer event leaks)
   const pan = Gesture.Pan()
     .activeOffsetY(6)
     .onChange((e) => {
@@ -136,17 +131,25 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
       transparent
       statusBarTranslucent
       animationType="none"
-      onRequestClose={handleOverlayPress}
+      onRequestClose={() => closeSheet(true)}
     >
+      {/* Overlay: pointer-events are disabled the moment close begins */}
       <Animated.View
-        style={[styles.overlay, overlayStyle, { pointerEvents: "box-none" }]}
+        style={[
+          styles.overlay,
+          overlayStyle,
+          { pointerEvents: backdropActive ? "box-none" : "none" },
+        ]}
       >
-        <Pressable style={StyleSheet.absoluteFill} onPress={handleOverlayPress} />
+        {backdropActive && (
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => closeSheet(true)}
+          />
+        )}
       </Animated.View>
 
       {Platform.OS === "web" ? (
-        // On web, skip GestureDetector entirely — it leaks pointer-event
-        // handlers on Modal close which freezes subsequent interaction.
         sheetContent
       ) : (
         <GestureDetector gesture={pan}>
