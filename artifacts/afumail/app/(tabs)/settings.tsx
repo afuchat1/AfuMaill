@@ -363,15 +363,36 @@ export default function SettingsScreen() {
           </View>
         ))}
 
-        <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
-          <Pressable
-            onPress={handleLogout}
-            style={({ pressed }) => [styles.signOutButton, { backgroundColor: pressed ? "#FFEBEE" : colors.card, borderColor: colors.border }]}
-          >
-            <Feather name="log-out" size={16} color={colors.destructive} />
-            <Text style={[styles.signOutText, { color: colors.destructive, fontFamily: "Inter_500Medium" }]}>Sign Out</Text>
-          </Pressable>
+        {/* Danger Zone — buried at the bottom, requires intentional scroll */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Danger Zone</Text>
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Pressable
+              onPress={() => {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                Alert.alert(
+                  "Sign Out",
+                  "You will be signed out of AfuMail on this device.",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Sign Out", style: "destructive", onPress: handleLogout },
+                  ]
+                );
+              }}
+              style={({ pressed }) => [styles.settingRow, { backgroundColor: pressed ? "#FFEBEE" : "transparent" }]}
+            >
+              <View style={styles.iconWrap}>
+                <Feather name="log-out" size={21} color={colors.destructive} />
+              </View>
+              <Text style={[styles.rowLabel, { color: colors.destructive, fontFamily: "Inter_700Bold" }]}>Sign Out</Text>
+              <View style={styles.rowRight}>
+                <Feather name="chevron-right" size={16} color={colors.destructive} />
+              </View>
+            </Pressable>
+          </View>
         </View>
+
+        <View style={{ height: 32 }} />
       </ScrollView>
 
       {/* ── Phone Dialog ── */}

@@ -69,10 +69,9 @@ interface Props {
 }
 
 export default function WebSidebar({ currentView, onSelectView, onCompose, searchQuery, onSearchChange }: Props) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { getEmailsByFolder, unreadCount } = useEmails();
   const [profileHovered, setProfileHovered] = useState(false);
-  const [logoutHovered, setLogoutHovered] = useState(false);
 
   return (
     <View style={styles.root}>
@@ -172,15 +171,7 @@ export default function WebSidebar({ currentView, onSelectView, onCompose, searc
               @{user?.username}
             </Text>
           </View>
-          <Pressable
-            onPointerEnter={() => setLogoutHovered(true)}
-            onPointerLeave={() => setLogoutHovered(false)}
-            onPress={logout}
-            hitSlop={8}
-            style={[styles.logoutBtn, { backgroundColor: logoutHovered ? W.sidebarHover : "transparent" }]}
-          >
-            <Feather name="log-out" size={14} color={W.sidebarText} />
-          </Pressable>
+          <Feather name="chevron-right" size={12} color={W.sidebarText} style={{ opacity: profileHovered ? 1 : 0 }} />
         </Pressable>
       </View>
     </View>

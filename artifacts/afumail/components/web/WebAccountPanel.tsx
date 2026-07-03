@@ -118,7 +118,7 @@ const btn = StyleSheet.create({
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function WebAccountPanel() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -368,6 +368,25 @@ export default function WebAccountPanel() {
 
       {/* Danger zone */}
       <Section title="Danger Zone">
+        <View style={[styles.dangerRow, { borderBottomColor: W.border, borderBottomWidth: 1 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.dangerTitle, { fontFamily: "Inter_600SemiBold", color: W.textPrimary }]}>Sign out</Text>
+            <Text style={[styles.dangerSub, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
+              Sign out of your Afu account on this device. You can sign back in at any time.
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => {
+              if (typeof window !== "undefined" && window.confirm("Sign out of AfuMail on this device?")) {
+                logout();
+              }
+            }}
+            style={[styles.dangerBtn, { borderColor: W.accent + "88" }]}
+          >
+            <Feather name="log-out" size={14} color={W.accent} />
+            <Text style={[styles.dangerBtnLabel, { fontFamily: "Inter_600SemiBold", color: W.accent }]}>Sign out</Text>
+          </Pressable>
+        </View>
         <View style={[styles.dangerRow, { borderBottomColor: W.border }]}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.dangerTitle, { fontFamily: "Inter_600SemiBold", color: W.textPrimary }]}>Delete account</Text>
