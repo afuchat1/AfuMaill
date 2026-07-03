@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -145,6 +146,8 @@ const eb = StyleSheet.create({
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function LoginWebScreen() {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
   const { refreshUser } = useAuth();
 
   const [mode, setMode] = useState<Mode>("login");
@@ -269,8 +272,8 @@ export default function LoginWebScreen() {
 
   return (
     <View style={styles.root}>
-      {/* ── LEFT PANEL — Brand ──────────────────────────────────────────── */}
-      <View style={[styles.leftPanel, { backgroundColor: "#0F172A" }]}>
+      {/* ── LEFT PANEL — Brand (hidden on narrow/phone viewport) ─────── */}
+      {!isMobile && <View style={[styles.leftPanel, { backgroundColor: "#0F172A" }]}>
         <View style={styles.leftInner}>
           {/* Brand mark */}
           <View style={styles.brandRow}>
@@ -324,7 +327,7 @@ export default function LoginWebScreen() {
             ))}
           </View>
         </View>
-      </View>
+      </View>}
 
       {/* ── RIGHT PANEL — Form ──────────────────────────────────────────── */}
       <ScrollView
