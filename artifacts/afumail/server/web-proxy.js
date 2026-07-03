@@ -1,11 +1,11 @@
 /**
- * Thin HTTP proxy: forwards all requests from port 5000 → port 8099 (Expo dev server).
- * This gives the "AfuMail Web" workflow its own port while reusing the live Expo server.
+ * Thin HTTP proxy: forwards all requests from port 3000 → port 8099 (Expo dev server).
+ * Website frame (port 3000) reuses the live Expo dev server (mobile runs on port 8099).
  */
 const http = require("http");
 
 const TARGET_PORT = 8099;
-const PROXY_PORT = parseInt(process.env.PORT || "5000", 10);
+const PROXY_PORT = parseInt(process.env.PORT || "3000", 10);
 
 const server = http.createServer((clientReq, clientRes) => {
   const options = {
