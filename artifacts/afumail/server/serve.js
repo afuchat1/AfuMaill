@@ -83,7 +83,8 @@ function serveLandingPage(req, res, landingPageTemplate, appName) {
 }
 
 function tryServeStaticFile(urlPath, res) {
-  const safePath = path.normalize(urlPath).replace(/^(\.\.(\/|\\|$))+/, "");
+  const decoded = decodeURIComponent(urlPath);
+  const safePath = path.normalize(decoded).replace(/^(\.\.(\/|\\|$))+/, "");
 
   // Check web dist first, then native static-build
   for (const root of [WEB_DIST, STATIC_ROOT]) {
