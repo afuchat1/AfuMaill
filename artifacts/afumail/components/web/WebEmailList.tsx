@@ -5,7 +5,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import type { Email, EmailCategory, EmailFolder } from "@/context/EmailContext";
 import { useEmails } from "@/context/EmailContext";
-import { W } from "./WebSidebar";
+import { W } from "./webColors";
 
 const INBOX_TABS: { label: string; category: EmailCategory | "all" }[] = [
   { label: "Primary",  category: "primary" },
@@ -25,13 +25,9 @@ function formatDate(ts: string): string {
     d.getDate() === now.getDate() &&
     d.getMonth() === now.getMonth() &&
     d.getFullYear() === now.getFullYear();
-  if (isToday) {
-    return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  }
+  if (isToday) return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   const diffDays = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
-  if (diffDays < 7) {
-    return d.toLocaleDateString("en-US", { weekday: "short" });
-  }
+  if (diffDays < 7) return d.toLocaleDateString("en-US", { weekday: "short" });
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
@@ -56,41 +52,50 @@ function EmailRow({ email, selected, onSelect, onStar, onArchive, onDelete }: Ro
       onPointerLeave={() => setHovered(false)}
       style={[styles.row, { backgroundColor: bg, borderBottomColor: W.border }]}
     >
-      {/* Unread indicator */}
-      <View style={[styles.unreadBar, { backgroundColor: bold ? W.accent : "transparent" }]} />
+      {/* Unread dot */}
+      <View style={[styles.unreadDot, { backgroundColor: bold ? W.accent : "transparent" }]} />
 
       {/* Star */}
       <Pressable
         onPress={(e) => { e.stopPropagation?.(); onStar(); }}
-        hitSlop={6}
+        hitSlop={8}
         style={styles.starBtn}
       >
         <Feather
           name="star"
           size={14}
-          color={email.starred ? "#F59E0B" : hovered ? W.textMuted : "transparent"}
+          color={email.starred ? "#D97706" : hovered ? W.textMuted : "transparent"}
         />
       </Pressable>
 
-      {/* Avatar */}
+      {/* Sender avatar */}
       <Avatar name={email.from.name} size={32} fontSize={13} />
 
       {/* Content */}
       <View style={styles.content}>
-        <View style={styles.topRow}>
+        <View style={styles.topLine}>
           <Text
-            style={[styles.sender, { fontFamily: bold ? "Inter_700Bold" : "Inter_400Regular", color: bold ? W.textPrimary : W.textSecondary }]}
+            style={[styles.sender, {
+              fontFamily: bold ? "Inter_700Bold" : "Inter_500Medium",
+              color: bold ? W.textPrimary : W.textSecondary,
+            }]}
             numberOfLines={1}
           >
             {email.from.name}
           </Text>
-          <Text style={[styles.date, { fontFamily: bold ? "Inter_600SemiBold" : "Inter_400Regular", color: bold ? W.textSecondary : W.textMuted }]}>
+          <Text style={[styles.date, {
+            fontFamily: bold ? "Inter_600SemiBold" : "Inter_400Regular",
+            color: bold ? W.textSecondary : W.textMuted,
+          }]}>
             {formatDate(email.timestamp)}
           </Text>
         </View>
-        <View style={styles.bottomRow}>
+        <View style={styles.bottomLine}>
           <Text
-            style={[styles.subject, { fontFamily: bold ? "Inter_600SemiBold" : "Inter_400Regular", color: bold ? W.textPrimary : W.textSecondary }]}
+            style={[styles.subject, {
+              fontFamily: bold ? "Inter_600SemiBold" : "Inter_400Regular",
+              color: bold ? W.textPrimary : W.textSecondary,
+            }]}
             numberOfLines={1}
           >
             {email.subject}
@@ -107,23 +112,23 @@ function EmailRow({ email, selected, onSelect, onStar, onArchive, onDelete }: Ro
           <Pressable
             onPress={(e) => { e.stopPropagation?.(); onArchive(); }}
             hitSlop={6}
-            style={styles.actionBtn}
+            style={[styles.hoverBtn, { backgroundColor: W.bgSecondary }]}
           >
-            <Feather name="archive" size={14} color={W.textSecondary} />
+            <Feather name="archive" size={13} color={W.textSecondary} />
           </Pressable>
           <Pressable
             onPress={(e) => { e.stopPropagation?.(); onDelete(); }}
             hitSlop={6}
-            style={styles.actionBtn}
+            style={[styles.hoverBtn, { backgroundColor: W.bgSecondary }]}
           >
-            <Feather name="trash-2" size={14} color={W.textSecondary} />
+            <Feather name="trash-2" size={13} color={W.destructive} />
           </Pressable>
         </View>
       )}
 
-      {/* Attachments indicator */}
+      {/* Attachment indicator */}
       {email.attachments.length > 0 && !hovered && (
-        <Feather name="paperclip" size={13} color={W.textMuted} style={styles.clipIcon} />
+        <Feather name="paperclip" size={12} color={W.textMuted} />
       )}
     </Pressable>
   );
@@ -143,9 +148,7 @@ export default function WebEmailList({ currentFolder, selectedId, onSelectEmail,
 
   let emails =
     currentFolder === "inbox"
-      ? activeTab === "all"
-        ? getEmailsByFolder("inbox")
-        : getEmailsByCategory(activeTab as EmailCategory)
+      ? (activeTab === "all" ? getEmailsByFolder("inbox") : getEmailsByCategory(activeTab as EmailCategory))
       : getEmailsByFolder(currentFolder);
 
   if (searchQuery.trim()) {
@@ -165,21 +168,31 @@ export default function WebEmailList({ currentFolder, selectedId, onSelectEmail,
     setRefreshing(false);
   }
 
+  const FOLDER_LABELS: Record<EmailFolder, string> = {
+    inbox: "Inbox", starred: "Starred", sent: "Sent", drafts: "Drafts",
+    archived: "Archive", spam: "Spam", trash: "Trash",
+  };
+
   return (
-    <View style={styles.root}>
-      {/* Toolbar strip */}
-      <View style={[styles.listToolbar, { borderBottomColor: W.border }]}>
-        <Pressable onPress={handleRefresh} hitSlop={6} style={styles.refreshBtn}>
-          <Feather name="refresh-cw" size={14} color={W.textSecondary} />
-        </Pressable>
-        <Text style={[styles.listTitle, { fontFamily: "Inter_600SemiBold", color: W.textSecondary }]}>
-          {emails.length} {emails.length === 1 ? "message" : "messages"}
+    <View style={[styles.root, { backgroundColor: W.bg }]}>
+      {/* List toolbar */}
+      <View style={[styles.toolbar, { borderBottomColor: W.border, backgroundColor: W.bg }]}>
+        <Text style={[styles.folderTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>
+          {FOLDER_LABELS[currentFolder] ?? "Inbox"}
         </Text>
+        <View style={styles.toolbarRight}>
+          <Text style={[styles.count, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
+            {emails.length} {emails.length === 1 ? "message" : "messages"}
+          </Text>
+          <Pressable onPress={handleRefresh} hitSlop={8} style={[styles.refreshBtn, { backgroundColor: W.bgSecondary }]}>
+            <Feather name="refresh-cw" size={13} color={W.textSecondary} />
+          </Pressable>
+        </View>
       </View>
 
       {/* Category tabs (inbox only) */}
       {currentFolder === "inbox" && !searchQuery && (
-        <View style={[styles.tabs, { borderBottomColor: W.border }]}>
+        <View style={[styles.tabs, { borderBottomColor: W.border, backgroundColor: W.bg }]}>
           {INBOX_TABS.map((tab) => {
             const active = activeTab === tab.category;
             return (
@@ -202,19 +215,21 @@ export default function WebEmailList({ currentFolder, selectedId, onSelectEmail,
         </View>
       )}
 
-      {/* Email rows */}
+      {/* Email list */}
       {isLoading && emails.length === 0 ? (
         <View style={styles.empty}>
           <Text style={[styles.emptyText, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>Loading…</Text>
         </View>
       ) : emails.length === 0 ? (
         <View style={styles.empty}>
-          <Feather name="inbox" size={40} color={W.textMuted} />
-          <Text style={[styles.emptyTitle, { fontFamily: "Inter_600SemiBold", color: W.textSecondary }]}>
-            {searchQuery ? "No results found" : "All clear"}
+          <View style={[styles.emptyIcon, { backgroundColor: W.bgSecondary }]}>
+            <Feather name="inbox" size={28} color={W.textMuted} />
+          </View>
+          <Text style={[styles.emptyTitle, { fontFamily: "Inter_700Bold", color: W.textSecondary }]}>
+            {searchQuery ? "No results" : "All clear"}
           </Text>
           <Text style={[styles.emptyText, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
-            {searchQuery ? `No emails match "${searchQuery}"` : "Nothing here"}
+            {searchQuery ? `Nothing matches "${searchQuery}"` : "No messages here"}
           </Text>
         </View>
       ) : (
@@ -239,33 +254,26 @@ export default function WebEmailList({ currentFolder, selectedId, onSelectEmail,
 }
 
 const styles = StyleSheet.create({
-  root: {
-    width: 340,
-    backgroundColor: W.bg,
-    borderRightColor: W.border,
-    borderRightWidth: 1,
-    flexDirection: "column",
-  },
-  listToolbar: {
+  root: { width: 340, flexDirection: "column", borderRightColor: W.border, borderRightWidth: 1 },
+  toolbar: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    gap: 8,
   },
-  refreshBtn: { padding: 4, borderRadius: 4 },
-  listTitle: { fontSize: 12 },
+  folderTitle: { fontSize: 15 },
+  toolbarRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  count: { fontSize: 12 },
+  refreshBtn: { padding: 6, borderRadius: 6 },
   tabs: {
     flexDirection: "row",
     borderBottomWidth: 1,
     paddingHorizontal: 8,
     overflow: "hidden",
   },
-  tab: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
+  tab: { paddingHorizontal: 10, paddingVertical: 9 },
   tabLabel: { fontSize: 12 },
   row: {
     flexDirection: "row",
@@ -274,30 +282,21 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 8,
-    minHeight: 56,
+    minHeight: 58,
   },
-  unreadBar: {
-    width: 3,
-    height: 36,
-    borderRadius: 2,
-    marginLeft: 2,
-  },
-  starBtn: { padding: 2 },
-  content: { flex: 1, gap: 3 },
-  topRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  unreadDot: { width: 6, height: 6, borderRadius: 3, marginLeft: 6, flexShrink: 0 },
+  starBtn: { padding: 2, flexShrink: 0 },
+  content: { flex: 1, gap: 4 },
+  topLine: { flexDirection: "row", alignItems: "center", gap: 8 },
   sender: { fontSize: 13, flex: 1 },
   date: { fontSize: 11, flexShrink: 0 },
-  bottomRow: { flexDirection: "row", alignItems: "center" },
-  subject: { fontSize: 12, flexShrink: 0, maxWidth: 140 },
+  bottomLine: { flexDirection: "row", alignItems: "center" },
+  subject: { fontSize: 12, flexShrink: 0, maxWidth: 130 },
   preview: { fontSize: 12, flex: 1 },
   hoverActions: { flexDirection: "row", gap: 4 },
-  actionBtn: {
-    padding: 6,
-    borderRadius: 4,
-    backgroundColor: W.bgHover,
-  },
-  clipIcon: { marginRight: 2 },
-  empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
-  emptyTitle: { fontSize: 16 },
+  hoverBtn: { padding: 6, borderRadius: 6 },
+  empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
+  emptyIcon: { width: 64, height: 64, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  emptyTitle: { fontSize: 15 },
   emptyText: { fontSize: 13 },
 });

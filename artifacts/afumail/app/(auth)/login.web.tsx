@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -13,62 +13,39 @@ import {
 
 import { useAuth } from "@/context/AuthContext";
 import { isUsernameAvailable, registerUser, savePhoneNumber, sendPasswordReset, signInUser } from "@/lib/supabase";
+import { W } from "@/components/web/webColors";
 
 type Mode = "login" | "register" | "forgot";
-type RegisterStep = 1 | 2 | 3 | 4 | 5;
+type RegStep = 1 | 2 | 3 | 4 | 5;
 
-const C = {
-  leftBg: "#0F172A",
-  leftAccent: "#2563EB",
-  leftText: "#F1F5F9",
-  leftMuted: "#64748B",
-  rightBg: "#FFFFFF",
-  rightBorder: "#E2E8F0",
-  textPrimary: "#0F172A",
-  textSecondary: "#475569",
-  textMuted: "#94A3B8",
-  accent: "#2563EB",
-  accentHover: "#1D4ED8",
-  inputBg: "#F8FAFC",
-  inputBorder: "#E2E8F0",
-  inputFocus: "#2563EB",
-  destructive: "#EF4444",
-  success: "#10B981",
-};
-
-function slugify(text: string) {
-  return text.toLowerCase().trim().replace(/\s+/g, "").replace(/[^a-z0-9._]/g, "");
+function slugify(t: string) {
+  return t.toLowerCase().trim().replace(/\s+/g, "").replace(/[^a-z0-9._]/g, "");
 }
 
-function WebInput({
+// ── Shared form field ────────────────────────────────────────────────────────
+
+function Field({
   label, value, onChange, placeholder, type = "text", autoFocus = false,
-  suffix, hint, rightElement,
+  suffix, hint, rightEl,
 }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  type?: string;
-  autoFocus?: boolean;
-  suffix?: string;
-  hint?: string;
-  rightElement?: React.ReactNode;
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder?: string; type?: string; autoFocus?: boolean;
+  suffix?: string; hint?: string; rightEl?: React.ReactNode;
 }) {
   const [focused, setFocused] = useState(false);
   return (
-    <View style={styles.fieldWrap}>
-      <Text style={[styles.fieldLabel, { fontFamily: "Inter_500Medium", color: C.textSecondary }]}>{label}</Text>
+    <View style={f.wrap}>
+      <Text style={[f.label, { fontFamily: "Inter_500Medium", color: W.textSecondary }]}>{label}</Text>
       <View style={[
-        styles.inputRow,
-        { borderColor: focused ? C.inputFocus : C.inputBorder, backgroundColor: C.inputBg },
-        focused && { borderColor: C.inputFocus },
+        f.inputWrap,
+        { borderColor: focused ? W.accent : W.border, backgroundColor: W.bgCard },
       ]}>
         <TextInput
-          style={[styles.input, { fontFamily: "Inter_400Regular", color: C.textPrimary }]}
+          style={[f.input, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
           value={value}
           onChangeText={onChange}
           placeholder={placeholder}
-          placeholderTextColor={C.textMuted}
+          placeholderTextColor={W.textMuted}
           secureTextEntry={type === "password"}
           keyboardType={type === "email" ? "email-address" : "default"}
           autoCapitalize={type === "email" || type === "username" ? "none" : "words"}
@@ -77,20 +54,31 @@ function WebInput({
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
         />
-        {suffix && (
-          <Text style={[styles.inputSuffix, { fontFamily: "Inter_400Regular", color: C.textMuted }]}>
-            {suffix}
-          </Text>
-        )}
-        {rightElement}
+        {suffix && <Text style={[f.suffix, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>{suffix}</Text>}
+        {rightEl}
       </View>
-      {hint && <Text style={[styles.fieldHint, { fontFamily: "Inter_400Regular", color: C.textMuted }]}>{hint}</Text>}
+      {hint && <Text style={[f.hint, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>{hint}</Text>}
     </View>
   );
 }
+const f = StyleSheet.create({
+  wrap: { gap: 6 },
+  label: { fontSize: 13 },
+  inputWrap: {
+    flexDirection: "row", alignItems: "center",
+    borderWidth: 1.5, borderRadius: 8,
+    paddingHorizontal: 14, paddingVertical: 11, gap: 6,
+  },
+  input: { flex: 1, fontSize: 14 },
+  suffix: { fontSize: 14, flexShrink: 0 },
+  hint: { fontSize: 12, lineHeight: 18 },
+});
+
+// ── Primary button ────────────────────────────────────────────────────────────
 
 function PrimaryBtn({ label, onPress, loading, disabled, icon }: {
-  label: string; onPress: () => void; loading?: boolean; disabled?: boolean; icon?: keyof typeof Feather.glyphMap;
+  label: string; onPress: () => void; loading?: boolean;
+  disabled?: boolean; icon?: keyof typeof Feather.glyphMap;
 }) {
   const [hovered, setHovered] = useState(false);
   return (
@@ -100,208 +88,247 @@ function PrimaryBtn({ label, onPress, loading, disabled, icon }: {
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
       style={[
-        styles.primaryBtn,
-        { backgroundColor: disabled ? "#CBD5E1" : hovered ? C.accentHover : C.accent, opacity: loading ? 0.8 : 1 },
+        pb.root,
+        { backgroundColor: disabled ? W.border : hovered ? W.accentHover : W.accent, opacity: loading ? 0.8 : 1 },
       ]}
     >
-      {loading ? (
-        <ActivityIndicator size="small" color="#fff" />
-      ) : (
+      {loading ? <ActivityIndicator size="small" color="#fff" /> : (
         <>
-          <Text style={[styles.primaryBtnLabel, { fontFamily: "Inter_600SemiBold" }]}>{label}</Text>
+          <Text style={[pb.label, { fontFamily: "Inter_700Bold" }]}>{label}</Text>
           {icon && <Feather name={icon} size={15} color="#fff" />}
         </>
       )}
     </Pressable>
   );
 }
+const pb = StyleSheet.create({
+  root: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, paddingVertical: 13, borderRadius: 8, marginTop: 4,
+  },
+  label: { fontSize: 15, color: "#fff" },
+});
 
-function SecondaryBtn({ label, onPress, icon }: { label: string; onPress: () => void; icon?: keyof typeof Feather.glyphMap }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <Pressable
-      onPress={onPress}
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
-      style={[
-        styles.secondaryBtn,
-        { backgroundColor: hovered ? "#F1F5F9" : "transparent", borderColor: C.inputBorder },
-      ]}
-    >
-      {icon && <Feather name={icon} size={15} color={C.textSecondary} />}
-      <Text style={[styles.secondaryBtnLabel, { fontFamily: "Inter_500Medium", color: C.textSecondary }]}>{label}</Text>
-    </Pressable>
-  );
-}
+// ── Step indicator ────────────────────────────────────────────────────────────
 
-function StepIndicator({ total, current }: { total: number; current: number }) {
+function StepBar({ total, current }: { total: number; current: number }) {
   return (
-    <View style={styles.steps}>
+    <View style={{ flexDirection: "row", gap: 5, marginBottom: 6 }}>
       {Array.from({ length: total }).map((_, i) => (
         <View
           key={i}
-          style={[
-            styles.step,
-            { backgroundColor: i < current ? C.accent : i === current - 1 ? C.accent : "#E2E8F0" },
-          ]}
+          style={{
+            height: 3, flex: 1, borderRadius: 2,
+            backgroundColor: i < current ? W.accent : W.border,
+          }}
         />
       ))}
     </View>
   );
 }
 
+// ── Error box ────────────────────────────────────────────────────────────────
+
+function ErrorBox({ msg }: { msg: string }) {
+  return (
+    <View style={[eb.root, { backgroundColor: W.destructiveLight, borderColor: W.destructive + "44" }]}>
+      <Feather name="alert-circle" size={14} color={W.destructive} />
+      <Text style={[eb.text, { fontFamily: "Inter_400Regular", color: W.destructive }]}>{msg}</Text>
+    </View>
+  );
+}
+const eb = StyleSheet.create({
+  root: { flexDirection: "row", alignItems: "center", gap: 8, padding: 10, borderRadius: 8, borderWidth: 1 },
+  text: { fontSize: 13, flex: 1 },
+});
+
+// ── Main screen ───────────────────────────────────────────────────────────────
+
 export default function LoginWebScreen() {
   const { refreshUser } = useAuth();
 
   const [mode, setMode] = useState<Mode>("login");
-  const [step, setStep] = useState<RegisterStep>(1);
+  const [step, setStep] = useState<RegStep>(1);
 
-  // Login
+  // Login state
   const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
+  const [loginPw, setLoginPw] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
-  const [loginError, setLoginError] = useState("");
+  const [loginErr, setLoginErr] = useState("");
 
-  // Forgot
-  const [forgotRecovery, setForgotRecovery] = useState("");
+  // Forgot state
+  const [forgotUser, setForgotUser] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
-  const [forgotError, setForgotError] = useState("");
-  const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [forgotErr, setForgotErr] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
 
-  // Register
+  // Register state
   const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [username, setUsername] = useState("");
-  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
-  const [checkingUsername, setCheckingUsername] = useState(false);
-  const [notificationEmail, setNotificationEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [registerLoading, setRegisterLoading] = useState(false);
-  const [registerError, setRegisterError] = useState("");
+  const [lastName, setLastName]   = useState("");
+  const [username, setUsername]   = useState("");
+  const [usernameOk, setUsernameOk] = useState<boolean | null>(null);
+  const [checkingUser, setCheckingUser] = useState(false);
+  const [notifEmail, setNotifEmail] = useState("");
+  const [password, setPassword]   = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [phone, setPhone]         = useState("");
+  const [regLoading, setRegLoading] = useState(false);
+  const [regErr, setRegErr]       = useState("");
   const [newUserId, setNewUserId] = useState<string | null>(null);
-  const [phoneNumber, setPhoneNumber] = useState("");
   const [phoneLoading, setPhoneLoading] = useState(false);
+
+  // ── handlers ────────────────────────────────────────────────────────────────
 
   async function handleLogin() {
     const raw = loginEmail.trim();
-    if (!raw || !loginPassword.trim()) { setLoginError("Please fill in all fields."); return; }
+    if (!raw || !loginPw.trim()) { setLoginErr("Please fill in all fields."); return; }
     const email = raw.includes("@") ? raw : `${raw}@afuchat.com`;
-    setLoginLoading(true); setLoginError("");
-    const { error } = await signInUser(email, loginPassword);
-    if (error) { setLoginError("Incorrect username or password."); }
-    else { await refreshUser(); }
+    setLoginLoading(true); setLoginErr("");
+    const { error } = await signInUser(email, loginPw);
+    if (error) setLoginErr("Incorrect username or password.");
+    else await refreshUser();
     setLoginLoading(false);
   }
 
-  function handleStep1Next() {
-    if (!firstName.trim() || !lastName.trim()) { setRegisterError("Please enter your first and last name."); return; }
-    setRegisterError("");
-    const suggestion = slugify(`${firstName} ${lastName}`);
-    setUsername(suggestion);
-    setUsernameAvailable(null);
+  function step1Next() {
+    if (!firstName.trim() || !lastName.trim()) { setRegErr("Please enter your first and last name."); return; }
+    setRegErr("");
+    setUsername(slugify(`${firstName}${lastName}`));
+    setUsernameOk(null);
     setStep(2);
   }
 
-  async function handleCheckUsername() {
+  async function checkUsername() {
     const u = username.trim().toLowerCase();
-    if (!u) { setRegisterError("Please enter a username."); return; }
-    if (!/^[a-z0-9._]+$/.test(u)) { setRegisterError("Letters, numbers, dots, and underscores only."); return; }
-    setRegisterError(""); setCheckingUsername(true);
-    const available = await isUsernameAvailable(u);
-    setUsernameAvailable(available); setCheckingUsername(false);
+    if (!u) { setRegErr("Please enter a username."); return; }
+    if (!/^[a-z0-9._]+$/.test(u)) { setRegErr("Letters, numbers, dots and underscores only."); return; }
+    setRegErr(""); setCheckingUser(true);
+    const ok = await isUsernameAvailable(u);
+    setUsernameOk(ok); setCheckingUser(false);
   }
 
-  function handleStep2Next() {
-    if (usernameAvailable !== true) { setRegisterError("Please check username availability first."); return; }
-    setRegisterError(""); setStep(3);
+  function step2Next() {
+    if (usernameOk !== true) { setRegErr("Please check username availability first."); return; }
+    setRegErr(""); setStep(3);
   }
 
-  function handleStep3Next() {
-    const email = notificationEmail.trim().toLowerCase();
-    if (!email) { setRegisterError("Please enter your real email address."); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setRegisterError("Please enter a valid email address."); return; }
-    if (email.endsWith("@afuchat.com")) { setRegisterError("Please use a real external email (Gmail, Outlook, etc.)."); return; }
-    setRegisterError(""); setStep(4);
+  function step3Next() {
+    const e = notifEmail.trim().toLowerCase();
+    if (!e) { setRegErr("Please enter your recovery email."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { setRegErr("Please enter a valid email address."); return; }
+    if (e.endsWith("@afuchat.com")) { setRegErr("Use an external email (Gmail, Outlook, etc.)."); return; }
+    setRegErr(""); setStep(4);
   }
 
   async function handleRegister() {
-    if (!password.trim() || password.length < 6) { setRegisterError("Password must be at least 6 characters."); return; }
-    if (password !== confirmPassword) { setRegisterError("Passwords don't match."); return; }
-    setRegisterError(""); setRegisterLoading(true);
-    const email = `${username.trim().toLowerCase()}@afuchat.com`;
+    if (!password.trim() || password.length < 6) { setRegErr("Password must be at least 6 characters."); return; }
+    if (password !== confirmPw) { setRegErr("Passwords don't match."); return; }
+    setRegErr(""); setRegLoading(true);
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
-    const { error, userId } = await registerUser(email, password, username.trim().toLowerCase(), fullName, notificationEmail.trim().toLowerCase());
-    if (error) { setRegisterError(error); setRegisterLoading(false); return; }
-    setNewUserId(userId ?? null); setRegisterLoading(false); setStep(5);
+    const { error, userId } = await registerUser(
+      `${username.trim().toLowerCase()}@afuchat.com`,
+      password,
+      username.trim().toLowerCase(),
+      fullName,
+      notifEmail.trim().toLowerCase(),
+    );
+    if (error) { setRegErr(error); setRegLoading(false); return; }
+    setNewUserId(userId ?? null);
+    setRegLoading(false);
+    setStep(5);
   }
 
   async function handleFinish(skip: boolean) {
     setPhoneLoading(true);
-    if (!skip && phoneNumber.trim() && newUserId) await savePhoneNumber(newUserId, phoneNumber.trim());
+    if (!skip && phone.trim() && newUserId) await savePhoneNumber(newUserId, phone.trim());
     await refreshUser();
     setPhoneLoading(false);
   }
 
-  async function handleForgotPassword() {
-    if (!forgotRecovery.trim()) { setForgotError("Please enter your AfuMail username."); return; }
-    setForgotLoading(true); setForgotError("");
-    const { error } = await sendPasswordReset(forgotRecovery.trim());
-    if (error) { setForgotError(error); } else { setForgotSuccess(true); }
+  async function handleForgot() {
+    if (!forgotUser.trim()) { setForgotErr("Please enter your AfuMail username."); return; }
+    setForgotLoading(true); setForgotErr("");
+    const { error } = await sendPasswordReset(forgotUser.trim());
+    if (error) setForgotErr(error);
+    else setForgotSent(true);
     setForgotLoading(false);
   }
 
   function reset() {
     setMode("login"); setStep(1);
-    setRegisterError(""); setLoginError(""); setForgotError(""); setForgotSuccess(false);
+    setRegErr(""); setLoginErr(""); setForgotErr(""); setForgotSent(false);
   }
 
+  // ── Left panel features ──────────────────────────────────────────────────────
   const FEATURES = [
-    { icon: "shield" as const, label: "Secure by default", desc: "End-to-end encrypted at rest" },
-    { icon: "zap" as const, label: "Real-time inbox", desc: "Instant updates across all devices" },
-    { icon: "layers" as const, label: "Smart categories", desc: "AI-sorted inbox, zero manual work" },
+    { icon: "mail" as const,   title: "One inbox, every device",      desc: "Real-time sync across web and mobile" },
+    { icon: "globe" as const,  title: "Single Sign-On identity",      desc: "One account for the entire Afu platform" },
+    { icon: "shield" as const, title: "Enterprise-grade security",    desc: "OAuth 2.1 · OIDC · encrypted at rest" },
+    { icon: "zap" as const,    title: "Smart inbox categories",       desc: "AI-powered sorting, zero effort" },
   ];
 
   return (
     <View style={styles.root}>
-      {/* Left panel — branding */}
-      <View style={[styles.leftPanel, { backgroundColor: C.leftBg }]}>
-        <View style={styles.leftContent}>
-          <View style={styles.leftBrand}>
-            <Image source={require("../../assets/images/logo.png")} style={styles.leftLogo} resizeMode="contain" />
-            <Text style={[styles.leftBrandName, { fontFamily: "Inter_700Bold", color: C.leftText }]}>AfuMail</Text>
+      {/* ── LEFT PANEL — Brand ──────────────────────────────────────────── */}
+      <View style={[styles.leftPanel, { backgroundColor: "#0F172A" }]}>
+        <View style={styles.leftInner}>
+          {/* Brand mark */}
+          <View style={styles.brandRow}>
+            <Image source={require("../../assets/images/logo.png")} style={styles.brandLogo} resizeMode="contain" />
+            <Text style={[styles.brandName, { fontFamily: "Inter_700Bold" }]}>AfuMail</Text>
           </View>
 
-          <Text style={[styles.tagline, { fontFamily: "Inter_700Bold", color: C.leftText }]}>
-            Your email,{"\n"}elevated.
+          {/* Ecosystem badge */}
+          <View style={styles.ecosystemBadge}>
+            <Feather name="globe" size={11} color="#4D9FEC" />
+            <Text style={[styles.ecosystemText, { fontFamily: "Inter_600SemiBold" }]}>Afu Ecosystem Identity Platform</Text>
+          </View>
+
+          <View style={styles.leftDivider} />
+
+          {/* Tagline */}
+          <Text style={[styles.tagline, { fontFamily: "Inter_700Bold" }]}>
+            Your identity.{"\n"}Your email.{"\n"}One account.
           </Text>
-          <Text style={[styles.taglineSub, { fontFamily: "Inter_400Regular", color: C.leftMuted }]}>
-            A modern email experience built for the Afu ecosystem. One account, every product.
+          <Text style={[styles.taglineSub, { fontFamily: "Inter_400Regular" }]}>
+            Create one AfuMail account and use it across every Afu application — no separate signups, ever.
           </Text>
 
+          {/* Features */}
           <View style={styles.featureList}>
-            {FEATURES.map((f) => (
-              <View key={f.label} style={styles.featureRow}>
-                <View style={[styles.featureIcon, { backgroundColor: C.leftAccent + "22" }]}>
-                  <Feather name={f.icon} size={16} color={C.leftAccent} />
+            {FEATURES.map((ft) => (
+              <View key={ft.title} style={styles.featureRow}>
+                <View style={styles.featureIconWrap}>
+                  <Feather name={ft.icon} size={15} color="#2563EB" />
                 </View>
-                <View>
-                  <Text style={[styles.featureLabel, { fontFamily: "Inter_600SemiBold", color: C.leftText }]}>{f.label}</Text>
-                  <Text style={[styles.featureDesc, { fontFamily: "Inter_400Regular", color: C.leftMuted }]}>{f.desc}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.featureTitle, { fontFamily: "Inter_600SemiBold" }]}>{ft.title}</Text>
+                  <Text style={[styles.featureDesc, { fontFamily: "Inter_400Regular" }]}>{ft.desc}</Text>
                 </View>
               </View>
             ))}
           </View>
         </View>
 
-        <Text style={[styles.leftFooter, { fontFamily: "Inter_400Regular", color: C.leftMuted }]}>
-          © 2026 AfuChat · mail.afuchat.com
-        </Text>
+        {/* Footer */}
+        <View style={styles.leftFooter}>
+          <View style={styles.leftFooterDivider} />
+          <Text style={[styles.leftFooterText, { fontFamily: "Inter_400Regular" }]}>
+            mail.afuchat.com · © 2026 AfuChat
+          </Text>
+          <View style={styles.leftFooterApps}>
+            {["AfuChat", "Engagera", "AfuCloud", "MMRadio"].map((app) => (
+              <View key={app} style={styles.appPill}>
+                <Text style={[styles.appPillText, { fontFamily: "Inter_500Medium" }]}>{app}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
       </View>
 
-      {/* Right panel — form */}
+      {/* ── RIGHT PANEL — Form ──────────────────────────────────────────── */}
       <ScrollView
-        style={[styles.rightPanel, { backgroundColor: C.rightBg }]}
+        style={[styles.rightPanel, { backgroundColor: W.bg }]}
         contentContainerStyle={styles.rightContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -309,46 +336,55 @@ export default function LoginWebScreen() {
         {/* ── LOGIN ── */}
         {mode === "login" && (
           <View style={styles.form}>
-            <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: C.textPrimary }]}>Sign in</Text>
-            <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: C.textSecondary }]}>
-              Welcome back to AfuMail
-            </Text>
+            <View style={styles.formHeader}>
+              <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>Sign in</Text>
+              <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: W.textSecondary }]}>
+                Access your AfuMail inbox and Afu account
+              </Text>
+            </View>
 
             <View style={styles.fields}>
-              <WebInput
+              <Field
                 label="Username or email"
                 value={loginEmail}
-                onChange={(t) => { setLoginEmail(t); setLoginError(""); }}
+                onChange={(t) => { setLoginEmail(t); setLoginErr(""); }}
                 placeholder="john or john@afuchat.com"
                 type="email"
                 autoFocus
               />
-              <WebInput
+              <Field
                 label="Password"
-                value={loginPassword}
-                onChange={(t) => { setLoginPassword(t); setLoginError(""); }}
+                value={loginPw}
+                onChange={(t) => { setLoginPw(t); setLoginErr(""); }}
                 placeholder="Your password"
                 type="password"
               />
-
-              {!!loginError && (
-                <View style={[styles.errorBox, { backgroundColor: "#FEF2F2", borderColor: "#FCA5A5" }]}>
-                  <Feather name="alert-circle" size={14} color={C.destructive} />
-                  <Text style={[styles.errorText, { fontFamily: "Inter_400Regular", color: C.destructive }]}>{loginError}</Text>
-                </View>
-              )}
-
+              {loginErr ? <ErrorBox msg={loginErr} /> : null}
               <PrimaryBtn label="Sign In" onPress={handleLogin} loading={loginLoading} />
-
-              <Pressable onPress={() => { setMode("forgot"); setForgotRecovery(""); setForgotError(""); setForgotSuccess(false); }} style={styles.centeredLink}>
-                <Text style={[styles.linkText, { fontFamily: "Inter_400Regular", color: C.accent }]}>Forgot your password?</Text>
+              <Pressable
+                onPress={() => { setMode("forgot"); setForgotSent(false); setForgotErr(""); }}
+                style={styles.centeredLink}
+              >
+                <Text style={[styles.link, { fontFamily: "Inter_400Regular", color: W.accent }]}>Forgot your password?</Text>
               </Pressable>
             </View>
 
-            <View style={[styles.divider, { borderTopColor: C.rightBorder }]}>
-              <Text style={[styles.dividerText, { fontFamily: "Inter_400Regular", color: C.textMuted }]}>Don't have an account?</Text>
+            <View style={[styles.divider, { borderTopColor: W.border }]}>
+              <Text style={[styles.dividerText, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
+                New to AfuMail?
+              </Text>
             </View>
-            <SecondaryBtn label="Create an AfuMail account" onPress={() => { setMode("register"); setStep(1); setRegisterError(""); }} />
+            <Pressable
+              onPress={() => { setMode("register"); setStep(1); setRegErr(""); }}
+              style={({ pressed }) => [
+                styles.outlineBtn,
+                { backgroundColor: pressed ? W.bgHover : W.bgCard, borderColor: W.border },
+              ]}
+            >
+              <Text style={[styles.outlineBtnLabel, { fontFamily: "Inter_600SemiBold", color: W.textPrimary }]}>
+                Create your Afu account
+              </Text>
+            </Pressable>
           </View>
         )}
 
@@ -356,43 +392,40 @@ export default function LoginWebScreen() {
         {mode === "forgot" && (
           <View style={styles.form}>
             <Pressable onPress={reset} style={styles.backRow}>
-              <Feather name="arrow-left" size={16} color={C.textSecondary} />
-              <Text style={[styles.backLabel, { fontFamily: "Inter_500Medium", color: C.textSecondary }]}>Back to sign in</Text>
+              <Feather name="arrow-left" size={15} color={W.textSecondary} />
+              <Text style={[styles.backLabel, { fontFamily: "Inter_500Medium", color: W.textSecondary }]}>Back to sign in</Text>
             </Pressable>
 
-            {forgotSuccess ? (
-              <View style={styles.successBox}>
-                <View style={[styles.successIcon, { backgroundColor: "#D1FAE5" }]}>
-                  <Feather name="check-circle" size={32} color={C.success} />
+            {forgotSent ? (
+              <View style={styles.successState}>
+                <View style={[styles.successIcon, { backgroundColor: W.successLight }]}>
+                  <Feather name="check-circle" size={36} color={W.success} />
                 </View>
-                <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: C.textPrimary }]}>Check your inbox</Text>
-                <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: C.textSecondary }]}>
-                  A password reset link has been sent to your recovery email address.
+                <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>Check your inbox</Text>
+                <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: W.textSecondary }]}>
+                  A reset link has been sent to your recovery email address.
                 </Text>
                 <PrimaryBtn label="Back to Sign In" onPress={reset} />
               </View>
             ) : (
               <>
-                <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: C.textPrimary }]}>Reset password</Text>
-                <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: C.textSecondary }]}>
-                  Enter your AfuMail username. We'll send a reset link to your recovery email.
-                </Text>
+                <View style={styles.formHeader}>
+                  <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>Reset password</Text>
+                  <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: W.textSecondary }]}>
+                    Enter your AfuMail username. We'll send a reset link to your recovery email.
+                  </Text>
+                </View>
                 <View style={styles.fields}>
-                  <WebInput
+                  <Field
                     label="Username"
-                    value={forgotRecovery}
-                    onChange={(t) => { setForgotRecovery(t); setForgotError(""); }}
-                    placeholder="your username (e.g. john)"
+                    value={forgotUser}
+                    onChange={(t) => { setForgotUser(t); setForgotErr(""); }}
+                    placeholder="yourusername"
                     type="username"
                     autoFocus
                   />
-                  {!!forgotError && (
-                    <View style={[styles.errorBox, { backgroundColor: "#FEF2F2", borderColor: "#FCA5A5" }]}>
-                      <Feather name="alert-circle" size={14} color={C.destructive} />
-                      <Text style={[styles.errorText, { fontFamily: "Inter_400Regular", color: C.destructive }]}>{forgotError}</Text>
-                    </View>
-                  )}
-                  <PrimaryBtn label="Send Reset Link" onPress={handleForgotPassword} loading={forgotLoading} />
+                  {forgotErr ? <ErrorBox msg={forgotErr} /> : null}
+                  <PrimaryBtn label="Send Reset Link" onPress={handleForgot} loading={forgotLoading} />
                 </View>
               </>
             )}
@@ -403,75 +436,88 @@ export default function LoginWebScreen() {
         {mode === "register" && (
           <View style={styles.form}>
             {step > 1 && (
-              <Pressable onPress={() => { setStep((s) => (s > 1 ? (s - 1) as RegisterStep : s)); setRegisterError(""); }} style={styles.backRow}>
-                <Feather name="arrow-left" size={16} color={C.textSecondary} />
-                <Text style={[styles.backLabel, { fontFamily: "Inter_500Medium", color: C.textSecondary }]}>Back</Text>
+              <Pressable
+                onPress={() => { setStep((s) => (s > 1 ? (s - 1) as RegStep : s)); setRegErr(""); }}
+                style={styles.backRow}
+              >
+                <Feather name="arrow-left" size={15} color={W.textSecondary} />
+                <Text style={[styles.backLabel, { fontFamily: "Inter_500Medium", color: W.textSecondary }]}>Back</Text>
               </Pressable>
             )}
 
-            <StepIndicator total={4} current={step} />
+            <StepBar total={4} current={step} />
 
             {/* Step 1 — Name */}
             {step === 1 && (
               <>
-                <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: C.textPrimary }]}>Create your account</Text>
-                <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: C.textSecondary }]}>What's your name?</Text>
+                <View style={styles.formHeader}>
+                  <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>Create your account</Text>
+                  <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: W.textSecondary }]}>What's your name?</Text>
+                </View>
                 <View style={styles.fields}>
                   <View style={styles.twoCol}>
                     <View style={{ flex: 1 }}>
-                      <WebInput label="First name" value={firstName} onChange={(t) => { setFirstName(t); setRegisterError(""); }} placeholder="Jane" autoFocus />
+                      <Field label="First name" value={firstName} onChange={(t) => { setFirstName(t); setRegErr(""); }} placeholder="Jane" autoFocus />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <WebInput label="Last name" value={lastName} onChange={(t) => { setLastName(t); setRegisterError(""); }} placeholder="Smith" />
+                      <Field label="Last name" value={lastName} onChange={(t) => { setLastName(t); setRegErr(""); }} placeholder="Smith" />
                     </View>
                   </View>
-                  {!!registerError && (
-                    <View style={[styles.errorBox, { backgroundColor: "#FEF2F2", borderColor: "#FCA5A5" }]}>
-                      <Feather name="alert-circle" size={14} color={C.destructive} />
-                      <Text style={[styles.errorText, { fontFamily: "Inter_400Regular", color: C.destructive }]}>{registerError}</Text>
-                    </View>
-                  )}
-                  <PrimaryBtn label="Continue" onPress={handleStep1Next} icon="arrow-right" />
+                  {regErr ? <ErrorBox msg={regErr} /> : null}
+                  <PrimaryBtn label="Continue" onPress={step1Next} icon="arrow-right" />
                 </View>
+                <Pressable onPress={reset} style={styles.centeredLink}>
+                  <Text style={[styles.link, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
+                    Already have an account? <Text style={{ color: W.accent }}>Sign in</Text>
+                  </Text>
+                </Pressable>
               </>
             )}
 
             {/* Step 2 — Username */}
             {step === 2 && (
               <>
-                <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: C.textPrimary }]}>Choose a username</Text>
-                <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: C.textSecondary }]}>
-                  Your email will be <Text style={{ color: C.accent, fontFamily: "Inter_600SemiBold" }}>{username || "username"}@afuchat.com</Text>
-                </Text>
+                <View style={styles.formHeader}>
+                  <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>Choose your username</Text>
+                  <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: W.textSecondary }]}>
+                    Your email will be{" "}
+                    <Text style={{ color: W.accent, fontFamily: "Inter_600SemiBold" }}>
+                      {username || "username"}@afuchat.com
+                    </Text>
+                  </Text>
+                </View>
                 <View style={styles.fields}>
-                  <WebInput
+                  <Field
                     label="Username"
                     value={username}
-                    onChange={(t) => { setUsername(slugify(t)); setUsernameAvailable(null); setRegisterError(""); }}
+                    onChange={(t) => { setUsername(slugify(t)); setUsernameOk(null); setRegErr(""); }}
                     placeholder="username"
                     type="username"
                     suffix="@afuchat.com"
                     autoFocus
-                    rightElement={
-                      usernameAvailable === true ? <Feather name="check-circle" size={16} color={C.success} /> :
-                      usernameAvailable === false ? <Feather name="x-circle" size={16} color={C.destructive} /> : undefined
+                    rightEl={
+                      usernameOk === true ? <Feather name="check-circle" size={16} color={W.success} /> :
+                      usernameOk === false ? <Feather name="x-circle" size={16} color={W.destructive} /> : undefined
                     }
                   />
-                  {usernameAvailable === true && (
-                    <Text style={[styles.availText, { fontFamily: "Inter_500Medium", color: C.success }]}>✓ Available</Text>
-                  )}
-                  {usernameAvailable === false && (
-                    <Text style={[styles.availText, { fontFamily: "Inter_500Medium", color: C.destructive }]}>✗ Already taken — try another</Text>
-                  )}
-                  {!!registerError && (
-                    <View style={[styles.errorBox, { backgroundColor: "#FEF2F2", borderColor: "#FCA5A5" }]}>
-                      <Feather name="alert-circle" size={14} color={C.destructive} />
-                      <Text style={[styles.errorText, { fontFamily: "Inter_400Regular", color: C.destructive }]}>{registerError}</Text>
-                    </View>
-                  )}
+                  {usernameOk === true && <Text style={[styles.availOk, { fontFamily: "Inter_500Medium", color: W.success }]}>✓ Available</Text>}
+                  {usernameOk === false && <Text style={[styles.availErr, { fontFamily: "Inter_500Medium", color: W.destructive }]}>✗ Already taken — try another</Text>}
+                  {regErr ? <ErrorBox msg={regErr} /> : null}
                   <View style={styles.twoCol}>
-                    <SecondaryBtn label={checkingUsername ? "Checking…" : "Check availability"} onPress={handleCheckUsername} />
-                    <PrimaryBtn label="Continue" onPress={handleStep2Next} disabled={usernameAvailable !== true} icon="arrow-right" />
+                    <Pressable
+                      onPress={checkUsername}
+                      style={({ pressed }) => [
+                        styles.outlineBtn,
+                        { flex: 1, backgroundColor: pressed ? W.bgHover : W.bgCard, borderColor: W.border },
+                      ]}
+                    >
+                      <Text style={[styles.outlineBtnLabel, { fontFamily: "Inter_600SemiBold", color: W.textPrimary }]}>
+                        {checkingUser ? "Checking…" : "Check"}
+                      </Text>
+                    </Pressable>
+                    <View style={{ flex: 1 }}>
+                      <PrimaryBtn label="Continue" onPress={step2Next} disabled={usernameOk !== true} icon="arrow-right" />
+                    </View>
                   </View>
                 </View>
               </>
@@ -480,26 +526,23 @@ export default function LoginWebScreen() {
             {/* Step 3 — Recovery email */}
             {step === 3 && (
               <>
-                <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: C.textPrimary }]}>Recovery email</Text>
-                <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: C.textSecondary }]}>
-                  Your real email for password reset links. This won't be your AfuMail address.
-                </Text>
+                <View style={styles.formHeader}>
+                  <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>Recovery email</Text>
+                  <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: W.textSecondary }]}>
+                    Your real email for password resets and security alerts. Not your AfuMail address.
+                  </Text>
+                </View>
                 <View style={styles.fields}>
-                  <WebInput
+                  <Field
                     label="Recovery email"
-                    value={notificationEmail}
-                    onChange={(t) => { setNotificationEmail(t); setRegisterError(""); }}
+                    value={notifEmail}
+                    onChange={(t) => { setNotifEmail(t); setRegErr(""); }}
                     placeholder="you@gmail.com"
                     type="email"
                     autoFocus
                   />
-                  {!!registerError && (
-                    <View style={[styles.errorBox, { backgroundColor: "#FEF2F2", borderColor: "#FCA5A5" }]}>
-                      <Feather name="alert-circle" size={14} color={C.destructive} />
-                      <Text style={[styles.errorText, { fontFamily: "Inter_400Regular", color: C.destructive }]}>{registerError}</Text>
-                    </View>
-                  )}
-                  <PrimaryBtn label="Continue" onPress={handleStep3Next} icon="arrow-right" />
+                  {regErr ? <ErrorBox msg={regErr} /> : null}
+                  <PrimaryBtn label="Continue" onPress={step3Next} icon="arrow-right" />
                 </View>
               </>
             )}
@@ -507,20 +550,17 @@ export default function LoginWebScreen() {
             {/* Step 4 — Password */}
             {step === 4 && (
               <>
-                <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: C.textPrimary }]}>Create a password</Text>
-                <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: C.textSecondary }]}>
-                  At least 6 characters. Make it strong.
-                </Text>
+                <View style={styles.formHeader}>
+                  <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>Create a password</Text>
+                  <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: W.textSecondary }]}>
+                    At least 6 characters. Use something strong.
+                  </Text>
+                </View>
                 <View style={styles.fields}>
-                  <WebInput label="Password" value={password} onChange={(t) => { setPassword(t); setRegisterError(""); }} placeholder="••••••••" type="password" autoFocus />
-                  <WebInput label="Confirm password" value={confirmPassword} onChange={(t) => { setConfirmPassword(t); setRegisterError(""); }} placeholder="••••••••" type="password" />
-                  {!!registerError && (
-                    <View style={[styles.errorBox, { backgroundColor: "#FEF2F2", borderColor: "#FCA5A5" }]}>
-                      <Feather name="alert-circle" size={14} color={C.destructive} />
-                      <Text style={[styles.errorText, { fontFamily: "Inter_400Regular", color: C.destructive }]}>{registerError}</Text>
-                    </View>
-                  )}
-                  <PrimaryBtn label="Create Account" onPress={handleRegister} loading={registerLoading} />
+                  <Field label="Password" value={password} onChange={(t) => { setPassword(t); setRegErr(""); }} placeholder="Min. 6 characters" type="password" autoFocus />
+                  <Field label="Confirm password" value={confirmPw} onChange={(t) => { setConfirmPw(t); setRegErr(""); }} placeholder="Repeat password" type="password" />
+                  {regErr ? <ErrorBox msg={regErr} /> : null}
+                  <PrimaryBtn label="Create Account" onPress={handleRegister} loading={regLoading} />
                 </View>
               </>
             )}
@@ -528,29 +568,23 @@ export default function LoginWebScreen() {
             {/* Step 5 — Phone (optional) */}
             {step === 5 && (
               <>
-                <View style={[styles.successIcon, { backgroundColor: "#EFF6FF", alignSelf: "flex-start" }]}>
-                  <Feather name="check-circle" size={32} color={C.accent} />
+                <View style={[styles.successIcon, { backgroundColor: W.accentLight, alignSelf: "flex-start" }]}>
+                  <Feather name="check-circle" size={36} color={W.accent} />
                 </View>
-                <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: C.textPrimary }]}>Account created!</Text>
-                <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: C.textSecondary }]}>
-                  Add a phone number for extra security, or skip to start using AfuMail.
-                </Text>
+                <View style={styles.formHeader}>
+                  <Text style={[styles.formTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>Account created!</Text>
+                  <Text style={[styles.formSub, { fontFamily: "Inter_400Regular", color: W.textSecondary }]}>
+                    Add a phone number for extra security (optional), or go straight to your inbox.
+                  </Text>
+                </View>
                 <View style={styles.fields}>
-                  <WebInput label="Phone number (optional)" value={phoneNumber} onChange={setPhoneNumber} placeholder="+1 234 567 8900" />
-                  <PrimaryBtn label="Finish & Go to Inbox" onPress={() => handleFinish(false)} loading={phoneLoading} />
+                  <Field label="Phone number" value={phone} onChange={setPhone} placeholder="+1 234 567 8900" />
+                  <PrimaryBtn label="Go to Inbox" onPress={() => handleFinish(false)} loading={phoneLoading} />
                   <Pressable onPress={() => handleFinish(true)} style={styles.centeredLink}>
-                    <Text style={[styles.linkText, { fontFamily: "Inter_400Regular", color: C.textMuted }]}>Skip for now</Text>
+                    <Text style={[styles.link, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>Skip for now</Text>
                   </Pressable>
                 </View>
               </>
-            )}
-
-            {step === 1 && (
-              <Pressable onPress={reset} style={styles.centeredLink}>
-                <Text style={[styles.linkText, { fontFamily: "Inter_400Regular", color: C.textMuted }]}>
-                  Already have an account? <Text style={{ color: C.accent }}>Sign in</Text>
-                </Text>
-              </Pressable>
             )}
           </View>
         )}
@@ -563,89 +597,69 @@ const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: "row" },
 
   // Left panel
-  leftPanel: { width: 420, flexDirection: "column", padding: 48 },
-  leftContent: { flex: 1, justifyContent: "center" },
-  leftBrand: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 48 },
-  leftLogo: { width: 32, height: 32 },
-  leftBrandName: { fontSize: 20, color: "#F1F5F9" },
-  tagline: { fontSize: 40, lineHeight: 48, letterSpacing: -1, color: "#F1F5F9", marginBottom: 16 },
-  taglineSub: { fontSize: 16, lineHeight: 26, color: "#64748B", marginBottom: 40 },
-  featureList: { gap: 20 },
+  leftPanel: { width: 400, flexDirection: "column" },
+  leftInner: { flex: 1, padding: 40, justifyContent: "center" },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 },
+  brandLogo: { width: 28, height: 28 },
+  brandName: { fontSize: 20, color: "#F1F5F9" },
+  ecosystemBadge: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    alignSelf: "flex-start",
+    backgroundColor: "#0F2442", borderWidth: 1, borderColor: "#1E3A5F",
+    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 28,
+  },
+  ecosystemText: { fontSize: 11, color: "#4D9FEC" },
+  leftDivider: { height: 1, backgroundColor: "#1E293B", marginBottom: 28 },
+  tagline: { fontSize: 34, lineHeight: 42, letterSpacing: -0.8, color: "#F1F5F9", marginBottom: 14 },
+  taglineSub: { fontSize: 14, lineHeight: 22, color: "#64748B", marginBottom: 32 },
+  featureList: { gap: 16 },
   featureRow: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
-  featureIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", marginTop: 2 },
-  featureLabel: { fontSize: 14, color: "#F1F5F9", marginBottom: 3 },
-  featureDesc: { fontSize: 13, color: "#64748B" },
-  leftFooter: { fontSize: 12, color: "#334155", marginTop: 24 },
+  featureIconWrap: {
+    width: 34, height: 34, borderRadius: 8,
+    backgroundColor: "#0F2442", borderWidth: 1, borderColor: "#1E3A5F",
+    alignItems: "center", justifyContent: "center", marginTop: 1,
+  },
+  featureTitle: { fontSize: 13, color: "#F1F5F9", marginBottom: 2 },
+  featureDesc: { fontSize: 12, color: "#64748B", lineHeight: 18 },
+  leftFooter: { padding: 32, paddingTop: 20 },
+  leftFooterDivider: { height: 1, backgroundColor: "#1E293B", marginBottom: 16 },
+  leftFooterText: { fontSize: 12, color: "#334155", marginBottom: 10 },
+  leftFooterApps: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  appPill: {
+    backgroundColor: "#1E293B", borderRadius: 20,
+    paddingHorizontal: 9, paddingVertical: 4,
+  },
+  appPillText: { fontSize: 11, color: "#94A3B8" },
 
   // Right panel
   rightPanel: { flex: 1 },
-  rightContent: { flexGrow: 1, justifyContent: "center", padding: 64, maxWidth: 480, alignSelf: "center", width: "100%" },
+  rightContent: {
+    flexGrow: 1, justifyContent: "center",
+    paddingHorizontal: 64, paddingVertical: 48,
+    maxWidth: 500, alignSelf: "center", width: "100%",
+  },
   form: { gap: 20, width: "100%" },
-  formTitle: { fontSize: 28, letterSpacing: -0.5, color: "#0F172A" },
-  formSub: { fontSize: 15, color: "#475569", marginTop: -10 },
+  formHeader: { gap: 6 },
+  formTitle: { fontSize: 26, letterSpacing: -0.5 },
+  formSub: { fontSize: 14, lineHeight: 22 },
   fields: { gap: 14 },
-  twoCol: { flexDirection: "row", gap: 12 },
-  backRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
+  twoCol: { flexDirection: "row", gap: 10 },
+  backRow: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 4 },
   backLabel: { fontSize: 14 },
-  steps: { flexDirection: "row", gap: 6, marginBottom: 4 },
-  step: { height: 4, flex: 1, borderRadius: 2 },
-
-  // Field
-  fieldWrap: { gap: 6 },
-  fieldLabel: { fontSize: 13 },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 6,
-  },
-  input: { flex: 1, fontSize: 14 },
-  inputSuffix: { fontSize: 14, flexShrink: 0 },
-  fieldHint: { fontSize: 12 },
-
-  // Buttons
-  primaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 13,
-    borderRadius: 8,
-    marginTop: 4,
-  },
-  primaryBtnLabel: { fontSize: 15, color: "#fff" },
-  secondaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 11,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    flex: 1,
-  },
-  secondaryBtnLabel: { fontSize: 14 },
-
-  // Error / success
-  errorBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  errorText: { fontSize: 13, flex: 1 },
-  availText: { fontSize: 13 },
-  successBox: { gap: 12, alignItems: "flex-start" },
-  successIcon: { width: 64, height: 64, borderRadius: 20, alignItems: "center", justifyContent: "center", marginBottom: 4 },
-
-  // Links
   divider: { borderTopWidth: 1, paddingTop: 16, alignItems: "center" },
-  dividerText: { fontSize: 13, marginBottom: 10 },
+  dividerText: { fontSize: 13, marginBottom: 12 },
   centeredLink: { alignItems: "center", paddingVertical: 4 },
-  linkText: { fontSize: 14 },
+  link: { fontSize: 14 },
+  outlineBtn: {
+    borderWidth: 1.5, borderRadius: 8,
+    paddingVertical: 12, alignItems: "center", justifyContent: "center",
+  },
+  outlineBtnLabel: { fontSize: 14 },
+  successState: { gap: 14, alignItems: "flex-start" },
+  successIcon: {
+    width: 72, height: 72, borderRadius: 20,
+    alignItems: "center", justifyContent: "center", marginBottom: 4,
+  },
+  availOk: { fontSize: 13 },
+  availErr: { fontSize: 13 },
 });

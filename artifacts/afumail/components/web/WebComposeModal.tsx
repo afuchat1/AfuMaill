@@ -1,11 +1,11 @@
 import { Feather } from "@expo/vector-icons";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { useAuth } from "@/context/AuthContext";
 import { useEmails } from "@/context/EmailContext";
 import { getProfile } from "@/lib/supabase";
-import { W } from "./WebSidebar";
+import { W } from "./webColors";
 
 interface ComposeConfig {
   to?: string;
@@ -18,7 +18,7 @@ interface Props {
   onClose: () => void;
 }
 
-type WindowState = "full" | "minimized";
+type WinState = "full" | "minimized";
 
 export default function WebComposeModal({ config, onClose }: Props) {
   const { user } = useAuth();
@@ -32,7 +32,7 @@ export default function WebComposeModal({ config, onClose }: Props) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
-  const [windowState, setWindowState] = useState<WindowState>("full");
+  const [winState, setWinState] = useState<WinState>("full");
 
   useEffect(() => {
     if (!user || config.body) return;
@@ -49,46 +49,48 @@ export default function WebComposeModal({ config, onClose }: Props) {
       await sendEmail(
         { to: to.trim(), cc: cc.trim() || undefined, subject: subject.trim() || "(No Subject)", body },
         user?.email ?? "me@afuchat.com",
-        user?.name ?? "Me"
+        user?.name ?? "Me",
       );
       setSent(true);
-      setTimeout(onClose, 800);
+      setTimeout(onClose, 900);
     } catch {
       setError("Failed to send. Please try again.");
     }
     setSending(false);
   }
 
-  const isMinimized = windowState === "minimized";
+  const minimized = winState === "minimized";
 
   return (
-    <View style={[styles.root, isMinimized && styles.rootMinimized]}>
+    <View style={[styles.root, minimized && styles.rootMin]}>
       {/* Title bar */}
-      <View style={styles.titleBar}>
-        <Text style={[styles.title, { fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
-          {subject.trim() || "New Message"}
-        </Text>
-        <View style={styles.titleActions}>
+      <View style={[styles.titleBar, { backgroundColor: W.textPrimary }]}>
+        <View style={styles.titleLeft}>
+          <Feather name="edit-2" size={12} color="#94A3B8" />
+          <Text style={[styles.titleText, { fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+            {subject.trim() || "New Message"} — AfuMail
+          </Text>
+        </View>
+        <View style={styles.titleBtns}>
           <Pressable
-            onPress={() => setWindowState((s) => (s === "full" ? "minimized" : "full"))}
-            hitSlop={6}
-            style={styles.windowBtn}
+            onPress={() => setWinState((s) => s === "full" ? "minimized" : "full")}
+            hitSlop={6} style={styles.winBtn}
           >
-            <Feather name={isMinimized ? "maximize-2" : "minus"} size={13} color="#94A3B8" />
+            <Feather name={minimized ? "maximize-2" : "minus"} size={12} color="#94A3B8" />
           </Pressable>
-          <Pressable onPress={onClose} hitSlop={6} style={styles.windowBtn}>
-            <Feather name="x" size={13} color="#94A3B8" />
+          <Pressable onPress={onClose} hitSlop={6} style={styles.winBtn}>
+            <Feather name="x" size={12} color="#94A3B8" />
           </Pressable>
         </View>
       </View>
 
-      {!isMinimized && (
+      {!minimized && (
         <>
-          {/* To field */}
+          {/* To */}
           <View style={[styles.field, { borderBottomColor: W.border }]}>
-            <Text style={[styles.fieldLabel, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>To</Text>
+            <Text style={[styles.fieldKey, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>To</Text>
             <TextInput
-              style={[styles.fieldInput, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
+              style={[styles.fieldVal, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
               value={to}
               onChangeText={(t) => { setTo(t); setError(""); }}
               placeholder="Recipients"
@@ -105,9 +107,9 @@ export default function WebComposeModal({ config, onClose }: Props) {
 
           {showCc && (
             <View style={[styles.field, { borderBottomColor: W.border }]}>
-              <Text style={[styles.fieldLabel, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>Cc</Text>
+              <Text style={[styles.fieldKey, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>Cc</Text>
               <TextInput
-                style={[styles.fieldInput, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
+                style={[styles.fieldVal, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
                 value={cc}
                 onChangeText={setCc}
                 placeholder="Carbon copy"
@@ -121,9 +123,9 @@ export default function WebComposeModal({ config, onClose }: Props) {
 
           {/* Subject */}
           <View style={[styles.field, { borderBottomColor: W.border }]}>
-            <Text style={[styles.fieldLabel, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>Subject</Text>
+            <Text style={[styles.fieldKey, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>Subject</Text>
             <TextInput
-              style={[styles.fieldInput, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
+              style={[styles.fieldVal, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
               value={subject}
               onChangeText={setSubject}
               placeholder="Subject"
@@ -134,7 +136,7 @@ export default function WebComposeModal({ config, onClose }: Props) {
 
           {/* Body */}
           <TextInput
-            style={[styles.body, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
+            style={[styles.body, { fontFamily: "Inter_400Regular", color: W.textPrimary, backgroundColor: W.bgCard }]}
             value={body}
             onChangeText={setBody}
             placeholder="Write your message…"
@@ -144,11 +146,14 @@ export default function WebComposeModal({ config, onClose }: Props) {
           />
 
           {/* Footer */}
-          <View style={[styles.footer, { borderTopColor: W.border }]}>
+          <View style={[styles.footer, { borderTopColor: W.border, backgroundColor: W.bgCard }]}>
             {!!error && (
-              <Text style={[styles.error, { fontFamily: "Inter_400Regular", color: W.destructive }]}>{error}</Text>
+              <View style={[styles.errorRow, { backgroundColor: W.destructiveLight }]}>
+                <Feather name="alert-circle" size={13} color={W.destructive} />
+                <Text style={[styles.errorText, { fontFamily: "Inter_400Regular", color: W.destructive }]}>{error}</Text>
+              </View>
             )}
-            <View style={styles.footerActions}>
+            <View style={styles.footerRow}>
               <Pressable
                 onPress={handleSend}
                 disabled={sending || sent}
@@ -161,14 +166,14 @@ export default function WebComposeModal({ config, onClose }: Props) {
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <>
-                    <Feather name={sent ? "check" : "send"} size={14} color="#fff" />
+                    <Feather name={sent ? "check" : "send"} size={13} color="#fff" />
                     <Text style={[styles.sendBtnLabel, { fontFamily: "Inter_600SemiBold" }]}>
                       {sent ? "Sent!" : "Send"}
                     </Text>
                   </>
                 )}
               </Pressable>
-              <Pressable onPress={onClose} hitSlop={6} style={styles.discardBtn}>
+              <Pressable onPress={onClose} hitSlop={6} style={[styles.discardBtn, { backgroundColor: W.bgSecondary }]}>
                 <Feather name="trash-2" size={14} color={W.textMuted} />
               </Pressable>
             </View>
@@ -186,13 +191,13 @@ const styles = StyleSheet.create({
     right: 24,
     width: 520,
     maxHeight: 520,
-    backgroundColor: "#fff",
+    backgroundColor: W.bgCard,
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.14,
-    shadowRadius: 20,
+    shadowColor: "#1C1208",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
     elevation: 16,
     zIndex: 200,
     borderWidth: 1,
@@ -200,37 +205,35 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     flexDirection: "column",
   },
-  rootMinimized: { maxHeight: 44 },
+  rootMin: { maxHeight: 44 },
   titleBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: W.textPrimary,
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 11,
     gap: 8,
   },
-  title: { flex: 1, fontSize: 13, color: "#F1F5F9" },
-  titleActions: { flexDirection: "row", gap: 8 },
-  windowBtn: { padding: 2 },
+  titleLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 7 },
+  titleText: { flex: 1, fontSize: 13, color: "#94A3B8" },
+  titleBtns: { flexDirection: "row", gap: 8 },
+  winBtn: { padding: 2 },
   field: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 9,
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 8,
+    backgroundColor: W.bgCard,
   },
-  fieldLabel: { fontSize: 12, width: 44 },
-  fieldInput: { flex: 1, fontSize: 13, paddingVertical: 2 },
+  fieldKey: { fontSize: 12, width: 46 },
+  fieldVal: { flex: 1, fontSize: 13, paddingVertical: 2 },
   ccToggle: { fontSize: 12 },
   body: {
-    flex: 1,
-    padding: 14,
-    fontSize: 13,
-    lineHeight: 20,
-    minHeight: 200,
+    flex: 1, padding: 14, fontSize: 13,
+    lineHeight: 20, minHeight: 200,
   },
   footer: {
     borderTopWidth: 1,
@@ -238,16 +241,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 6,
   },
-  error: { fontSize: 12 },
-  footerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  errorRow: {
+    flexDirection: "row", alignItems: "center", gap: 7,
+    padding: 9, borderRadius: 7,
+  },
+  errorText: { fontSize: 12, flex: 1 },
+  footerRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   sendBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 20,
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 20, paddingVertical: 9, borderRadius: 20,
   },
   sendBtnLabel: { color: "#fff", fontSize: 13 },
-  discardBtn: { padding: 8, borderRadius: 6 },
+  discardBtn: { padding: 9, borderRadius: 7 },
 });
