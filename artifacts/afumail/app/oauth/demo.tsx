@@ -10,8 +10,20 @@ import { useColors } from "@/hooks/useColors";
 import { generateCodeChallenge, generateCodeVerifier, generateState } from "@/lib/pkce";
 
 const DEMO_CLIENT_ID = "afumail-demo-app";
-const DEMO_REDIRECT_URI =
-  Platform.OS === "web" ? Linking.createURL("/oauth/demo-callback") : "afumail://oauth/demo-callback";
+
+// On web (Replit dev or production), derive the redirect URI from the current
+// origin so it works across environments. On native, use the deep-link scheme.
+function getDemoRedirectUri(): string {
+  if (Platform.OS !== "web") return "afumail://oauth/demo-callback";
+  // EXPO_PUBLIC_DOMAIN is set by Replit to the preview domain; use it in dev.
+  const domain = process.env.EXPO_PUBLIC_DOMAIN;
+  if (domain) return `https://${domain}/oauth/demo-callback`;
+  // Production fallback via EXPO_PUBLIC_SITE_URL
+  const site = process.env.EXPO_PUBLIC_SITE_URL ?? "https://mail.afuchat.com";
+  return `${site.replace(/\/+$/, "")}/oauth/demo-callback`;
+}
+
+const DEMO_REDIRECT_URI = getDemoRedirectUri();
 
 export default function OAuthDemoScreen() {
   const colors = useColors();

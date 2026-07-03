@@ -1,0 +1,342 @@
+AfuMail – Product & Identity Platform Specification
+
+Vision
+
+AfuMail is not just an email application.
+
+AfuMail is the foundation of the entire Afu ecosystem and must be built as a modern email platform combined with a secure, scalable identity service.
+
+Every user should create one AfuMail account and use that account across every Afu product without creating another account.
+
+The architecture must also be designed from the beginning to eventually allow approved third-party applications to support "Continue with AfuMail", making AfuMail a globally trusted identity provider.
+
+---
+
+Primary Objectives
+
+Build AfuMail as:
+
+- A complete email platform
+- A secure authentication platform
+- A centralized identity provider
+- An account management platform
+- A scalable developer authentication platform
+- The foundation for every future Afu product
+
+---
+
+Web & Mobile
+
+AfuMail must be developed as both:
+
+- A Web Application
+- An Android Application
+- An iOS Application (future-ready)
+
+The web version will be hosted at:
+
+mail.afuchat.com
+
+The web platform will act as the primary identity service while sharing the same backend as the mobile applications.
+
+There must only be one backend and one authentication system.
+
+---
+
+Account System
+
+Users create one AfuMail account.
+
+Required information:
+
+- AfuMail email address
+- Password
+- Display name
+- Username
+- Profile picture
+- Country
+- Preferred language
+- Time zone
+- Account status
+- Verification status
+- Created date
+- Updated date
+
+Passwords must be hashed using Argon2id or bcrypt.
+
+Passwords must never be stored in plain text.
+
+---
+
+Email as the User Identity
+
+The AfuMail email address is the user's primary identity.
+
+Example:
+
+username@afumail.com
+
+Users will use this email address to authenticate across all supported applications.
+
+Internally, every account must also have a permanent unique User ID that never changes.
+
+The User ID is used internally for database relationships, while the AfuMail email address is the public identity users recognize.
+
+---
+
+Authentication Platform
+
+AfuMail is the Identity Provider.
+
+Responsibilities include:
+
+- User registration
+- Login
+- Logout
+- Email verification
+- Password reset
+- Session management
+- Refresh tokens
+- Access tokens
+- Device management
+- Profile management
+- Login history
+- Security monitoring
+- Multi-factor authentication (future-ready)
+- User consent management
+- Authentication logs
+
+---
+
+Single Sign-On (SSO)
+
+Users authenticate only once.
+
+After signing in, every Afu application should be able to recognize the authenticated user without requiring another password entry while the session remains valid.
+
+Applications should simply request authentication from AfuMail and receive secure tokens after successful authorization.
+
+---
+
+Future Third-Party Authentication
+
+The authentication platform must be designed from the beginning so that, in the future, external developers can integrate:
+
+Continue with AfuMail
+
+A third-party application must never receive or store the user's password.
+
+Authentication must always happen through AfuMail.
+
+Applications only receive secure authorization responses and access tokens after the user's approval.
+
+---
+
+Authentication Standards
+
+Design the authentication system around widely adopted standards, including where appropriate:
+
+- OAuth 2.1
+- OpenID Connect (OIDC)
+- JWT access tokens
+- Refresh tokens
+- PKCE
+- Secure scopes and permissions
+
+Do not create a proprietary authentication protocol unless there is a compelling technical reason.
+
+---
+
+User Profile Service
+
+Create a centralized profile service.
+
+Information available through authorized APIs may include:
+
+- User ID
+- AfuMail email
+- Username
+- Display name
+- Avatar
+- Verification status
+
+Applications should retrieve profile information from AfuMail instead of duplicating user profile management.
+
+---
+
+Session Management
+
+Users should be able to:
+
+- View all active sessions
+- View all signed-in devices
+- See login history
+- See recent security activity
+- Revoke any session remotely
+- Log out from all devices
+
+---
+
+Security
+
+Implement enterprise-grade security.
+
+Requirements include:
+
+- HTTPS everywhere
+- Secure cookies where applicable
+- Argon2id or bcrypt password hashing
+- Refresh token rotation
+- Short-lived access tokens
+- Email verification
+- Rate limiting
+- Brute-force protection
+- CSRF protection where applicable
+- XSS prevention
+- SQL injection protection
+- Audit logging
+- Device recognition
+- Multi-factor authentication support
+- Secure account recovery
+
+Security must be treated as a core feature, not an afterthought.
+
+---
+
+Database Architecture
+
+The authentication database is owned only by AfuMail.
+
+It contains:
+
+- Users
+- Sessions
+- Devices
+- Password resets
+- Email verification
+- Security logs
+- Authentication tokens
+- Login history
+
+Every Afu application must have its own independent database.
+
+Examples include:
+
+AfuChat
+
+- Chats
+- AI conversations
+- Usage
+- Subscriptions
+
+Engagera
+
+- Posts
+- Comments
+- Followers
+- Groups
+
+AfuCloud
+
+- Files
+- Folders
+- Storage
+
+MMRadio
+
+- Favorites
+- Listening history
+- Stations
+
+Applications must never store passwords.
+
+They should reference users by the permanent User ID issued by AfuMail.
+
+---
+
+Developer Platform
+
+The authentication platform should eventually expose developer capabilities.
+
+Developers should be able to:
+
+- Register applications
+- Receive Client IDs
+- Configure redirect URLs
+- Configure scopes
+- Rotate credentials
+- Monitor authentication usage
+- Integrate using documented APIs and SDKs
+
+The system should be designed with this future capability in mind even if the developer portal is implemented later.
+
+---
+
+APIs
+
+Design clean RESTful APIs (or GraphQL where justified) with proper versioning and documentation.
+
+Core endpoints should include:
+
+- Register
+- Login
+- Logout
+- Refresh token
+- Verify email
+- Reset password
+- Get current user
+- Update profile
+- List active sessions
+- Revoke session
+- Account deletion
+
+All APIs must require appropriate authentication and authorization.
+
+---
+
+Scalability
+
+Design the system to support:
+
+- Millions of users
+- Millions of authentication requests
+- Horizontal scaling
+- High availability
+- Future microservice architecture
+- Future global deployment
+- Independent service scaling
+- Backward compatibility for API versions
+
+Avoid architectural decisions that would require major redesigns as the ecosystem grows.
+
+---
+
+Code Quality
+
+Build maintainable, modular, well-documented code.
+
+Separate concerns clearly between:
+
+- Authentication
+- Email services
+- User profiles
+- Session management
+- Notifications
+- Security
+- APIs
+
+Follow clean architecture and SOLID principles where appropriate.
+
+---
+
+Long-Term Vision
+
+AfuMail is the foundation of the Afu ecosystem.
+
+Every user should think:
+
+«"My AfuMail account gives me secure access to everything."»
+
+The platform must be built so it can grow from an email application into a globally trusted identity platform while maintaining high standards for security, privacy, scalability, reliability, and developer experience.
+
+Every technical decision made today should support that long-term vision.

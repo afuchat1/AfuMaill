@@ -169,6 +169,16 @@ export default function ConnectedAccountsScreen() {
           </Text>
         </Pressable>
 
+        <Pressable
+          onPress={() => router.push("/developer")}
+          style={[styles.demoBtn, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}
+        >
+          <Feather name="code" size={18} color={colors.accent} />
+          <Text style={[styles.demoBtnText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+            Developer Documentation
+          </Text>
+        </Pressable>
+
         <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Feather name="info" size={18} color={colors.accent} />
           <Text style={[styles.infoText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>

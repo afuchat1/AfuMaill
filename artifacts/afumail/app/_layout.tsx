@@ -36,7 +36,10 @@ function RootLayoutNav() {
       return;
     }
     const inAuthGroup = segments[0] === "(auth)";
-    if (!isAuthenticated && !inAuthGroup) {
+    // Public routes — accessible without signing in
+    const publicRoutes = ["developer"];
+    const inPublicRoute = publicRoutes.includes(segments[0] ?? "");
+    if (!isAuthenticated && !inAuthGroup && !inPublicRoute) {
       router.replace("/(auth)/login");
     } else if (isAuthenticated && inAuthGroup) {
       router.replace("/(tabs)");
@@ -68,6 +71,7 @@ function RootLayoutNav() {
       />
       <Stack.Screen name="settings" options={{ headerShown: false, animation: "none", gestureEnabled: false }} />
       <Stack.Screen name="oauth" options={{ headerShown: false, animation: "none" }} />
+      <Stack.Screen name="developer" options={{ headerShown: false, animation: "slide_from_bottom" }} />
     </Stack>
   );
 }
