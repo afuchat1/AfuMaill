@@ -19,7 +19,6 @@ function formatSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// Sandboxed iframe for HTML email bodies (web-only)
 function HtmlBody({ html }: { html: string }) {
   const iframeRef = useRef<any>(null);
   const [height, setHeight] = useState(300);
@@ -28,12 +27,12 @@ function HtmlBody({ html }: { html: string }) {
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
       *{box-sizing:border-box}
-      html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;font-size:14px;line-height:1.65;color:#1C1208;background:#FAF7F2}
+      html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;font-size:14px;line-height:1.65;color:#111827;background:#FFFFFF}
       a{color:#2563EB;word-break:break-all}
       img{max-width:100%;height:auto;border-radius:4px}
       p{margin:0 0 12px}
-      pre,code{white-space:pre-wrap;font-family:monospace;background:#F3EDE3;padding:12px;border-radius:6px;font-size:13px}
-      blockquote{border-left:3px solid #DDD4C4;margin:0;padding-left:16px;color:#5C4E3A}
+      pre,code{white-space:pre-wrap;font-family:monospace;background:#F0F2F5;padding:12px;border-radius:6px;font-size:13px}
+      blockquote{border-left:3px solid #E8EAED;margin:0;padding-left:16px;color:#4B5563}
     </style>
   </head><body>${html}</body></html>`;
 
@@ -51,7 +50,7 @@ function HtmlBody({ html }: { html: string }) {
   }, [html]);
 
   return (
-    // @ts-ignore — iframe is a valid DOM element in .web.tsx files
+    // @ts-ignore
     <iframe
       ref={iframeRef}
       srcDoc={doc}
@@ -93,7 +92,7 @@ function ReplyChip({ icon, label, onPress }: { icon: keyof typeof Feather.glyphM
       onPointerLeave={() => setHovered(false)}
       style={[
         styles.replyChip,
-        { backgroundColor: hovered ? W.bgHover : W.bgCard, borderColor: W.border },
+        { backgroundColor: hovered ? W.bgHover : W.bgSecondary },
       ]}
     >
       <Feather name={icon} size={13} color={W.textPrimary} />
@@ -133,7 +132,7 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
 
   if (!email) {
     return (
-      <View style={[styles.placeholder, { backgroundColor: W.bg }]}>
+      <View style={[styles.placeholder, { backgroundColor: W.bgCard }]}>
         <View style={[styles.placeholderIcon, { backgroundColor: W.bgSecondary }]}>
           <Feather name="mail" size={32} color={W.textMuted} />
         </View>
@@ -192,8 +191,7 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
   };
 
   return (
-    <View style={[styles.root, { backgroundColor: W.bg }]}>
-      {/* Toast */}
+    <View style={[styles.root, { backgroundColor: W.bgCard }]}>
       {toast && (
         <View style={styles.toast}>
           <Feather name="check" size={13} color="#fff" />
@@ -202,7 +200,7 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
       )}
 
       {/* Toolbar */}
-      <View style={[styles.topBar, { borderBottomColor: W.border, backgroundColor: W.bg }]}>
+      <View style={[styles.topBar, { backgroundColor: W.bgCard }]}>
         <Pressable onPress={onClose} hitSlop={8} style={[styles.backBtn, { backgroundColor: W.bgSecondary }]}>
           <Feather name="arrow-left" size={15} color={W.textSecondary} />
         </Pressable>
@@ -214,7 +212,7 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
           <View>
             <ToolbarBtn icon="more-horizontal" label="More" onPress={() => setShowMore((v) => !v)} />
             {showMore && (
-              <View style={[styles.dropdown, { backgroundColor: W.bgCard, borderColor: W.border }]}>
+              <View style={[styles.dropdown, { backgroundColor: W.bgCard }]}>
                 {MOVE_FOLDERS.filter((f) => f.folder !== email.folder).map((f) => (
                   <Pressable
                     key={f.folder}
@@ -235,12 +233,10 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
 
       {/* Body */}
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Subject */}
         <Text style={[styles.subject, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>
           {email.subject}
         </Text>
 
-        {/* Category */}
         {email.category && (
           <View style={[styles.catBadge, { backgroundColor: (CATEGORY_COLORS[email.category] ?? W.accent) + "18" }]}>
             <View style={[styles.catDot, { backgroundColor: CATEGORY_COLORS[email.category] ?? W.accent }]} />
@@ -250,8 +246,8 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
           </View>
         )}
 
-        {/* Sender card */}
-        <View style={[styles.senderCard, { backgroundColor: W.bgCard, borderColor: W.border }]}>
+        {/* Sender — flat, no border */}
+        <View style={[styles.senderCard, { backgroundColor: W.bgSecondary }]}>
           <Avatar name={email.from.name} size={42} fontSize={16} />
           <View style={styles.senderMeta}>
             <View style={styles.senderTopRow}>
@@ -276,8 +272,8 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
           </View>
         </View>
 
-        {/* Body content */}
-        <View style={[styles.bodyWrap, { backgroundColor: W.bgCard, borderColor: W.border }]}>
+        {/* Body — flat, no border */}
+        <View style={[styles.bodyWrap, { backgroundColor: W.bgCard }]}>
           {isHtml ? (
             <HtmlBody html={email.body} />
           ) : (
@@ -294,7 +290,7 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
               {email.attachments.length} ATTACHMENT{email.attachments.length !== 1 ? "S" : ""}
             </Text>
             {email.attachments.map((att) => (
-              <View key={att.id} style={[styles.attachCard, { backgroundColor: W.bgCard, borderColor: W.border }]}>
+              <View key={att.id} style={[styles.attachCard, { backgroundColor: W.bgSecondary }]}>
                 <View style={[styles.attachIconWrap, { backgroundColor: W.accentLight }]}>
                   <Feather name="file-text" size={16} color={W.accent} />
                 </View>
@@ -306,7 +302,7 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
                     {formatSize(att.size)}
                   </Text>
                 </View>
-                <Pressable style={[styles.downloadBtn, { backgroundColor: W.bgSecondary }]}>
+                <Pressable style={[styles.downloadBtn, { backgroundColor: W.bgHover }]}>
                   <Feather name="download" size={13} color={W.textSecondary} />
                 </Pressable>
               </View>
@@ -316,7 +312,7 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
       </ScrollView>
 
       {/* Reply bar */}
-      <View style={[styles.replyBar, { borderTopColor: W.border, backgroundColor: W.bg }]}>
+      <View style={[styles.replyBar, { borderTopColor: W.borderLight, backgroundColor: W.bgCard }]}>
         <ReplyChip icon="corner-up-left" label="Reply" onPress={handleReply} />
         <ReplyChip icon="users" label="Reply All" onPress={handleReplyAll} />
         <ReplyChip icon="corner-up-right" label="Forward" onPress={handleForward} />
@@ -335,8 +331,8 @@ const styles = StyleSheet.create({
   placeholderSub: { fontSize: 14 },
   topBar: {
     flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 20, paddingVertical: 9,
-    borderBottomWidth: 1, gap: 12,
+    paddingHorizontal: 20, paddingVertical: 10,
+    gap: 12,
   },
   backBtn: { padding: 7, borderRadius: 7 },
   toolbarActions: { flexDirection: "row", alignItems: "center", gap: 2, flex: 1 },
@@ -347,9 +343,9 @@ const styles = StyleSheet.create({
   toolbarBtnLabel: { fontSize: 12 },
   dropdown: {
     position: "absolute", top: 34, right: 0, width: 190,
-    borderWidth: 1, borderRadius: 8, zIndex: 100,
-    shadowColor: "#1C1208", shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1, shadowRadius: 12, elevation: 8, overflow: "hidden",
+    borderRadius: 10, zIndex: 100,
+    shadowColor: "#111827", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08, shadowRadius: 16, elevation: 8, overflow: "hidden",
   },
   dropdownItem: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 10 },
   dropdownItemLabel: { fontSize: 13 },
@@ -365,7 +361,7 @@ const styles = StyleSheet.create({
   catLabel: { fontSize: 12 },
   senderCard: {
     flexDirection: "row", alignItems: "flex-start", gap: 14,
-    padding: 16, borderWidth: 1, borderRadius: 10, marginBottom: 16,
+    padding: 16, borderRadius: 12, marginBottom: 16,
   },
   senderMeta: { flex: 1, gap: 3 },
   senderTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
@@ -373,13 +369,13 @@ const styles = StyleSheet.create({
   timestamp: { fontSize: 12, flexShrink: 0 },
   senderEmail: { fontSize: 13 },
   recipientRow: { fontSize: 12, marginTop: 1 },
-  bodyWrap: { padding: 20, borderWidth: 1, borderRadius: 10, marginBottom: 16 },
+  bodyWrap: { padding: 20, borderRadius: 12, marginBottom: 16 },
   bodyText: { fontSize: 15, lineHeight: 27 },
   attachSection: { gap: 8 },
   attachHeader: { fontSize: 10, letterSpacing: 1.2, marginBottom: 4 },
   attachCard: {
     flexDirection: "row", alignItems: "center", gap: 12,
-    padding: 12, borderWidth: 1, borderRadius: 8,
+    padding: 12, borderRadius: 10,
   },
   attachIconWrap: { width: 36, height: 36, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   attachName: { fontSize: 13 },
@@ -393,7 +389,7 @@ const styles = StyleSheet.create({
   replyChip: {
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 16, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1,
+    borderRadius: 20,
   },
   replyChipLabel: { fontSize: 13 },
   toast: {

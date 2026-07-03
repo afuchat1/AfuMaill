@@ -27,7 +27,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 const sec = StyleSheet.create({
   root: { marginBottom: 28 },
   title: { fontSize: 13, letterSpacing: 0.3, marginBottom: 10 },
-  body: { borderWidth: 1, borderRadius: 12, overflow: "hidden" },
+  body: { borderRadius: 12, overflow: "hidden" },
 });
 
 function FieldRow({
@@ -392,24 +392,24 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 40, paddingTop: 28, paddingBottom: 60, maxWidth: 760, alignSelf: "center", width: "100%" },
   pageHeader: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    marginBottom: 28, paddingBottom: 20, borderBottomWidth: 1,
+    marginBottom: 28, paddingBottom: 20,
   },
   pageTitle: { fontSize: 22, letterSpacing: -0.4 },
   pageSub: { fontSize: 14, marginTop: 4 },
   ecosystemPill: {
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: 20, borderWidth: 1,
+    borderRadius: 20,
   },
   ecosystemText: { fontSize: 12 },
   errorBanner: {
     flexDirection: "row", alignItems: "center", gap: 8,
-    padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 20,
+    padding: 12, borderRadius: 8, marginBottom: 20,
   },
   errorText: { fontSize: 13, flex: 1 },
   identityCard: {
     flexDirection: "row", alignItems: "center", gap: 20,
-    padding: 24, borderWidth: 1, borderRadius: 14, marginBottom: 32,
+    padding: 24, borderRadius: 14, marginBottom: 32,
   },
   avatarWrap: { position: "relative" },
   verifiedBadge: {

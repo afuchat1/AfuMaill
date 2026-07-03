@@ -1,42 +1,41 @@
 /**
  * AfuMail Web — Brand Color System
  *
- * The cream palette is the signature of AfuMail on web.
- * Dark navy sidebar is the permanent brand anchor across every view.
+ * Clean, flat, light design. No dark panels.
  * Blue accent (#2563EB) is the primary brand action color.
  */
 export const W = {
-  // ─── Sidebar (brand anchor — always dark navy) ───────────────────────
-  sidebarBg:          "#0F172A",
-  sidebarHover:       "#1E293B",
-  sidebarActive:      "#1D3461",
-  sidebarBorder:      "#1E293B",
-  sidebarText:        "#8DA2B8",
-  sidebarTextActive:  "#F1F5F9",
-  sidebarSection:     "#4A5A6E",
+  // ─── Sidebar — light, flat, white ────────────────────────────────────
+  sidebarBg:          "#FFFFFF",
+  sidebarHover:       "#F5F5F7",
+  sidebarActive:      "#EEF2FF",
+  sidebarBorder:      "#F0F0F2",
+  sidebarText:        "#6B7280",
+  sidebarTextActive:  "#111827",
+  sidebarSection:     "#B0B8C4",
 
-  // ─── Main backgrounds (cream) ─────────────────────────────────────────
-  bg:         "#FAF7F2",  // warm cream — universal app background
-  bgCard:     "#FFFFFF",  // elevated white — for rows, modals, inputs
-  bgSecondary:"#F3EDE3",  // slightly deeper cream — section separators
-  bgHover:    "#EDE6D9",  // hover state on cream
-  bgSelected: "#E5EEFF",  // blue-tinted selection — clearly readable on cream
-  bgAccentSubtle: "#EEF2FF", // light tint for brand highlights
+  // ─── Main backgrounds ─────────────────────────────────────────────────
+  bg:             "#F6F7F9",
+  bgCard:         "#FFFFFF",
+  bgSecondary:    "#F0F2F5",
+  bgHover:        "#ECEEF2",
+  bgSelected:     "#EEF2FF",
+  bgAccentSubtle: "#EEF2FF",
 
-  // ─── Typography (warm tones on cream) ────────────────────────────────
-  textPrimary:   "#1C1208",  // warm near-black
-  textSecondary: "#5C4E3A",  // warm brown-gray
-  textMuted:     "#9B8B74",  // warm muted
+  // ─── Typography ───────────────────────────────────────────────────────
+  textPrimary:   "#111827",
+  textSecondary: "#4B5563",
+  textMuted:     "#9CA3AF",
 
   // ─── Brand accent ─────────────────────────────────────────────────────
   accent:      "#2563EB",
   accentHover: "#1D4ED8",
-  accentLight: "#EEF3FF",
-  accentText:  "#1E40AF",  // accent on light backgrounds
+  accentLight: "#EEF2FF",
+  accentText:  "#1E40AF",
 
-  // ─── Borders (warm) ──────────────────────────────────────────────────
-  border:      "#DDD4C4",
-  borderLight: "#EDE8DF",
+  // ─── Borders — very subtle, used sparingly ────────────────────────────
+  border:      "#E8EAED",
+  borderLight: "#F0F2F5",
 
   // ─── Status ───────────────────────────────────────────────────────────
   destructive:      "#DC2626",

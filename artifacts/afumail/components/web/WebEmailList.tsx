@@ -42,7 +42,7 @@ interface RowProps {
 
 function EmailRow({ email, selected, onSelect, onStar, onArchive, onDelete }: RowProps) {
   const [hovered, setHovered] = useState(false);
-  const bg = selected ? W.bgSelected : hovered ? W.bgHover : W.bg;
+  const bg = selected ? W.bgSelected : hovered ? W.bgHover : W.bgCard;
   const bold = !email.read;
 
   return (
@@ -50,12 +50,10 @@ function EmailRow({ email, selected, onSelect, onStar, onArchive, onDelete }: Ro
       onPress={onSelect}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
-      style={[styles.row, { backgroundColor: bg, borderBottomColor: W.border }]}
+      style={[styles.row, { backgroundColor: bg, borderBottomColor: W.borderLight }]}
     >
-      {/* Unread dot */}
       <View style={[styles.unreadDot, { backgroundColor: bold ? W.accent : "transparent" }]} />
 
-      {/* Star */}
       <Pressable
         onPress={(e) => { e.stopPropagation?.(); onStar(); }}
         hitSlop={8}
@@ -68,10 +66,8 @@ function EmailRow({ email, selected, onSelect, onStar, onArchive, onDelete }: Ro
         />
       </Pressable>
 
-      {/* Sender avatar */}
       <Avatar name={email.from.name} size={32} fontSize={13} />
 
-      {/* Content */}
       <View style={styles.content}>
         <View style={styles.topLine}>
           <Text
@@ -106,7 +102,6 @@ function EmailRow({ email, selected, onSelect, onStar, onArchive, onDelete }: Ro
         </View>
       </View>
 
-      {/* Hover actions */}
       {hovered && (
         <View style={styles.hoverActions}>
           <Pressable
@@ -126,7 +121,6 @@ function EmailRow({ email, selected, onSelect, onStar, onArchive, onDelete }: Ro
         </View>
       )}
 
-      {/* Attachment indicator */}
       {email.attachments.length > 0 && !hovered && (
         <Feather name="paperclip" size={12} color={W.textMuted} />
       )}
@@ -175,8 +169,7 @@ export default function WebEmailList({ currentFolder, selectedId, onSelectEmail,
 
   return (
     <View style={[styles.root, { backgroundColor: W.bg }]}>
-      {/* List toolbar */}
-      <View style={[styles.toolbar, { borderBottomColor: W.border, backgroundColor: W.bg }]}>
+      <View style={[styles.toolbar, { backgroundColor: W.bg }]}>
         <Text style={[styles.folderTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>
           {FOLDER_LABELS[currentFolder] ?? "Inbox"}
         </Text>
@@ -190,9 +183,8 @@ export default function WebEmailList({ currentFolder, selectedId, onSelectEmail,
         </View>
       </View>
 
-      {/* Category tabs (inbox only) */}
       {currentFolder === "inbox" && !searchQuery && (
-        <View style={[styles.tabs, { borderBottomColor: W.border, backgroundColor: W.bg }]}>
+        <View style={[styles.tabs, { borderBottomColor: W.borderLight, backgroundColor: W.bg }]}>
           {INBOX_TABS.map((tab) => {
             const active = activeTab === tab.category;
             return (
@@ -215,7 +207,6 @@ export default function WebEmailList({ currentFolder, selectedId, onSelectEmail,
         </View>
       )}
 
-      {/* Email list */}
       {isLoading && emails.length === 0 ? (
         <View style={styles.empty}>
           <Text style={[styles.emptyText, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>Loading…</Text>
@@ -254,14 +245,13 @@ export default function WebEmailList({ currentFolder, selectedId, onSelectEmail,
 }
 
 const styles = StyleSheet.create({
-  root: { width: 340, flexDirection: "column", borderRightColor: W.border, borderRightWidth: 1 },
+  root: { width: 340, flexDirection: "column" },
   toolbar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
+    paddingVertical: 12,
   },
   folderTitle: { fontSize: 15 },
   toolbarRight: { flexDirection: "row", alignItems: "center", gap: 8 },

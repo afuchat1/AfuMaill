@@ -37,7 +37,7 @@ interface SidebarRowProps {
 function SidebarRow({ icon, label, active, onPress, badge }: SidebarRowProps) {
   const [hovered, setHovered] = useState(false);
   const bg = active ? W.sidebarActive : hovered ? W.sidebarHover : "transparent";
-  const color = active ? W.sidebarTextActive : W.sidebarText;
+  const color = active ? W.accent : hovered ? W.textPrimary : W.sidebarText;
   return (
     <Pressable
       onPress={onPress}
@@ -45,14 +45,13 @@ function SidebarRow({ icon, label, active, onPress, badge }: SidebarRowProps) {
       onPointerLeave={() => setHovered(false)}
       style={[styles.row, { backgroundColor: bg }]}
     >
-      {active && <View style={[styles.activeBar, { backgroundColor: W.accent }]} />}
       <Feather name={icon} size={14} color={color} />
       <Text style={[styles.rowLabel, { color, fontFamily: active ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
         {label}
       </Text>
       {badge !== undefined && badge > 0 && (
-        <View style={[styles.badge, { backgroundColor: active ? W.accent : W.sidebarHover }]}>
-          <Text style={[styles.badgeText, { color: active ? "#fff" : W.sidebarText, fontFamily: "Inter_700Bold" }]}>
+        <View style={[styles.badge, { backgroundColor: active ? W.accentLight : W.bgSecondary }]}>
+          <Text style={[styles.badgeText, { color: active ? W.accent : W.textSecondary, fontFamily: "Inter_700Bold" }]}>
             {badge > 99 ? "99+" : badge}
           </Text>
         </View>
@@ -81,17 +80,12 @@ export default function WebSidebar({ currentView, onSelectView, onCompose, searc
       <View style={styles.brand}>
         <View style={styles.brandTop}>
           <Image source={require("../../assets/images/logo.png")} style={styles.logo} resizeMode="contain" />
-          <Text style={[styles.brandName, { fontFamily: "Inter_700Bold" }]}>AfuMail</Text>
-        </View>
-        {/* Afu Ecosystem identity badge */}
-        <View style={styles.ecosystemBadge}>
-          <Feather name="globe" size={10} color="#4D9FEC" />
-          <Text style={[styles.ecosystemLabel, { fontFamily: "Inter_600SemiBold" }]}>Afu Ecosystem</Text>
+          <Text style={[styles.brandName, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>AfuMail</Text>
         </View>
       </View>
 
       {/* Search */}
-      <View style={styles.searchBox}>
+      <View style={[styles.searchBox, { backgroundColor: W.bgSecondary }]}>
         <Feather name="search" size={13} color={W.sidebarText} />
         <input
           value={searchQuery}
@@ -102,7 +96,7 @@ export default function WebSidebar({ currentView, onSelectView, onCompose, searc
             background: "transparent",
             border: "none",
             outline: "none",
-            color: "#F1F5F9",
+            color: W.textPrimary,
             fontFamily: "Inter, sans-serif",
             fontSize: 13,
           } as any}
@@ -117,7 +111,7 @@ export default function WebSidebar({ currentView, onSelectView, onCompose, searc
       {/* Compose */}
       <Pressable
         onPress={onCompose}
-        style={({ pressed }) => [styles.composeBtn, { opacity: pressed ? 0.88 : 1 }]}
+        style={({ pressed }) => [styles.composeBtn, { backgroundColor: W.accent, opacity: pressed ? 0.88 : 1 }]}
       >
         <Feather name="edit-2" size={13} color="#fff" />
         <Text style={[styles.composeBtnLabel, { fontFamily: "Inter_600SemiBold" }]}>New Message</Text>
@@ -161,7 +155,7 @@ export default function WebSidebar({ currentView, onSelectView, onCompose, searc
         </View>
       </ScrollView>
 
-      {/* Footer — user identity always visible */}
+      {/* Footer — user identity */}
       <View style={[styles.footer, { borderTopColor: W.sidebarBorder }]}>
         <Pressable
           onPointerEnter={() => setProfileHovered(true)}
@@ -171,10 +165,10 @@ export default function WebSidebar({ currentView, onSelectView, onCompose, searc
         >
           {user && <Avatar name={user.name} size={32} fontSize={13} />}
           <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, { fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+            <Text style={[styles.profileName, { fontFamily: "Inter_600SemiBold", color: W.textPrimary }]} numberOfLines={1}>
               {user?.name ?? ""}
             </Text>
-            <Text style={[styles.profileHandle, { fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+            <Text style={[styles.profileHandle, { fontFamily: "Inter_400Regular", color: W.sidebarText }]} numberOfLines={1}>
               @{user?.username}
             </Text>
           </View>
@@ -183,7 +177,7 @@ export default function WebSidebar({ currentView, onSelectView, onCompose, searc
             onPointerLeave={() => setLogoutHovered(false)}
             onPress={logout}
             hitSlop={8}
-            style={[styles.logoutBtn, { backgroundColor: logoutHovered ? W.sidebarActive : "transparent" }]}
+            style={[styles.logoutBtn, { backgroundColor: logoutHovered ? W.sidebarHover : "transparent" }]}
           >
             <Feather name="log-out" size={14} color={W.sidebarText} />
           </Pressable>
@@ -198,35 +192,18 @@ const styles = StyleSheet.create({
     width: 236,
     backgroundColor: W.sidebarBg,
     flexDirection: "column",
-    borderRightColor: W.sidebarBorder,
-    borderRightWidth: 1,
   },
   brand: {
     paddingHorizontal: 16,
     paddingTop: 18,
     paddingBottom: 14,
-    gap: 8,
   },
   brandTop: { flexDirection: "row", alignItems: "center", gap: 9 },
   logo: { width: 24, height: 24 },
-  brandName: { fontSize: 17, color: "#F1F5F9", letterSpacing: -0.3 },
-  ecosystemBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    alignSelf: "flex-start",
-    backgroundColor: "#0F2442",
-    borderWidth: 1,
-    borderColor: "#1E3A5F",
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  ecosystemLabel: { fontSize: 10, color: "#4D9FEC", letterSpacing: 0.3 },
+  brandName: { fontSize: 17, letterSpacing: -0.3 },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: W.sidebarHover,
     borderRadius: 8,
     marginHorizontal: 12,
     marginBottom: 12,
@@ -240,7 +217,6 @@ const styles = StyleSheet.create({
     gap: 8,
     marginHorizontal: 12,
     marginBottom: 14,
-    backgroundColor: W.accent,
     borderRadius: 20,
     paddingVertical: 9,
     paddingHorizontal: 16,
@@ -263,7 +239,6 @@ const styles = StyleSheet.create({
     marginBottom: 1,
     overflow: "hidden",
   },
-  activeBar: { position: "absolute", left: 0, top: 4, bottom: 4, width: 3, borderRadius: 2 },
   rowLabel: { flex: 1, fontSize: 13 },
   badge: { borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1, minWidth: 20, alignItems: "center" },
   badgeText: { fontSize: 10 },
@@ -282,7 +257,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   profileInfo: { flex: 1, overflow: "hidden" },
-  profileName: { fontSize: 12, color: "#F1F5F9" },
-  profileHandle: { fontSize: 11, color: W.sidebarText, marginTop: 1 },
+  profileName: { fontSize: 12 },
+  profileHandle: { fontSize: 11, marginTop: 1 },
   logoutBtn: { padding: 5, borderRadius: 5 },
 });
