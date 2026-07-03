@@ -25,7 +25,13 @@ app.use(
     },
   }),
 );
-app.use(cors());
+const allowedOrigins: (string | RegExp)[] = ["https://mail.afuchat.com"];
+if (process.env.NODE_ENV !== "production") {
+  // Allow Replit preview domains in development only
+  allowedOrigins.push(/\.replit\.dev$/, /\.kirk\.replit\.dev$/);
+}
+
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -61,3 +61,9 @@ timeoutMs = 20000
 [userenv.shared]
 EXPO_PUBLIC_SUPABASE_URL = "https://lqowocmjmhbkoxlwyxku.supabase.co"
 NEXT_PUBLIC_SITE_URL = "https://mail.afuchat.com"
+EXPO_PUBLIC_SITE_URL = "https://mail.afuchat.com"
+EXPO_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxxb3dvY21qbWhia294bHd5eGt1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4Mjg1NzksImV4cCI6MjA5ODQwNDU3OX0.NgE6jPWYTGprdPrCxJ7WpgSE12RIXrY4zHC4aK5knZc"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxxb3dvY21qbWhia294bHd5eGt1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4Mjg1NzksImV4cCI6MjA5ODQwNDU3OX0.NgE6jPWYTGprdPrCxJ7WpgSE12RIXrY4zHC4aK5knZc"
+SUPABASE_DB_URL = "postgresql://postgres.lqowocmjmhbkoxlwyxku:AfuMail_Db2026!Secure@aws-1-eu-central-1.pooler.supabase.com:6543/postgres"
+SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxxb3dvY21qbWhia294bHd5eGt1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjgyODU3OSwiZXhwIjoyMDk4NDA0NTc5fQ.ldRetWlHSnVgS81qurmI4ttdyrLbAqZ-Z3JW6xscfzs"
+SUPABASE_URL = "https://lqowocmjmhbkoxlwyxku.supabase.co"

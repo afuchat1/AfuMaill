@@ -80,7 +80,7 @@ export async function sendPasswordReset(username: string): Promise<{ error?: str
   const redirectTo =
     typeof window !== "undefined" && window.location?.origin
       ? window.location.origin
-      : `https://${process.env.EXPO_PUBLIC_DOMAIN ?? "lqowocmjmhbkoxlwyxku.supabase.co"}`;
+      : (process.env.EXPO_PUBLIC_SITE_URL ?? `https://${process.env.EXPO_PUBLIC_DOMAIN}` ?? "https://mail.afuchat.com");
 
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/reset-password`, {
