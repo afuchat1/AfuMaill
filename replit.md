@@ -1,36 +1,73 @@
-# [Project name]
+# AfuMail
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A mobile email app built with Expo (React Native) backed by an Express 5 API server.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+### Install dependencies (first time / after pulling)
+```
+pnpm install
+```
+
+### API server (port 8080)
+```
+pnpm --filter @workspace/api-server run dev
+```
+Or use the **artifacts/api-server: API Server** workflow in Replit.
+
+### Mobile app (Expo, port 8099)
+```
+pnpm --filter @workspace/afumail run dev
+```
+Or use the **artifacts/afumail: expo** workflow in Replit.
+Scan the QR code printed in the terminal with Expo Go on your phone, or press `w` to open the web version.
+
+### Other commands
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm --filter @workspace/db run push` — push DB schema changes to the database (dev only)
+
+## Required environment variables
+
+| Variable | Where set | Purpose |
+|---|---|---|
+| `DATABASE_URL` | Replit secret | Postgres connection string for the API server |
+| `SESSION_SECRET` | Replit secret | Session signing key for the API server |
+
+> **Note:** The API server starts without `DATABASE_URL` (only the health route is active), but any data-backed routes will fail until a database is provisioned and the env var is set.
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- **API:** Express 5, port 8080
+- **Mobile:** Expo (React Native) with expo-router, port 8099
+- **DB:** PostgreSQL + Drizzle ORM
+- **Validation:** Zod (`zod/v4`), `drizzle-zod`
+- **API codegen:** Orval (from OpenAPI spec)
+- **Build:** esbuild (CJS bundle)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+| Path | What it is |
+|---|---|
+| `artifacts/api-server/` | Express API server |
+| `artifacts/afumail/` | Expo mobile app |
+| `artifacts/mockup-sandbox/` | Vite component preview (canvas) |
+| `lib/db/` | Drizzle schema + DB client |
+| `lib/api-spec/` | OpenAPI spec (source of truth for API) |
+| `lib/api-client-react/` | Generated React Query hooks |
+| `lib/api-zod/` | Generated Zod validators |
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- API spec-first: edit `lib/api-spec/`, run codegen, then implement routes.
+- DB schema lives in `lib/db/src/schema.ts`; push changes with `pnpm --filter @workspace/db run push`.
+- Mobile app uses expo-router for file-based routing.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+AfuMail is a mobile email application. See `attached_assets/` for the product identity and platform specification.
 
 ## User preferences
 
@@ -38,8 +75,10 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Always run `pnpm install` from the workspace root (not inside a package directory) — the lockfile is at the root.
+- The Expo dev server prints a QR code; use Expo Go on a physical device or press `w` for web preview.
+- `DATABASE_URL` must be set before any DB-backed API routes will work.
 
 ## Pointers
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
