@@ -34,8 +34,11 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=5000 pnpm --filter @workspace/afumail run dev"
+args = "cd artifacts/afumail && EXPO_PACKAGER_PROXY_URL=https://$REPLIT_EXPO_DEV_DOMAIN EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_REPL_ID=$REPL_ID REACT_NATIVE_PACKAGER_HOSTNAME=$REPLIT_DEV_DOMAIN PORT=5000 node server/expo-proxy.js"
 waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [[workflows.workflow]]
 name = "AfuMail Web"
@@ -52,6 +55,7 @@ waitForPort = 3000
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
+integrations = ["javascript_database:1.0.0"]
 
 [postMerge]
 path = "scripts/post-merge.sh"
@@ -68,3 +72,7 @@ SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 SUPABASE_DB_URL = "postgresql://postgres.lqowocmjmhbkoxlwyxku:AfuMail_Db2026!Secure@aws-1-eu-central-1.pooler.supabase.com:6543/postgres"
 SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxxb3dvY21qbWhia294bHd5eGt1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjgyODU3OSwiZXhwIjoyMDk4NDA0NTc5fQ.ldRetWlHSnVgS81qurmI4ttdyrLbAqZ-Z3JW6xscfzs"
 SUPABASE_URL = "https://lqowocmjmhbkoxlwyxku.supabase.co"
+
+[[ports]]
+localPort = 3000
+externalPort = 80
