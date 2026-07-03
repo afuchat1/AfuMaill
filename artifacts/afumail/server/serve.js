@@ -149,6 +149,16 @@ const server = http.createServer((req, res) => {
 });
 
 const port = parseInt(process.env.PORT || "3000", 10);
+
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(`Port ${port} already in use, retrying in 2s...`);
+    setTimeout(() => server.listen(port, "0.0.0.0"), 2000);
+  } else {
+    throw err;
+  }
+});
+
 server.listen(port, "0.0.0.0", () => {
   console.log(`Serving static Expo build on port ${port}`);
 });
