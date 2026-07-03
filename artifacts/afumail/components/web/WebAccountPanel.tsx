@@ -80,7 +80,7 @@ const fld = StyleSheet.create({
   root: { paddingHorizontal: 20, paddingVertical: 14, flexDirection: "row", alignItems: "center", gap: 12 },
   label: { fontSize: 13, width: 160, flexShrink: 0 },
   right: { flex: 1 },
-  input: { fontSize: 14, paddingVertical: 2 },
+  input: { fontSize: 14, paddingVertical: 2, outlineWidth: 0 } as any,
   readOnly: { fontSize: 14 },
   lockedBadge: { alignSelf: "flex-start", marginTop: 4, padding: 4, borderRadius: 4 },
   hint: { fontSize: 11, marginTop: 4 },
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   },
   infoText: { fontSize: 12 },
   textAreaWrap: { padding: 16 },
-  textArea: { fontSize: 14, lineHeight: 22, minHeight: 96 },
+  textArea: { fontSize: 14, lineHeight: 22, minHeight: 96, outlineWidth: 0 } as any,
   toggleRow: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 20, paddingVertical: 14,

@@ -95,6 +95,7 @@ export default function WebSidebar({ currentView, onSelectView, onCompose, searc
             background: "transparent",
             border: "none",
             outline: "none",
+            boxShadow: "none",
             color: W.textPrimary,
             fontFamily: "Inter, sans-serif",
             fontSize: 13,

@@ -69,7 +69,7 @@ const f = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14, paddingVertical: 12, gap: 6,
   },
-  input: { flex: 1, fontSize: 14 },
+  input: { flex: 1, fontSize: 14, outlineWidth: 0 } as any,
   suffix: { fontSize: 14, flexShrink: 0 },
   hint: { fontSize: 12, lineHeight: 18 },
 });

@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     backgroundColor: W.bgCard,
   },
   fieldKey: { fontSize: 12, width: 46, flexShrink: 0 },
-  fieldVal: { flex: 1, fontSize: 13, paddingVertical: 2 },
+  fieldVal: { flex: 1, fontSize: 13, paddingVertical: 2, outlineWidth: 0 } as any,
   fieldBtns: { flexDirection: "row", gap: 8 },
   ccToggle: { fontSize: 12 },
   fmtToolbar: {
@@ -338,8 +338,8 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1, padding: 14, fontSize: 13,
-    lineHeight: 20, minHeight: 190,
-  },
+    lineHeight: 20, minHeight: 190, outlineWidth: 0,
+  } as any,
   footer: {
     borderTopWidth: 1,
     paddingHorizontal: 14,

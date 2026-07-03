@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18, paddingVertical: 14, gap: 16,
   },
   inputLabel: { width: 150, fontSize: 13 },
-  inputField: { flex: 1, fontSize: 14, paddingVertical: 2 },
+  inputField: { flex: 1, fontSize: 14, paddingVertical: 2, outlineWidth: 0 } as any,
   primaryBtn: {
     flexDirection: "row", alignItems: "center", gap: 7,
     paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20,
