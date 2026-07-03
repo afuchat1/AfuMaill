@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web", "bash"]
+modules = ["nodejs-20", "web", "bash", "nix"]
 
 [deployment]
 router = "application"
@@ -78,19 +78,13 @@ timeoutMs = 20000
 [nix]
 channel = "stable-25_05"
 
-# ── Port declarations ──────────────────────────────────────────────────────────
-# Each localPort must match the PORT= value in the workflow above AND the
-# waitForPort value. Keeping all three in sync here prevents preview mismatches.
-
 [[ports]]
 localPort = 3000
 externalPort = 3000
-# artifacts/website: web  →  node server/serve.js  →  landing page / web app
 
 [[ports]]
 localPort = 8080
 externalPort = 8080
-# artifacts/api-server: API Server  →  Express REST + OAuth API
 
 [[ports]]
 localPort = 8099
