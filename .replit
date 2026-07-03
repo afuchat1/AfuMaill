@@ -33,7 +33,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd artifacts/afumail && pnpm build:web && fuser -k 3000/tcp 2>/dev/null; PORT=3000 pnpm run serve"
+args = "cd artifacts/afumail && ([ -f dist/index.html ] || pnpm build:web) && fuser -k 3000/tcp 2>/dev/null; PORT=3000 pnpm run serve"
 waitForPort = 3000
 
 [agent]
