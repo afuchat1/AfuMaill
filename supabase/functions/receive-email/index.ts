@@ -1,9 +1,10 @@
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, svix-id, svix-timestamp, svix-signature",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, svix-id, svix-timestamp, svix-signature",
 };
 
-// Parse "Name <email@example.com>" or "email@example.com" into { name, email }
+// Parse "Name <email@example.com>" or plain "email@example.com" → { name, email }
 function parseAddress(raw: string): { name: string; email: string } {
   const match = raw.match(/^(.*?)\s*<([^>]+)>$/);
   if (match) {
@@ -16,12 +17,13 @@ function parseAddress(raw: string): { name: string; email: string } {
   return { name: email.split("@")[0] ?? email, email };
 }
 
-// Normalize HTML body to plain text (strip tags, decode entities)
+// Strip HTML tags and decode common entities
 function htmlToText(html: string): string {
   return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<p\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "")
+    .replace(/<\/?(p|div|tr|li|h[1-6])[^>]*>/gi, "\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
@@ -33,7 +35,7 @@ function htmlToText(html: string): string {
     .trim();
 }
 
-// Simple category guess based on from-address / subject keywords
+// Category heuristic
 function guessCategory(from: string, subject: string): string {
   const text = (from + " " + subject).toLowerCase();
   if (/bank|invoice|payment|receipt|transaction|order|refund|billing|stripe|paypal/.test(text)) return "finance";
@@ -45,6 +47,36 @@ function guessCategory(from: string, subject: string): string {
   return "primary";
 }
 
+// Try a list of key names and return the first non-empty string value
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function pick(obj: any, ...keys: string[]): string {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (v != null && typeof v === "string" && v.trim()) return v.trim();
+  }
+  return "";
+}
+
+// Normalise to/cc into an array of raw address strings
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normaliseAddressList(val: any): string[] {
+  if (!val) return [];
+  if (typeof val === "string") return val.split(",").map((s: string) => s.trim()).filter(Boolean);
+  if (Array.isArray(val)) {
+    return val
+      .map((v: unknown) => {
+        if (typeof v === "string") return v.trim();
+        if (v && typeof v === "object") {
+          const o = v as Record<string, string>;
+          return o.email ?? o.address ?? o.Email ?? o.Address ?? "";
+        }
+        return "";
+      })
+      .filter(Boolean);
+  }
+  return [];
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -54,142 +86,172 @@ Deno.serve(async (req) => {
     const projectUrl = "https://lqowocmjmhbkoxlwyxku.supabase.co";
     const serviceRoleKey = Deno.env.get("SVC_ROLE_KEY") ?? "";
 
+    const rawText = await req.text();
+    console.log("[receive-email] raw payload (first 3000 chars):", rawText.slice(0, 3000));
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const payload = await req.json() as any;
+    let payload: any;
+    try {
+      payload = JSON.parse(rawText);
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    // Accept either wrapped { type, data } or a direct email object
-    const isWrapped = payload?.type === "email.received" && payload?.data;
-    const emailData = isWrapped ? payload.data : payload;
+    // ── Normalise envelope ────────────────────────────────────────────────────
+    // Resend may send: { type, created_at, data: { … } }  OR  a flat object
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const email: any = (payload?.type && payload?.data) ? payload.data : payload;
 
-    const rawFrom = emailData?.from ?? "";
-    const rawTo = emailData?.to;
-    const rawCc = emailData?.cc;
-    const subject = emailData?.subject ?? "(No Subject)";
-    // Resend may use html/text or body/plain variants depending on version
-    let htmlBody: string = emailData?.html ?? emailData?.body_html ?? emailData?.htmlBody ?? "";
-    let textBody: string = emailData?.text ?? emailData?.plain ?? emailData?.body_text ?? emailData?.textBody ?? "";
-    const emailId: string = emailData?.email_id ?? emailData?.id ?? "";
-    const attachments: Array<{ filename?: string; size?: number; content_type?: string }> =
-      emailData?.attachments ?? [];
+    const allKeys = Object.keys(email ?? {});
+    console.log("[receive-email] email-level keys:", allKeys.join(", "));
 
-    if (!rawFrom || !rawTo) {
+    // Log every field's type + length for debugging (first 200 chars of value)
+    for (const k of allKeys) {
+      const v = email[k];
+      const preview = typeof v === "string" ? v.slice(0, 200) : JSON.stringify(v)?.slice(0, 200);
+      console.log(`  [field] ${k} (${typeof v}): ${preview}`);
+    }
+
+    // ── Extract fields — try every known variant ──────────────────────────────
+    const rawFrom = pick(email,
+      // standard lowercase
+      "from", "sender", "from_email",
+      // Postmark / Postal style
+      "From", "Sender", "ReplyTo",
+    );
+
+    const rawSubject = pick(email,
+      "subject", "Subject",
+    );
+
+    const toList = normaliseAddressList(
+      email?.to ?? email?.To ?? email?.to_email ?? email?.recipients ?? email?.Recipients
+    );
+    const ccList = normaliseAddressList(
+      email?.cc ?? email?.Cc ?? email?.CC ?? email?.cc_email
+    );
+
+    // Body: try every reasonable variant
+    const textBody = pick(email,
+      // Resend / SendGrid style
+      "text", "text_body", "textBody", "plain_text", "plainText", "body_plain", "bodyPlain",
+      // Postmark style
+      "TextBody", "Text",
+      // Generic
+      "body", "Body", "content", "Content", "message", "Message",
+    );
+
+    const htmlBody = pick(email,
+      // Resend / SendGrid style
+      "html", "html_body", "htmlBody", "body_html", "bodyHtml",
+      // Postmark style
+      "HtmlBody", "Html", "HTML",
+      // Generic
+      "htmlContent", "HtmlContent",
+    );
+
+    console.log(`[receive-email] from="${rawFrom}" subject="${rawSubject}"`);
+    console.log(`[receive-email] toList: ${toList.join("; ")}`);
+    console.log(`[receive-email] textBody.length=${textBody.length} htmlBody.length=${htmlBody.length}`);
+
+    let body = textBody || htmlToText(htmlBody);
+
+    // ── Debug fallback: if body is STILL empty, build a readable summary of all
+    //   fields so the user can see what Resend actually sent (temporary diagnostic). ──
+    if (!body) {
+      const lines: string[] = ["[Debug: body could not be extracted. Resend payload fields:]"];
+      for (const k of allKeys) {
+        const v = email[k];
+        const valueStr = typeof v === "string" ? v.slice(0, 300) : JSON.stringify(v)?.slice(0, 300);
+        lines.push(`${k}: ${valueStr}`);
+      }
+      body = lines.join("\n");
+      console.log("[receive-email] body empty — storing debug info instead");
+    }
+
+    if (!rawFrom || toList.length === 0) {
       return new Response(JSON.stringify({ error: "Missing from or to." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // If body is missing but we have an email_id, fetch full content from Resend
-    if (!htmlBody && !textBody && emailId) {
-      const resendKey = Deno.env.get("RESEND_API_KEY") ?? "";
-      if (resendKey) {
-        try {
-          const r = await fetch(`https://api.resend.com/emails/${emailId}`, {
-            headers: { Authorization: `Bearer ${resendKey}` },
-          });
-          if (r.ok) {
-            const detail = await r.json() as { html?: string; text?: string };
-            htmlBody = detail.html ?? "";
-            textBody = detail.text ?? "";
-          }
-        } catch (_) { /* ignore fetch errors */ }
-      }
-    }
-
     const fromAddr = parseAddress(rawFrom);
-
-    // Normalise to/cc into string arrays
-    const toRaw: string[] = Array.isArray(rawTo) ? rawTo : [rawTo as string];
-    const ccRaw: string[] = rawCc
-      ? (Array.isArray(rawCc) ? rawCc : [rawCc as string])
-      : [];
-
-    const toList = toRaw;
-    const ccList = ccRaw;
-
     const toAddresses = toList.map(parseAddress);
     const ccAddresses = ccList.map(parseAddress);
+    const preview = body.startsWith("[Debug:") ? "" : body.slice(0, 140).replace(/\n/g, " ");
+    const category = guessCategory(fromAddr.email, rawSubject);
 
-    // Store HTML for rich rendering; plain text for preview
-    const body = htmlBody || textBody;
-    const plainForPreview = textBody || htmlToText(htmlBody);
-    const preview = plainForPreview.slice(0, 140).replace(/\n/g, " ");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const attachments: any[] = email?.attachments ?? email?.Attachments ?? [];
 
-    const category = guessCategory(fromAddr.email, subject);
+    // ── Find @afuchat.com recipients and deliver ──────────────────────────────
+    const afuchatRecipients = [...toAddresses, ...ccAddresses].filter(
+      (a) => a.email.endsWith("@afuchat.com")
+    );
 
-    // Find all @afuchat.com recipients and deliver to their inboxes
-    const afuchatRecipients = toAddresses
-      .concat(ccAddresses)
-      .filter((a) => a.email.endsWith("@afuchat.com"));
-
-    if (afuchatRecipients.length === 0) {
-      return new Response(JSON.stringify({ ok: true, delivered: 0 }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    console.log("[receive-email] afuchat recipients:", afuchatRecipients.map(a => a.email).join(", ") || "none");
 
     let delivered = 0;
 
     for (const recipient of afuchatRecipients) {
-      // Look up owner by their afuchat.com email in profiles
       const profileRes = await fetch(
         `${projectUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(recipient.email)}&select=id`,
-        {
-          headers: {
-            Authorization: `Bearer ${serviceRoleKey}`,
-            apikey: serviceRoleKey,
-          },
-        }
+        { headers: { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey } }
       );
 
-      if (!profileRes.ok) continue;
+      if (!profileRes.ok) {
+        console.warn("[receive-email] profile lookup failed:", await profileRes.text());
+        continue;
+      }
 
       const profiles = await profileRes.json() as Array<{ id: string }>;
       const profile = profiles[0];
-      if (!profile) continue;
+      if (!profile) {
+        console.warn("[receive-email] no profile for:", recipient.email);
+        continue;
+      }
 
-      // Insert the email into that user's inbox
-      const insertRes = await fetch(
-        `${projectUrl}/rest/v1/emails`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${serviceRoleKey}`,
-            apikey: serviceRoleKey,
-            "Content-Type": "application/json",
-            Prefer: "return=minimal",
-          },
-          body: JSON.stringify({
-            owner_id: profile.id,
-            from_name: fromAddr.name,
-            from_email: fromAddr.email,
-            to_emails: toAddresses,
-            cc_emails: ccAddresses,
-            subject,
-            body,
-            preview,
-            timestamp: new Date().toISOString(),
-            read: false,
-            starred: false,
-            pinned: false,
-            attachments: attachments.map((a) => ({
-              id: crypto.randomUUID(),
-              name: a.filename ?? "attachment",
-              size: a.size ?? 0,
-              type: a.content_type ?? "application/octet-stream",
-            })),
-            category,
-            folder: "inbox",
-          }),
-        }
-      );
+      const insertRes = await fetch(`${projectUrl}/rest/v1/emails`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${serviceRoleKey}`,
+          apikey: serviceRoleKey,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({
+          owner_id: profile.id,
+          from_name: fromAddr.name,
+          from_email: fromAddr.email,
+          to_emails: toAddresses,
+          cc_emails: ccAddresses,
+          subject: rawSubject || "(No Subject)",
+          body,
+          preview,
+          timestamp: new Date().toISOString(),
+          read: false,
+          starred: false,
+          pinned: false,
+          attachments: attachments.map((a) => ({
+            id: crypto.randomUUID(),
+            name: a.filename ?? a.name ?? a.Name ?? "attachment",
+            size: a.size ?? a.Size ?? 0,
+            type: a.content_type ?? a.type ?? a.ContentType ?? "application/octet-stream",
+          })),
+          category,
+          folder: "inbox",
+        }),
+      });
 
       if (insertRes.ok || insertRes.status === 201) {
         delivered++;
+        console.log("[receive-email] delivered to:", recipient.email);
       } else {
-        const err = await insertRes.text();
-        console.error("insert error for", recipient.email, err);
+        console.error("[receive-email] insert error:", await insertRes.text());
       }
     }
 
@@ -198,7 +260,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("receive-email error:", err);
+    console.error("[receive-email] unhandled error:", err);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

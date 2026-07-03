@@ -1,0 +1,249 @@
+# AfuMail Identity Platform (Core Authentication System)
+
+We are not building AfuMail as just an email application. AfuMail must become the **central identity and authentication platform** for the entire Afu ecosystem.
+
+## Goal
+
+Implement a scalable **Single Sign-On (SSO)** system so users create **one Afu Account** in AfuMail and use it across all current and future Afu applications without creating separate accounts.
+
+Current ecosystem:
+
+* AfuMail (Identity Provider)
+* AfuChat
+* Engagera
+* AfuCloud
+* MMRadio
+* Any future Afu applications
+
+---
+
+# Core Principles
+
+## 1. Single Account
+
+A user creates one Afu Account only.
+
+Required information:
+
+* Unique User ID (never changes)
+* Email address
+* Password (hashed using Argon2id or bcrypt)
+* Display name
+* Profile photo
+* Account status
+* Email verification status
+* Created date
+* Updated date
+
+Passwords must never be stored in plain text.
+
+---
+
+## 2. Identity Service
+
+AfuMail must expose a secure authentication service/API.
+
+Responsibilities:
+
+* Register users
+* Login
+* Logout
+* Refresh tokens
+* Verify email
+* Reset password
+* Multi-device session management
+* Revoke sessions
+* OAuth2/OpenID Connect compatible architecture where practical
+* JWT access tokens
+* Refresh tokens
+
+---
+
+## 3. Unique User ID
+
+Generate a permanent unique identifier such as:
+
+AFU_01HXXXXXXXXXXXX
+
+This ID will be referenced by every Afu application.
+
+Never use email addresses as foreign keys between services.
+
+---
+
+## 4. Separate Databases
+
+Each application owns its own database.
+
+Example:
+
+AfuMail Database
+
+* users
+* sessions
+* devices
+* security_logs
+* password_resets
+* verification_codes
+
+AfuChat Database
+
+* chats
+* conversations
+* AI usage
+* subscriptions
+
+Engagera Database
+
+* posts
+* comments
+* likes
+* followers
+
+AfuCloud Database
+
+* files
+* folders
+* storage
+* sharing
+
+MMRadio Database
+
+* favorites
+* listening history
+* playlists
+
+Applications must never store user passwords.
+
+Only store:
+
+* user_id
+* profile information required for that app
+
+---
+
+# Authentication Flow
+
+User installs AfuMail
+
+↓
+
+Creates Afu Account
+
+↓
+
+Identity server issues:
+
+* Access Token
+* Refresh Token
+
+↓
+
+User installs another Afu app
+
+↓
+
+The app checks whether an Afu session already exists.
+
+↓
+
+If a valid session exists:
+
+* Request a fresh access token
+* Automatically sign the user in
+
+No additional password entry should be required unless the session has expired or been revoked.
+
+---
+
+# User Profile Service
+
+Create a centralized profile endpoint.
+
+Example information:
+
+* user_id
+* display_name
+* username
+* avatar
+* email
+* verification status
+
+All Afu apps should fetch profile data from AfuMail instead of duplicating it.
+
+---
+
+# Device Management
+
+Users should be able to view:
+
+* Active devices
+* Login history
+* Device names
+* Browser/app
+* IP (where appropriate)
+* Country
+* Last active time
+
+Users must be able to revoke any session remotely.
+
+---
+
+# Security
+
+Implement:
+
+* HTTPS only
+* Secure cookies where applicable
+* Token expiration
+* Refresh token rotation
+* Rate limiting
+* Brute-force protection
+* Email verification
+* Two-factor authentication (future-ready)
+* Audit logs
+* Password hashing using Argon2id or bcrypt
+
+---
+
+# Developer SDK
+
+Design the authentication system so every future Afu app can integrate with only a few API calls.
+
+Example:
+
+signInWithAfu()
+
+getCurrentUser()
+
+refreshToken()
+
+logout()
+
+getProfile()
+
+This should become the standard authentication SDK for every Afu application.
+
+---
+
+# Scalability
+
+Design this as a standalone authentication service that can support millions of users and additional Afu products without requiring architectural changes.
+
+The identity system should remain independent of business logic in AfuChat, Engagera, AfuCloud, MMRadio, and any future applications.
+
+---
+
+# Vision
+
+AfuMail is the heart of the Afu ecosystem.
+
+One Afu Account.
+
+One secure identity.
+
+One login.
+
+Unlimited Afu applications.
+
+Build this with enterprise-grade architecture from day one so every future Afu product can rely on it without redesigning authentication later.
