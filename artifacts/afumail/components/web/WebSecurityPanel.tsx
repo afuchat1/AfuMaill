@@ -3,8 +3,17 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { useAuth } from "@/context/AuthContext";
-import { setNewPassword } from "@/lib/supabase";
+import { apiUrl } from "@/lib/api-base";
+import { setNewPassword, supabase } from "@/lib/supabase";
 import { W } from "./webColors";
+
+interface OAuthGrant {
+  clientId: string;
+  name: string;
+  logoUrl: string | null;
+  scopes: string[];
+  authorizedAt: string;
+}
 
 type Tab = "overview" | "password" | "sessions";
 
@@ -139,9 +148,52 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
   // Sessions
   const [signOutAllLoading, setSignOutAllLoading] = useState(false);
 
+  // OAuth grants
+  const [grants, setGrants] = useState<OAuthGrant[]>([]);
+  const [grantsLoading, setGrantsLoading] = useState(true);
+  const [revokingClientId, setRevokingClientId] = useState<string | null>(null);
+
   useEffect(() => {
     setTab(initialTab);
   }, [initialTab]);
+
+  useEffect(() => {
+    async function loadGrants() {
+      setGrantsLoading(true);
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) return;
+        const res = await fetch(apiUrl("/api/oauth/grants"), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          setGrants(json.grants ?? []);
+        }
+      } catch {
+        // best-effort — leave grants empty
+      } finally {
+        setGrantsLoading(false);
+      }
+    }
+    loadGrants();
+  }, []);
+
+  async function revokeGrant(clientId: string) {
+    setRevokingClientId(clientId);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      await fetch(apiUrl(`/api/oauth/grants/${encodeURIComponent(clientId)}`), {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setGrants((prev) => prev.filter((g) => g.clientId !== clientId));
+    } finally {
+      setRevokingClientId(null);
+    }
+  }
 
   async function handleChangePassword() {
     if (!newPw || newPw.length < 6) { setPwError("Password must be at least 6 characters."); return; }
@@ -215,10 +267,59 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
             </Section>
 
             <Section title="Authentication platform" sub="AfuMail is the identity provider for all Afu applications">
-              <Row icon="key" label="OAuth 2.1" status={{ text: "Supported", color: W.success, bg: W.successLight }} />
-              <Row icon="user" label="OpenID Connect" status={{ text: "Supported", color: W.success, bg: W.successLight }} />
-              <Row icon="link" label="Single Sign-On" status={{ text: "Active", color: W.success, bg: W.successLight }} />
+              <Row icon="key" label="OAuth 2.1 (Authorization Code + PKCE)" status={{ text: "Live", color: W.success, bg: W.successLight }} />
+              <Row icon="user" label="OpenID Connect (/oauth/userinfo)" status={{ text: "Live", color: W.success, bg: W.successLight }} />
+              <Row icon="link" label="Sign in with AfuMail (other Afu apps)" status={{ text: `${grants.length} app${grants.length === 1 ? "" : "s"} connected`, color: grants.length > 0 ? W.success : W.textMuted, bg: grants.length > 0 ? W.successLight : W.bgSecondary }} />
               <Row icon="code" label="Developer API access" status={{ text: "Coming soon", color: W.textMuted, bg: W.bgSecondary }} last />
+            </Section>
+
+            <Section title="Connected apps" sub="Third-party Afu apps you've signed into with AfuMail">
+              {grantsLoading && (
+                <View style={{ padding: 20, alignItems: "center" }}>
+                  <ActivityIndicator color={W.accent} />
+                </View>
+              )}
+              {!grantsLoading && grants.length === 0 && (
+                <View style={{ padding: 20 }}>
+                  <Text style={{ fontFamily: "Inter_400Regular", color: W.textMuted, fontSize: 13, lineHeight: 19 }}>
+                    No apps have used "Sign in with AfuMail" yet. Try the live demo to see the real OAuth flow end-to-end.
+                  </Text>
+                </View>
+              )}
+              {grants.map((grant, i) => (
+                <View
+                  key={grant.clientId}
+                  style={[
+                    styles.recommendRow,
+                    i === grants.length - 1 ? { borderBottomWidth: 0 } : { borderBottomColor: W.border },
+                  ]}
+                >
+                  <View style={[styles.recommendIcon, { backgroundColor: W.accentLight }]}>
+                    <Feather name="grid" size={16} color={W.accent} />
+                  </View>
+                  <View style={styles.recommendContent}>
+                    <Text style={[styles.recommendTitle, { fontFamily: "Inter_600SemiBold", color: W.textPrimary }]}>
+                      {grant.name}
+                    </Text>
+                    <Text style={[styles.recommendSub, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
+                      Access: {grant.scopes.join(", ")}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => revokeGrant(grant.clientId)}
+                    disabled={revokingClientId === grant.clientId}
+                    style={[styles.revokeBtn, { backgroundColor: W.bgSecondary, borderColor: W.border }]}
+                  >
+                    {revokingClientId === grant.clientId ? (
+                      <ActivityIndicator size="small" color={W.destructive} />
+                    ) : (
+                      <Text style={[styles.revokeBtnLabel, { fontFamily: "Inter_600SemiBold", color: W.destructive }]}>
+                        Remove
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
+              ))}
             </Section>
 
             <Section title="Security recommendations" sub="Actions to improve your account security">

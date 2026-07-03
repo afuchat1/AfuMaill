@@ -74,3 +74,70 @@ CREATE POLICY "Users can delete own emails"
 -- Index for fast inbox queries
 CREATE INDEX IF NOT EXISTS emails_owner_folder_idx ON public.emails (owner_id, folder);
 CREATE INDEX IF NOT EXISTS emails_owner_timestamp_idx ON public.emails (owner_id, timestamp DESC);
+
+-- 3. OAuth 2.1 / OIDC identity-provider tables
+-- AfuMail is the identity provider for the whole Afu ecosystem. Any Afu app
+-- (or third party) can register a client here and use standard
+-- Authorization Code + PKCE to let a user sign in with their AfuMail account.
+CREATE TABLE IF NOT EXISTS public.oauth_clients (
+  client_id        TEXT PRIMARY KEY,
+  name             TEXT NOT NULL,
+  logo_url         TEXT,
+  redirect_uris    JSONB NOT NULL DEFAULT '[]'::jsonb,
+  scopes           JSONB NOT NULL DEFAULT '["profile","email"]'::jsonb,
+  is_first_party   BOOLEAN NOT NULL DEFAULT false,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.oauth_authorization_codes (
+  code                    TEXT PRIMARY KEY,
+  client_id               TEXT NOT NULL REFERENCES public.oauth_clients(client_id) ON DELETE CASCADE,
+  user_id                 UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  redirect_uri            TEXT NOT NULL,
+  code_challenge          TEXT NOT NULL,
+  code_challenge_method   TEXT NOT NULL DEFAULT 'S256',
+  scope                   TEXT NOT NULL DEFAULT 'profile email',
+  expires_at              TIMESTAMPTZ NOT NULL,
+  used                    BOOLEAN NOT NULL DEFAULT false,
+  created_at              TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.oauth_tokens (
+  access_token        TEXT PRIMARY KEY,
+  refresh_token       TEXT UNIQUE NOT NULL,
+  client_id           TEXT NOT NULL REFERENCES public.oauth_clients(client_id) ON DELETE CASCADE,
+  user_id             UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  scope               TEXT NOT NULL DEFAULT 'profile email',
+  access_expires_at   TIMESTAMPTZ NOT NULL,
+  refresh_expires_at  TIMESTAMPTZ NOT NULL,
+  revoked             BOOLEAN NOT NULL DEFAULT false,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS oauth_tokens_user_client_idx ON public.oauth_tokens (user_id, client_id) WHERE revoked = false;
+CREATE INDEX IF NOT EXISTS oauth_codes_expires_idx ON public.oauth_authorization_codes (expires_at);
+
+-- All writes to these three tables go through the api-server using the
+-- Supabase service-role key, never directly from the client. RLS is enabled
+-- with no INSERT/UPDATE/DELETE policies for anon/authenticated roles, so a
+-- browser or mobile client can never mint or forge its own tokens/codes.
+ALTER TABLE public.oauth_clients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.oauth_authorization_codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.oauth_tokens ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Clients are publicly readable"
+  ON public.oauth_clients FOR SELECT
+  USING (true);
+
+-- Seed a demo client used by the in-app OAuth demo (Settings → Connected
+-- Accounts → "Try the OAuth demo"). Register real Afu apps the same way.
+INSERT INTO public.oauth_clients (client_id, name, logo_url, redirect_uris, scopes, is_first_party)
+VALUES (
+  'afumail-demo-app',
+  'AfuMail OAuth Demo',
+  NULL,
+  '["afumail://oauth/demo-callback", "https://mail.afuchat.com/oauth/demo-callback"]'::jsonb,
+  '["profile","email"]'::jsonb,
+  true
+)
+ON CONFLICT (client_id) DO UPDATE SET redirect_uris = EXCLUDED.redirect_uris;
