@@ -1,0 +1,9 @@
+{
+  "name": "@workspace/website",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node ../afumail/server/serve.js",
+    "start": "node ../afumail/server/serve.js"
+  }
+}

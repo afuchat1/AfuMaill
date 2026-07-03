@@ -1,0 +1,15 @@
+kind = "web"
+previewPath = "/"
+title = "AfuMail Website"
+version = "1.0.0"
+
+[[services]]
+localPort = 3000
+name = "Website"
+paths = ["/"]
+
+[services.development]
+run = "node artifacts/afumail/server/serve.js"
+
+[services.env]
+PORT = "3000"

@@ -38,7 +38,7 @@ args = "cd artifacts/afumail && EXPO_PACKAGER_PROXY_URL=https://$REPLIT_EXPO_DEV
 waitForPort = 5000
 
 [workflows.workflow.metadata]
-outputType = "webview"
+outputType = "console"
 
 [[workflows.workflow]]
 name = "AfuMail Website"
