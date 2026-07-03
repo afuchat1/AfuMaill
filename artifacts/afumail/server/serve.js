@@ -14,6 +14,7 @@ const fs = require("fs");
 const path = require("path");
 
 const STATIC_ROOT = path.resolve(__dirname, "..", "static-build");
+const WEB_DIST = path.resolve(__dirname, "..", "dist");
 const TEMPLATE_PATH = path.resolve(__dirname, "templates", "landing-page.html");
 const basePath = (process.env.BASE_PATH || "/").replace(/\/+$/, "");
 
@@ -81,30 +82,38 @@ function serveLandingPage(req, res, landingPageTemplate, appName) {
   res.end(html);
 }
 
-function serveStaticFile(urlPath, res) {
+function tryServeStaticFile(urlPath, res) {
   const safePath = path.normalize(urlPath).replace(/^(\.\.(\/|\\|$))+/, "");
-  const filePath = path.join(STATIC_ROOT, safePath);
 
-  if (!filePath.startsWith(STATIC_ROOT)) {
-    res.writeHead(403);
-    res.end("Forbidden");
-    return;
+  // Check web dist first, then native static-build
+  for (const root of [WEB_DIST, STATIC_ROOT]) {
+    const filePath = path.join(root, safePath);
+    if (!filePath.startsWith(root)) continue;
+    if (fs.existsSync(filePath) && !fs.statSync(filePath).isDirectory()) {
+      const ext = path.extname(filePath).toLowerCase();
+      const contentType = MIME_TYPES[ext] || "application/octet-stream";
+      const content = fs.readFileSync(filePath);
+      res.writeHead(200, { "content-type": contentType });
+      res.end(content);
+      return true;
+    }
   }
 
-  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-    res.writeHead(404);
-    res.end("Not Found");
-    return;
-  }
-
-  const ext = path.extname(filePath).toLowerCase();
-  const contentType = MIME_TYPES[ext] || "application/octet-stream";
-  const content = fs.readFileSync(filePath);
-  res.writeHead(200, { "content-type": contentType });
-  res.end(content);
+  return false;
 }
 
-const landingPageTemplate = fs.readFileSync(TEMPLATE_PATH, "utf-8");
+function serveWebApp(res) {
+  const indexPath = path.join(WEB_DIST, "index.html");
+  if (fs.existsSync(indexPath)) {
+    const content = fs.readFileSync(indexPath);
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(content);
+  } else {
+    res.writeHead(503, { "content-type": "text/plain" });
+    res.end("Web build not found. Run: pnpm build:web");
+  }
+}
+
 const appName = getAppName();
 
 const server = http.createServer((req, res) => {
@@ -115,18 +124,28 @@ const server = http.createServer((req, res) => {
     pathname = pathname.slice(basePath.length) || "/";
   }
 
-  if (pathname === "/" || pathname === "/manifest") {
-    const platform = req.headers["expo-platform"];
-    if (platform === "ios" || platform === "android") {
-      return serveManifest(platform, res);
-    }
-
-    if (pathname === "/") {
-      return serveLandingPage(req, res, landingPageTemplate, appName);
-    }
+  // Native Expo clients identify themselves with expo-platform header
+  const platform = req.headers["expo-platform"];
+  if ((pathname === "/" || pathname === "/manifest") && (platform === "ios" || platform === "android")) {
+    return serveManifest(platform, res);
   }
 
-  serveStaticFile(pathname, res);
+  // Try to serve an exact static file (JS chunks, fonts, images, favicon, etc.)
+  if (tryServeStaticFile(pathname, res)) return;
+
+  // SPA fallback: if the path has a known static extension and the file wasn't
+  // found above, return 404 (don't serve HTML for missing assets).
+  const ext = path.extname(pathname).toLowerCase();
+  const knownStaticExt = [".js", ".css", ".map", ".png", ".jpg", ".jpeg",
+    ".gif", ".svg", ".ico", ".woff", ".woff2", ".ttf", ".otf", ".json"];
+  if (ext && knownStaticExt.includes(ext)) {
+    res.writeHead(404);
+    res.end("Not Found");
+    return;
+  }
+
+  // All other paths (including routes with dots like /user/jane.doe) → SPA index
+  serveWebApp(res);
 });
 
 const port = parseInt(process.env.PORT || "3000", 10);
