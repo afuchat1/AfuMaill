@@ -3,12 +3,21 @@ import { createClient } from "@supabase/supabase-js";
 
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
+// During static export (`expo export --platform web`), Supabase's realtime
+// client is constructed in a Node.js SSR context. Node < 22 has no native
+// WebSocket global, which crashes client construction unless we supply the
+// `ws` package as the transport. In the browser, WebSocket exists natively
+// and this branch is skipped.
+const wsTransport =
+  typeof WebSocket === "undefined" ? require("ws") : undefined;
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
   },
+  ...(wsTransport ? { realtime: { transport: wsTransport } } : {}),
 });
 
 export interface Profile {
