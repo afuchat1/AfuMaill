@@ -272,8 +272,7 @@ export default function MainScreen() {
           )}
           <View style={[styles.navInner, { paddingBottom: insets.bottom }]}>
             <Animated.View
-              style={[styles.indicator, { backgroundColor: colors.primary }, indicatorStyle]}
-              pointerEvents="none"
+              style={[styles.indicator, { backgroundColor: colors.primary, pointerEvents: "none" }, indicatorStyle]}
             />
             {NAV.map((item) => {
               const isCompose = item.key === "compose";
