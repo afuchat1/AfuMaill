@@ -24,6 +24,10 @@ args = "artifacts/api-server: API Server"
 task = "workflow.run"
 args = "AfuMail Web"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/afumail: expo"
+
 [[workflows.workflow]]
 name = "AfuMail Web"
 author = "agent"
