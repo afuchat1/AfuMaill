@@ -44,13 +44,13 @@ outputType = "webview"
 name = "AfuMail Website"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd artifacts/afumail && PORT=3000 node server/web-proxy.js"
-waitForPort = 3000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/afumail && PORT=3000 node server/serve.js"
+waitForPort = 3000
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
