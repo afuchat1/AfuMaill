@@ -59,3 +59,5 @@ timeoutMs = 20000
 [userenv]
 
 [userenv.shared]
+EXPO_PUBLIC_SUPABASE_URL = "https://lqowocmjmhbkoxlwyxku.supabase.co"
+NEXT_PUBLIC_SITE_URL = "https://mail.afuchat.com"
