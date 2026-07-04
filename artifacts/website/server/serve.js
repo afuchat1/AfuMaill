@@ -18,6 +18,13 @@ const WEB_DIST = path.resolve(__dirname, "..", "dist");
 const TEMPLATE_PATH = path.resolve(__dirname, "templates", "landing-page.html");
 const basePath = (process.env.BASE_PATH || "/").replace(/\/+$/, "");
 
+// mail.afuchat.com is the one and only production domain for this website.
+// Any browser request that reaches production on a different host (a raw
+// deployment domain, an old preview URL, etc.) is redirected there so users
+// and search engines never see or index a non-canonical origin.
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+const CANONICAL_HOST = process.env.CANONICAL_WEB_HOST || "mail.afuchat.com";
+
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
@@ -126,15 +133,26 @@ try {
 }
 
 const server = http.createServer((req, res) => {
+  // Native Expo clients identify themselves with expo-platform header — those
+  // requests come from the app itself (manifest/update checks), not a
+  // browser, so they're exempt from the canonical-domain redirect.
+  const platform = req.headers["expo-platform"];
+  const requestHost = (req.headers["x-forwarded-host"] || req.headers["host"] || "").split(":")[0];
+
+  if (IS_PRODUCTION && !platform && requestHost && requestHost !== CANONICAL_HOST) {
+    res.writeHead(301, {
+      Location: `https://${CANONICAL_HOST}${req.url || "/"}`,
+    });
+    res.end();
+    return;
+  }
+
   const url = new URL(req.url || "/", `http://${req.headers.host}`);
   let pathname = url.pathname;
 
   if (basePath && pathname.startsWith(basePath)) {
     pathname = pathname.slice(basePath.length) || "/";
   }
-
-  // Native Expo clients identify themselves with expo-platform header
-  const platform = req.headers["expo-platform"];
   if ((pathname === "/" || pathname === "/manifest") && (platform === "ios" || platform === "android")) {
     return serveManifest(platform, res);
   }

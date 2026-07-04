@@ -32,6 +32,23 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
+
+// api.mail.afuchat.com is the sole production API host. Only GET requests
+// are redirected — POST/PUT/DELETE bodies aren't safely replayed across a
+// redirect by every HTTP client, and OAuth token/authorize calls must not
+// be silently rerouted. GET-only surfaces (the docs page, discovery
+// endpoints) are safe to redirect and this keeps them off non-canonical
+// deployment domains.
+const CANONICAL_API_HOST = process.env.CANONICAL_API_HOST || "api.mail.afuchat.com";
+if (process.env.NODE_ENV === "production") {
+  app.use((req, res, next) => {
+    if (req.method === "GET" && req.hostname && req.hostname !== CANONICAL_API_HOST) {
+      return res.redirect(301, `https://${CANONICAL_API_HOST}${req.originalUrl}`);
+    }
+    next();
+  });
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

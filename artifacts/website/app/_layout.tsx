@@ -22,10 +22,23 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoading) return;
     const inAuthGroup = segments[0] === "(auth)";
+    const inOAuthFlow = segments[0] === "oauth";
+
     if (!isAuthenticated && !inAuthGroup) {
+      if (inOAuthFlow && typeof window !== "undefined") {
+        // Preserve the OAuth consent request so the user lands back on it
+        // after signing in, instead of losing client_id/redirect_uri/state.
+        sessionStorage.setItem("oauth_return_to", window.location.pathname + window.location.search);
+      }
       router.replace("/(auth)/login");
     } else if (isAuthenticated && inAuthGroup) {
-      router.replace("/(tabs)");
+      const returnTo = typeof window !== "undefined" ? sessionStorage.getItem("oauth_return_to") : null;
+      if (returnTo) {
+        sessionStorage.removeItem("oauth_return_to");
+        router.replace(returnTo as never);
+      } else {
+        router.replace("/(tabs)");
+      }
     }
   }, [isAuthenticated, isLoading, segments]);
 
@@ -41,6 +54,7 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(auth)" options={{ animation: "fade" }} />
+      <Stack.Screen name="oauth/authorize" options={{ animation: "fade" }} />
     </Stack>
   );
 }

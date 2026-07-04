@@ -1,5 +1,6 @@
 import { randomBytes, createHash, timingSafeEqual } from "node:crypto";
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Response } from "express";
+import { rateLimit } from "express-rate-limit";
 
 import { supabaseAdmin, getUserFromBearerToken } from "../lib/supabaseAdmin";
 
@@ -8,6 +9,50 @@ const router: IRouter = Router();
 const AUTH_CODE_TTL_MS = 60 * 1000; // 60s — standard for authorization codes
 const ACCESS_TOKEN_TTL_MS = 60 * 60 * 1000; // 1h
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30d
+
+/**
+ * RFC 6749 §5.2 error response helper. Every error the OAuth endpoints return
+ * follows this exact shape so third-party integrators can rely on a single,
+ * documented error contract instead of guessing at ad hoc messages.
+ */
+function oauthError(
+  res: Response,
+  status: number,
+  error: string,
+  description?: string,
+) {
+  return res.status(status).json(
+    description ? { error, error_description: description } : { error },
+  );
+}
+
+// Token/code-guessing and credential-stuffing mitigation. Limits apply per
+// client IP; thresholds are generous enough for legitimate integrations but
+// block brute-force attempts against authorization codes, refresh tokens,
+// and access tokens.
+const tokenRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => oauthError(res, 429, "temporarily_unavailable", "Too many token requests. Please try again later."),
+});
+
+const authorizeRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => oauthError(res, 429, "temporarily_unavailable", "Too many authorization requests. Please try again later."),
+});
+
+const sensitiveRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => oauthError(res, 429, "temporarily_unavailable", "Too many requests. Please try again later."),
+});
 
 function genToken(bytes = 32): string {
   return randomBytes(bytes).toString("base64url");
@@ -102,13 +147,13 @@ router.get("/oauth/.well-known/openid-configuration", (req, res) => {
  * Public. Used by the consent screen to show "X wants to access your account"
  * and to validate the redirect_uri before rendering anything.
  */
-router.get("/oauth/clients/:clientId", async (req, res) => {
-  const client = await getClient(req.params.clientId);
-  if (!client) return res.status(404).json({ error: "Unknown client_id." });
+router.get("/oauth/clients/:clientId", sensitiveRateLimiter, async (req, res) => {
+  const client = await getClient(String(req.params.clientId));
+  if (!client) return oauthError(res, 404, "invalid_client", "Unknown client_id.");
 
   const redirectUri = req.query.redirect_uri as string | undefined;
   if (redirectUri && !isRedirectUriAllowed(redirectUri, client)) {
-    return res.status(400).json({ error: "redirect_uri is not registered for this client." });
+    return oauthError(res, 400, "invalid_request", "redirect_uri is not registered for this client.");
   }
 
   return res.json({
@@ -129,23 +174,29 @@ router.get("/oauth/clients/:clientId", async (req, res) => {
  * Mints a one-time PKCE authorization code once the authenticated user approves the
  * consent screen. This is step 2 of the Authorization Code flow.
  */
-router.post("/oauth/authorize", async (req, res) => {
+router.post("/oauth/authorize", authorizeRateLimiter, async (req, res) => {
   const user = await getUserFromBearerToken(req.headers.authorization);
-  if (!user) return res.status(401).json({ error: "You must be signed in to AfuMail to authorize an app." });
+  if (!user) return oauthError(res, 401, "unauthorized", "You must be signed in to AfuMail to authorize an application.");
 
   const { client_id, redirect_uri, code_challenge, code_challenge_method, scope, state } = req.body ?? {};
 
   if (!client_id || !redirect_uri || !code_challenge) {
-    return res.status(400).json({ error: "client_id, redirect_uri and code_challenge are required." });
+    return oauthError(res, 400, "invalid_request", "client_id, redirect_uri and code_challenge are required.");
+  }
+  // `state` is mandatory: without it, third-party integrations have no
+  // reliable way to bind the callback to the request that initiated it,
+  // which is a CSRF risk (RFC 6749 §10.12).
+  if (!state || typeof state !== "string") {
+    return oauthError(res, 400, "invalid_request", "state is required and must be a non-empty string. Generate a random value before redirecting the user here.");
   }
   if (code_challenge_method && code_challenge_method !== "S256") {
-    return res.status(400).json({ error: "Only the S256 PKCE method is supported." });
+    return oauthError(res, 400, "invalid_request", "Only the S256 PKCE method is supported.");
   }
 
   const client = await getClient(client_id);
-  if (!client) return res.status(400).json({ error: "Unknown client_id." });
+  if (!client) return oauthError(res, 400, "invalid_client", "Unknown client_id.");
   if (!isRedirectUriAllowed(redirect_uri, client)) {
-    return res.status(400).json({ error: "redirect_uri is not registered for this client." });
+    return oauthError(res, 400, "invalid_request", "redirect_uri is not registered for this client.");
   }
 
   const code = genToken(32);
@@ -159,15 +210,15 @@ router.post("/oauth/authorize", async (req, res) => {
     code_challenge,
     code_challenge_method: code_challenge_method ?? "S256",
     scope: scope ?? "profile email",
-    expires_at: expiresAt, // ← required field: was missing before
+    expires_at: expiresAt,
   });
 
   if (error) {
     console.error("oauth_authorization_codes insert error:", error);
-    return res.status(500).json({ error: "Failed to create authorization code." });
+    return oauthError(res, 500, "server_error", "Failed to create authorization code.");
   }
 
-  return res.json({ code, state: state ?? null });
+  return res.json({ code, state });
 });
 
 // ─── Token endpoint ──────────────────────────────────────────────────────────
@@ -177,14 +228,14 @@ router.post("/oauth/authorize", async (req, res) => {
  * Standard OAuth 2.1 token endpoint. Public clients only — PKCE is mandatory,
  * no client_secret. Supports grant_type=authorization_code and refresh_token.
  */
-router.post("/oauth/token", async (req, res) => {
+router.post("/oauth/token", tokenRateLimiter, async (req, res) => {
   const { grant_type } = req.body ?? {};
 
   // ── Authorization Code ──
   if (grant_type === "authorization_code") {
     const { code, redirect_uri, client_id, code_verifier } = req.body ?? {};
     if (!code || !redirect_uri || !client_id || !code_verifier) {
-      return res.status(400).json({ error: "invalid_request", error_description: "Missing required parameters." });
+      return oauthError(res, 400, "invalid_request", "code, redirect_uri, client_id and code_verifier are required.");
     }
 
     const { data: authCode } = await supabaseAdmin
@@ -194,16 +245,16 @@ router.post("/oauth/token", async (req, res) => {
       .maybeSingle();
 
     if (!authCode || authCode.used || authCode.client_id !== client_id || authCode.redirect_uri !== redirect_uri) {
-      return res.status(400).json({ error: "invalid_grant", error_description: "Authorization code is invalid." });
+      return oauthError(res, 400, "invalid_grant", "Authorization code is invalid.");
     }
     if (new Date(authCode.expires_at).getTime() < Date.now()) {
-      return res.status(400).json({ error: "invalid_grant", error_description: "Authorization code has expired." });
+      return oauthError(res, 400, "invalid_grant", "Authorization code has expired.");
     }
 
     // Verify PKCE: SHA-256(code_verifier) must equal the stored challenge
     const expectedChallenge = base64UrlSha256(code_verifier);
     if (!safeEqual(expectedChallenge, authCode.code_challenge)) {
-      return res.status(400).json({ error: "invalid_grant", error_description: "PKCE verification failed." });
+      return oauthError(res, 400, "invalid_grant", "PKCE verification failed.");
     }
 
     // Single-use: mark code consumed before issuing tokens
@@ -224,7 +275,7 @@ router.post("/oauth/token", async (req, res) => {
     });
     if (tokenError) {
       console.error("oauth_tokens insert error:", tokenError);
-      return res.status(500).json({ error: "server_error" });
+      return oauthError(res, 500, "server_error", "Failed to issue tokens. Please try again.");
     }
 
     return res.json({
@@ -240,7 +291,7 @@ router.post("/oauth/token", async (req, res) => {
   if (grant_type === "refresh_token") {
     const { refresh_token, client_id } = req.body ?? {};
     if (!refresh_token || !client_id) {
-      return res.status(400).json({ error: "invalid_request", error_description: "refresh_token and client_id are required." });
+      return oauthError(res, 400, "invalid_request", "refresh_token and client_id are required.");
     }
 
     const { data: existing } = await supabaseAdmin
@@ -251,7 +302,7 @@ router.post("/oauth/token", async (req, res) => {
       .maybeSingle();
 
     if (!existing || existing.revoked || new Date(existing.refresh_expires_at).getTime() < Date.now()) {
-      return res.status(400).json({ error: "invalid_grant", error_description: "Refresh token is invalid or expired." });
+      return oauthError(res, 400, "invalid_grant", "Refresh token is invalid or expired.");
     }
 
     // Rotate: revoke old pair, issue new pair
@@ -272,7 +323,7 @@ router.post("/oauth/token", async (req, res) => {
     });
     if (tokenError) {
       console.error("oauth_tokens rotate error:", tokenError);
-      return res.status(500).json({ error: "server_error" });
+      return oauthError(res, 500, "server_error", "Failed to issue tokens. Please try again.");
     }
 
     return res.json({
@@ -284,7 +335,7 @@ router.post("/oauth/token", async (req, res) => {
     });
   }
 
-  return res.status(400).json({ error: "unsupported_grant_type" });
+  return oauthError(res, 400, "unsupported_grant_type", "grant_type must be authorization_code or refresh_token.");
 });
 
 // ─── UserInfo ────────────────────────────────────────────────────────────────
@@ -296,10 +347,10 @@ router.post("/oauth/token", async (req, res) => {
  * Requires: Authorization: Bearer <access_token>
  * (the opaque OAuth access token minted above, NOT the AfuMail Supabase session).
  */
-router.get("/oauth/userinfo", async (req, res) => {
+router.get("/oauth/userinfo", sensitiveRateLimiter, async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "invalid_token" });
+    return oauthError(res, 401, "invalid_token", "Missing or malformed Authorization header.");
   }
   const accessToken = authHeader.slice("Bearer ".length);
 
@@ -310,7 +361,7 @@ router.get("/oauth/userinfo", async (req, res) => {
     .maybeSingle();
 
   if (!tokenRow || tokenRow.revoked || new Date(tokenRow.access_expires_at).getTime() < Date.now()) {
-    return res.status(401).json({ error: "invalid_token", error_description: "Access token is invalid or expired." });
+    return oauthError(res, 401, "invalid_token", "Access token is invalid or expired.");
   }
 
   const { data: profile } = await supabaseAdmin
@@ -319,7 +370,7 @@ router.get("/oauth/userinfo", async (req, res) => {
     .eq("id", tokenRow.user_id)
     .maybeSingle();
 
-  if (!profile) return res.status(404).json({ error: "user_not_found" });
+  if (!profile) return oauthError(res, 404, "invalid_token", "The user for this token no longer exists.");
 
   const scopes: string[] = tokenRow.scope ? tokenRow.scope.split(" ") : [];
   const response: Record<string, unknown> = { sub: profile.id };
@@ -343,9 +394,9 @@ router.get("/oauth/userinfo", async (req, res) => {
  * RFC 7009 token revocation. Accepts either an access_token or refresh_token.
  * Always returns 200 (even for unknown tokens) per the spec.
  */
-router.post("/oauth/revoke", async (req, res) => {
+router.post("/oauth/revoke", sensitiveRateLimiter, async (req, res) => {
   const { token, token_type_hint, client_id } = req.body ?? {};
-  if (!token || !client_id) return res.status(400).json({ error: "invalid_request" });
+  if (!token || !client_id) return oauthError(res, 400, "invalid_request", "token and client_id are required.");
 
   // Try to find by access_token or refresh_token
   let query = supabaseAdmin.from("oauth_tokens").update({ revoked: true }).eq("client_id", client_id);
@@ -369,17 +420,17 @@ router.post("/oauth/revoke", async (req, res) => {
  * Requires the Supabase service-role key in the X-Service-Key header so that
  * only trusted backend services (not end users) can call this endpoint.
  */
-router.post("/oauth/introspect", async (req, res) => {
+router.post("/oauth/introspect", sensitiveRateLimiter, async (req, res) => {
   // Gate: only trusted server-side callers may introspect tokens.
   // They authenticate with the Supabase service-role key, which is never
   // exposed to browsers or end-users.
   const serviceKey = req.headers["x-service-key"];
-  if (!serviceKey || serviceKey !== process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return res.status(401).json({ error: "unauthorized" });
+  if (!serviceKey || typeof serviceKey !== "string" || !process.env.SUPABASE_SERVICE_ROLE_KEY || !safeEqual(serviceKey, process.env.SUPABASE_SERVICE_ROLE_KEY)) {
+    return oauthError(res, 401, "unauthorized", "Missing or invalid X-Service-Key header.");
   }
 
   const { token } = req.body ?? {};
-  if (!token) return res.status(400).json({ error: "invalid_request" });
+  if (!token) return oauthError(res, 400, "invalid_request", "token is required.");
 
   const { data: tokenRow } = await supabaseAdmin
     .from("oauth_tokens")
@@ -410,9 +461,9 @@ router.post("/oauth/introspect", async (req, res) => {
  * Lists third-party apps the signed-in user has authorized (for the
  * "Connected Accounts" settings screen).
  */
-router.get("/oauth/grants", async (req, res) => {
+router.get("/oauth/grants", sensitiveRateLimiter, async (req, res) => {
   const user = await getUserFromBearerToken(req.headers.authorization);
-  if (!user) return res.status(401).json({ error: "Not signed in." });
+  if (!user) return oauthError(res, 401, "unauthorized", "You must be signed in to AfuMail.");
 
   const { data: tokens } = await supabaseAdmin
     .from("oauth_tokens")
@@ -450,9 +501,9 @@ router.get("/oauth/grants", async (req, res) => {
  * DELETE /api/oauth/grants/:clientId
  * Revokes all tokens the signed-in user has issued to a given client.
  */
-router.delete("/oauth/grants/:clientId", async (req, res) => {
+router.delete("/oauth/grants/:clientId", sensitiveRateLimiter, async (req, res) => {
   const user = await getUserFromBearerToken(req.headers.authorization);
-  if (!user) return res.status(401).json({ error: "Not signed in." });
+  if (!user) return oauthError(res, 401, "unauthorized", "You must be signed in to AfuMail.");
 
   const { error } = await supabaseAdmin
     .from("oauth_tokens")
@@ -460,7 +511,7 @@ router.delete("/oauth/grants/:clientId", async (req, res) => {
     .eq("user_id", user.id)
     .eq("client_id", req.params.clientId);
 
-  if (error) return res.status(500).json({ error: "Failed to revoke access." });
+  if (error) return oauthError(res, 500, "server_error", "Failed to revoke access. Please try again.");
   return res.json({ ok: true });
 });
 

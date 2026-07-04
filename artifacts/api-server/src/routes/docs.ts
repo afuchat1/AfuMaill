@@ -771,7 +771,7 @@ console.<span class="fn">log</span>(<span class="str">"Signed in as:"</span>, <s
               <tr><td>code_challenge</td><td style="color:var(--red)">required</td><td>SHA-256 hash of code_verifier, base64url-encoded.</td></tr>
               <tr><td>code_challenge_method</td><td style="color:var(--yellow)">optional</td><td>Must be <code>S256</code> (only supported method). Defaults to S256.</td></tr>
               <tr><td>scope</td><td style="color:var(--yellow)">optional</td><td>Space-separated scopes. Defaults to <code>profile email</code>.</td></tr>
-              <tr><td>state</td><td style="color:var(--yellow)">optional</td><td>Opaque value returned unchanged in the callback. Use for CSRF protection.</td></tr>
+              <tr><td>state</td><td style="color:var(--red)">required</td><td>Opaque, unguessable value returned unchanged in the callback. Required for CSRF protection.</td></tr>
             </table>
             <p><strong>Response:</strong> <code>{"code": "...", "state": "..."}</code></p>
           </div>
@@ -1055,14 +1055,17 @@ curl -X GET https://api.mail.afuchat.com/api/oauth/userinfo \\
 
         <table>
           <tr><th>Error</th><th>HTTP</th><th>Meaning</th></tr>
-          <tr><td class="error-code">invalid_request</td><td>400</td><td>Missing or malformed parameters.</td></tr>
-          <tr><td class="error-code">invalid_grant</td><td>400</td><td>Authorization code is invalid, expired, used, or PKCE verification failed.</td></tr>
+          <tr><td class="error-code">invalid_request</td><td>400</td><td>Missing or malformed parameters, including a missing <code>state</code> value.</td></tr>
+          <tr><td class="error-code">invalid_client</td><td>400 / 404</td><td>client_id is unknown or not registered.</td></tr>
+          <tr><td class="error-code">invalid_grant</td><td>400</td><td>Authorization code or refresh token is invalid, expired, used, or PKCE verification failed.</td></tr>
           <tr><td class="error-code">unsupported_grant_type</td><td>400</td><td>grant_type is not <code>authorization_code</code> or <code>refresh_token</code>.</td></tr>
-          <tr><td class="error-code">invalid_token</td><td>401</td><td>Access token is invalid, expired, or revoked.</td></tr>
+          <tr><td class="error-code">invalid_token</td><td>401 / 404</td><td>Access token is invalid, expired, or revoked.</td></tr>
           <tr><td class="error-code">unauthorized</td><td>401</td><td>No valid AfuMail session token provided (for session-gated endpoints).</td></tr>
           <tr><td class="error-code">access_denied</td><td>—</td><td>User denied the consent screen. Returned as a query param in the redirect: <code>?error=access_denied</code>.</td></tr>
+          <tr><td class="error-code">temporarily_unavailable</td><td>429</td><td>Rate limit exceeded. Back off and retry after a short delay.</td></tr>
           <tr><td class="error-code">server_error</td><td>500</td><td>An unexpected error occurred on the server.</td></tr>
         </table>
+        <p style="margin-top: 12px;">Every error response includes a human-readable <code>error_description</code> field alongside the machine-readable <code>error</code> code.</p>
       </div>
 
       <div class="section-divider"></div>
@@ -1109,8 +1112,13 @@ curl -X GET https://api.mail.afuchat.com/api/oauth/userinfo \\
           </div>
           <div class="card">
             <div class="card-icon">✅</div>
-            <h3>State Parameter</h3>
-            <p>Always send a <code>state</code> parameter and verify it at your callback to prevent CSRF attacks.</p>
+            <h3>State Parameter Required</h3>
+            <p>A <code>state</code> parameter is mandatory on every authorization request. AfuMail rejects requests without one. Verify it matches at your callback to prevent CSRF attacks.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">⛔</div>
+            <h3>Rate Limiting</h3>
+            <p>OAuth endpoints are rate-limited per IP address. Excessive requests receive <code>429 temporarily_unavailable</code>.</p>
           </div>
           <div class="card">
             <div class="card-icon">🚫</div>
