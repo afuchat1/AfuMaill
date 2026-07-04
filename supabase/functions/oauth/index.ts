@@ -218,8 +218,9 @@ async function parseBody(req: Request): Promise<Record<string, string>> {
 // ── Path extraction ───────────────────────────────────────────────────────────
 
 function extractPath(url: URL): string {
-  // pathname: /functions/v1/oauth/<rest>  →  /<rest>
-  const stripped = url.pathname.replace(/^\/functions\/v1\/oauth/, "") || "/";
+  // Supabase passes pathname as /<function-name>/<rest>, e.g. /oauth/authorize
+  // Strip the leading /oauth segment to get the sub-path.
+  const stripped = url.pathname.replace(/^\/oauth/, "") || "/";
   return stripped.startsWith("/") ? stripped : `/${stripped}`;
 }
 
@@ -342,7 +343,9 @@ async function handleToken(req: Request): Promise<Response> {
     }
 
     // Mark code as used (single-use)
-    await dbUpdate("oauth_authorization_codes", `code=eq.${encodeURIComponent(code)}`, { used: true });
+    // Fail closed: if marking the code used fails, do not issue tokens (blocks replay)
+    const markUsed = await dbUpdate("oauth_authorization_codes", `code=eq.${encodeURIComponent(code)}`, { used: true });
+    if (!markUsed.ok) return oauthError(500, "server_error", "Failed to consume authorization code. Please try again.");
 
     const accessToken  = genToken(32);
     const refreshToken = genToken(32);
@@ -391,8 +394,9 @@ async function handleToken(req: Request): Promise<Response> {
       return oauthError(400, "invalid_grant", "Refresh token is invalid or expired.");
     }
 
-    // Rotate: revoke old pair
-    await dbUpdate("oauth_tokens", `access_token=eq.${encodeURIComponent(existing.access_token)}`, { revoked: true });
+    // Rotate: revoke old pair — fail closed so old token can't remain active
+    const revoke = await dbUpdate("oauth_tokens", `access_token=eq.${encodeURIComponent(existing.access_token)}`, { revoked: true });
+    if (!revoke.ok) return oauthError(500, "server_error", "Failed to rotate tokens. Please try again.");
 
     const accessToken     = genToken(32);
     const newRefreshToken = genToken(32);

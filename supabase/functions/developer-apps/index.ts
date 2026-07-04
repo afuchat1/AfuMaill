@@ -276,17 +276,23 @@ async function requireOwnedApp(
 // ── Path extraction ───────────────────────────────────────────────────────────
 
 function extractPath(url: URL): string {
-  const s = url.pathname.replace(/^\/functions\/v1\/developer-apps/, "") || "/";
+  // Supabase passes pathname as /developer-apps/<rest>; strip that prefix.
+  const s = url.pathname.replace(/^\/developer-apps/, "") || "/";
   return s.startsWith("/") ? s : `/${s}`;
 }
 
 // ── Handlers ─────────────────────────────────────────────────────────────────
 
+async function safeJson(req: Request): Promise<Record<string, unknown> | null> {
+  try { return await req.json() as Record<string, unknown>; } catch { return null; }
+}
+
 async function handleCreate(req: Request): Promise<Response> {
   const user = await getUserFromBearerToken(req.headers.get("authorization"));
   if (!user) return devError(401, "unauthorized", "You must be signed in to register an application.");
 
-  const body = await req.json() as Record<string, unknown>;
+  const body = await safeJson(req);
+  if (!body) return devError(400, "invalid_request", "Request body must be valid JSON.");
   const { name, redirect_uris, client_type, scopes, logo_url } = body;
 
   const cleanName = validateName(name);
@@ -361,7 +367,8 @@ async function handleUpdate(req: Request, clientId: string): Promise<Response> {
   if (r.error === "not_found") return devError(404, "invalid_client", "Application not found.");
   if (r.error === "forbidden") return devError(403, "forbidden", "You do not own this application.");
 
-  const body = await req.json() as Record<string, unknown>;
+  const body = await safeJson(req);
+  if (!body) return devError(400, "invalid_request", "Request body must be valid JSON.");
   const { name, redirect_uris, scopes, logo_url } = body;
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
