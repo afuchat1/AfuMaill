@@ -1,0 +1,46 @@
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "https://mail.afuchat.com"
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+
+[edge_runtime]
+enabled = true
+
+[functions.oauth]
+verify_jwt = false
+
+[functions.developer-apps]
+verify_jwt = false
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.receive-email]
+verify_jwt = false
+
+[functions.reset-password]
+verify_jwt = false

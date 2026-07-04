@@ -1,21 +1,35 @@
-// Base URL for the AfuMail API server (Express, artifacts/api-server), which
-// hosts the OAuth 2.1 / OIDC identity-provider endpoints under /api/oauth/*.
-//
-// Dev (Replit): the api-server listens on port 8080, which Replit forwards
-// externally on the same dev domain via an explicit `:8080` port suffix
-// (see the `[[ports]]` entry in `.replit`).
-// Prod: same origin as the web app, reverse-proxied to the api-server.
-function computeApiBaseUrl(): string {
-  const domain = process.env.EXPO_PUBLIC_DOMAIN;
-  if (domain) {
-    return `https://${domain}:8080`;
-  }
-  const siteUrl = process.env.EXPO_PUBLIC_SITE_URL ?? "https://mail.afuchat.com";
-  return `${siteUrl.replace(/\/+$/, "")}/api-server`;
-}
+/**
+ * AfuMail API base URL — now points directly at Supabase Edge Functions.
+ *
+ * All OAuth 2.1 / OIDC and developer-app endpoints live as Supabase Edge
+ * Functions under:
+ *   https://<project>.supabase.co/functions/v1/oauth/*
+ *   https://<project>.supabase.co/functions/v1/developer-apps/*
+ *
+ * The Express api-server artifact is no longer required.
+ */
 
-export const API_BASE_URL = computeApiBaseUrl();
+const SUPABASE_URL = "https://lqowocmjmhbkoxlwyxku.supabase.co";
+const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;
 
+/**
+ * Map a legacy api-server path to its Supabase Edge Function URL.
+ *
+ * Old paths (Express):
+ *   /api/oauth/*           → /functions/v1/oauth/*
+ *   /api/developer/apps*   → /functions/v1/developer-apps*
+ *
+ * New paths can also be passed directly without the /api prefix.
+ */
 export function apiUrl(path: string): string {
-  return `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  // Normalise: strip optional /api prefix
+  let p = path.replace(/^\/api/, "");
+
+  // /developer/apps → /developer-apps  (matches the edge function name)
+  p = p.replace(/^\/developer\/apps/, "/developer-apps");
+
+  // Ensure leading slash
+  if (!p.startsWith("/")) p = `/${p}`;
+
+  return `${FUNCTIONS_BASE}${p}`;
 }

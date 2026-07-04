@@ -56,7 +56,7 @@ export default function DeveloperDocsScreen() {
           </Text>
         </View>
         <Pressable
-          onPress={() => Linking.openURL(apiUrl("/docs"))}
+          onPress={() => Linking.openURL("https://mail.afuchat.com/developer")}
           style={[styles.webDocsBtn, { borderColor: colors.border }]}
         >
           <Feather name="external-link" size={14} color={colors.foreground} />
@@ -286,7 +286,7 @@ function ErrorRow({ code, http, desc, colors }: { code: string; http: string; de
 // ─── Tab content ─────────────────────────────────────────────────────────────
 
 function OverviewTab({ colors }: { colors: ReturnType<typeof useColors> }) {
-  const docsUrl = apiUrl("/docs");
+  const docsUrl = "https://lqowocmjmhbkoxlwyxku.supabase.co/functions/v1/oauth/.well-known/openid-configuration";
   return (
     <View>
       {/* Hero banner */}
