@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
@@ -365,6 +366,25 @@ export default function WebAccountPanel() {
       <View style={styles.sectionActions}>
         <SaveBtn onPress={handleSaveVacation} loading={savingVacation} saved={savedVacation} />
       </View>
+
+      {/* Developer */}
+      <Section title="Developer">
+        <View style={[styles.dangerRow, { borderBottomWidth: 0 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.dangerTitle, { fontFamily: "Inter_600SemiBold", color: W.textPrimary }]}>
+              Developer Dashboard
+            </Text>
+            <Text style={[styles.dangerSub, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
+              Register OAuth applications to let developers sign users in with AfuMail. Get a client_id (and
+              client_secret for server-side apps) for your integration.
+            </Text>
+          </View>
+          <Pressable onPress={() => router.push("/developer/apps")} style={[styles.dangerBtn, { borderColor: W.accent + "88" }]}>
+            <Feather name="code" size={14} color={W.accent} />
+            <Text style={[styles.dangerBtnLabel, { fontFamily: "Inter_600SemiBold", color: W.accent }]}>Open dashboard</Text>
+          </Pressable>
+        </View>
+      </Section>
 
       {/* Danger zone */}
       <Section title="Danger Zone">

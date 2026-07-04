@@ -83,8 +83,36 @@ async function getClient(clientId: string) {
         redirect_uris: string[];
         scopes: string[];
         is_first_party: boolean;
+        client_type: "public" | "confidential";
+        client_secret_hash: string | null;
+        status: "active" | "suspended";
       }
     | null;
+}
+
+/**
+ * Verifies a confidential client's secret. Public clients (mobile/SPA) have
+ * no secret and rely on PKCE instead — this only applies to apps registered
+ * as "confidential" via the Developer Dashboard.
+ */
+function verifyClientSecret(
+  client: NonNullable<Awaited<ReturnType<typeof getClient>>>,
+  providedSecret: unknown,
+): { ok: true } | { ok: false; error: string } {
+  if (client.client_type !== "confidential") return { ok: true };
+  if (!client.client_secret_hash) {
+    // Defensive: a confidential client must always have a secret hash.
+    return { ok: false, error: "This application is misconfigured. Contact the application developer." };
+  }
+  if (!providedSecret || typeof providedSecret !== "string") {
+    return { ok: false, error: "client_secret is required for this application." };
+  }
+  const providedHash = base64UrlSha256(providedSecret);
+  const storedHash = Buffer.from(client.client_secret_hash, "hex").toString("base64url");
+  if (!safeEqual(providedHash, storedHash)) {
+    return { ok: false, error: "client_secret is incorrect." };
+  }
+  return { ok: true };
 }
 
 /**
@@ -134,7 +162,7 @@ router.get("/oauth/.well-known/openid-configuration", (req, res) => {
     subject_types_supported: ["public"],
     id_token_signing_alg_values_supported: [],
     scopes_supported: ["profile", "email"],
-    token_endpoint_auth_methods_supported: ["none"],
+    token_endpoint_auth_methods_supported: ["none", "client_secret_post"],
     code_challenge_methods_supported: ["S256"],
     claims_supported: ["sub", "name", "preferred_username", "email", "email_verified"],
   });
@@ -150,6 +178,9 @@ router.get("/oauth/.well-known/openid-configuration", (req, res) => {
 router.get("/oauth/clients/:clientId", sensitiveRateLimiter, async (req, res) => {
   const client = await getClient(String(req.params.clientId));
   if (!client) return oauthError(res, 404, "invalid_client", "Unknown client_id.");
+  if (client.status !== "active") {
+    return oauthError(res, 400, "invalid_client", "This application is no longer available.");
+  }
 
   const redirectUri = req.query.redirect_uri as string | undefined;
   if (redirectUri && !isRedirectUriAllowed(redirectUri, client)) {
@@ -195,6 +226,9 @@ router.post("/oauth/authorize", authorizeRateLimiter, async (req, res) => {
 
   const client = await getClient(client_id);
   if (!client) return oauthError(res, 400, "invalid_client", "Unknown client_id.");
+  if (client.status !== "active") {
+    return oauthError(res, 400, "invalid_client", "This application is no longer available.");
+  }
   if (!isRedirectUriAllowed(redirect_uri, client)) {
     return oauthError(res, 400, "invalid_request", "redirect_uri is not registered for this client.");
   }
@@ -233,10 +267,21 @@ router.post("/oauth/token", tokenRateLimiter, async (req, res) => {
 
   // ── Authorization Code ──
   if (grant_type === "authorization_code") {
-    const { code, redirect_uri, client_id, code_verifier } = req.body ?? {};
+    const { code, redirect_uri, client_id, code_verifier, client_secret } = req.body ?? {};
     if (!code || !redirect_uri || !client_id || !code_verifier) {
       return oauthError(res, 400, "invalid_request", "code, redirect_uri, client_id and code_verifier are required.");
     }
+
+    const client = await getClient(client_id);
+    if (!client) return oauthError(res, 400, "invalid_client", "Unknown client_id.");
+    if (client.status !== "active") {
+      return oauthError(res, 400, "invalid_client", "This application is no longer available.");
+    }
+    // Confidential apps (registered via the Developer Dashboard) must also
+    // authenticate with their client_secret — PKCE alone isn't sufficient
+    // once a client can hold a secret safely on a server.
+    const secretCheck = verifyClientSecret(client, client_secret);
+    if (!secretCheck.ok) return oauthError(res, 401, "invalid_client", secretCheck.error);
 
     const { data: authCode } = await supabaseAdmin
       .from("oauth_authorization_codes")
@@ -289,10 +334,18 @@ router.post("/oauth/token", tokenRateLimiter, async (req, res) => {
 
   // ── Refresh Token ──
   if (grant_type === "refresh_token") {
-    const { refresh_token, client_id } = req.body ?? {};
+    const { refresh_token, client_id, client_secret } = req.body ?? {};
     if (!refresh_token || !client_id) {
       return oauthError(res, 400, "invalid_request", "refresh_token and client_id are required.");
     }
+
+    const client = await getClient(client_id);
+    if (!client) return oauthError(res, 400, "invalid_client", "Unknown client_id.");
+    if (client.status !== "active") {
+      return oauthError(res, 400, "invalid_client", "This application is no longer available.");
+    }
+    const secretCheck = verifyClientSecret(client, client_secret);
+    if (!secretCheck.ok) return oauthError(res, 401, "invalid_client", secretCheck.error);
 
     const { data: existing } = await supabaseAdmin
       .from("oauth_tokens")

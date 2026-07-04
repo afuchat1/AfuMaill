@@ -550,26 +550,49 @@ console.<span class="fn">log</span>(<span class="str">"Signed in as:"</span>, <s
         <div class="section-anchor"></div>
         <h2>Registering Your App</h2>
         <p>
-          To use AfuMail OAuth, your app must be registered in the <code>oauth_clients</code> table 
-          with a unique <strong>client_id</strong> and a list of allowed <strong>redirect URIs</strong>.
+          Applications are registered <strong>self-service</strong> through the
+          <strong>AfuMail Developer Dashboard</strong> (sign in at mail.afuchat.com →
+          Profile &amp; Account → Developer → Open dashboard). You must have an AfuMail account
+          to register an app, and every app you create is permanently owned by your account —
+          only you can view its secret material, edit it, rotate its secret, or delete it.
         </p>
         <p>
-          During the current early-access period, <strong>contact the AfuMail team</strong> to register 
-          your application. A self-service developer portal is on the roadmap.
+          Registration mints a unique <strong>client_id</strong> immediately. There is no manual
+          approval step, but abusive or compromised apps may be suspended.
         </p>
+
+        <h3 style="margin-top: 20px;">Choosing a client type</h3>
+        <table>
+          <tr><th>Type</th><th>Use for</th><th>Authenticates with</th></tr>
+          <tr>
+            <td>public</td>
+            <td>Mobile apps, single-page apps, and anything else that can't keep a secret safe.</td>
+            <td>PKCE only — no client_secret is issued.</td>
+          </tr>
+          <tr>
+            <td>confidential</td>
+            <td>Trusted backend servers that can store a secret safely.</td>
+            <td>PKCE <em>and</em> client_secret, sent at the token endpoint.</td>
+          </tr>
+        </table>
 
         <h3 style="margin-top: 20px;">What you'll receive</h3>
         <table>
           <tr><th>Item</th><th>Example</th><th>Description</th></tr>
           <tr>
             <td>client_id</td>
-            <td style="color: var(--muted); font-family: var(--mono);">afuchat-web</td>
+            <td style="color: var(--muted); font-family: var(--mono);">afu_3f9a1c...</td>
             <td>Public identifier for your app. Safe to include in frontend code.</td>
+          </tr>
+          <tr>
+            <td>client_secret</td>
+            <td style="color: var(--muted); font-family: var(--mono);">afu_secret_...</td>
+            <td>Confidential apps only. Shown <strong>exactly once</strong> at creation (or rotation) — AfuMail stores only its hash and cannot redisplay it. Never ship it in a mobile app, browser bundle, or public repo.</td>
           </tr>
           <tr>
             <td>redirect_uris</td>
             <td style="color: var(--muted); font-family: var(--mono);">["https://yourapp.com/cb"]</td>
-            <td>AfuMail will only redirect to these exact URIs after authorization.</td>
+            <td>AfuMail will only redirect to these exact URIs after authorization. Must be https:// (custom URL schemes are permitted for public/native apps; http://localhost for local development).</td>
           </tr>
           <tr>
             <td>scopes</td>
@@ -581,9 +604,10 @@ console.<span class="fn">log</span>(<span class="str">"Signed in as:"</span>, <s
         <div class="callout">
           <div class="callout-icon">🔒</div>
           <p>
-            AfuMail OAuth uses <strong>public clients only</strong> — no client secret is issued or 
-            required. All token requests must include a PKCE code verifier instead. This is the 
-            OAuth 2.1 best practice for mobile and browser-based apps.
+            PKCE is required for <strong>every</strong> app, public or confidential — it's not a
+            substitute for a client_secret, it's defense in depth. If your client_secret is ever
+            exposed, rotate it immediately from the dashboard; the old secret stops working the
+            instant a new one is issued.
           </p>
         </div>
       </div>
@@ -796,6 +820,7 @@ console.<span class="fn">log</span>(<span class="str">"Signed in as:"</span>, <s
               <tr><td>redirect_uri</td><td style="color:var(--red)">required</td><td>Same URI used when requesting the code.</td></tr>
               <tr><td>client_id</td><td style="color:var(--red)">required</td><td>Your client ID.</td></tr>
               <tr><td>code_verifier</td><td style="color:var(--red)">required</td><td>The original PKCE verifier string.</td></tr>
+              <tr><td>client_secret</td><td style="color:var(--yellow)">conditional</td><td>Required only if your app is registered as <code>confidential</code>. Omit for public apps.</td></tr>
             </table>
 
             <h4>grant_type: refresh_token</h4>
@@ -804,6 +829,7 @@ console.<span class="fn">log</span>(<span class="str">"Signed in as:"</span>, <s
               <tr><td>grant_type</td><td style="color:var(--red)">required</td><td><code>refresh_token</code></td></tr>
               <tr><td>refresh_token</td><td style="color:var(--red)">required</td><td>The refresh token from a previous token response.</td></tr>
               <tr><td>client_id</td><td style="color:var(--red)">required</td><td>Your client ID.</td></tr>
+              <tr><td>client_secret</td><td style="color:var(--yellow)">conditional</td><td>Required only if your app is registered as <code>confidential</code>. Omit for public apps.</td></tr>
             </table>
 
             <p><strong>Response (both grant types):</strong></p>

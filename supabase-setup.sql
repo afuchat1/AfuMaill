@@ -80,14 +80,30 @@ CREATE INDEX IF NOT EXISTS emails_owner_timestamp_idx ON public.emails (owner_id
 -- (or third party) can register a client here and use standard
 -- Authorization Code + PKCE to let a user sign in with their AfuMail account.
 CREATE TABLE IF NOT EXISTS public.oauth_clients (
-  client_id        TEXT PRIMARY KEY,
-  name             TEXT NOT NULL,
-  logo_url         TEXT,
-  redirect_uris    JSONB NOT NULL DEFAULT '[]'::jsonb,
-  scopes           JSONB NOT NULL DEFAULT '["profile","email"]'::jsonb,
-  is_first_party   BOOLEAN NOT NULL DEFAULT false,
-  created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+  client_id           TEXT PRIMARY KEY,
+  name                TEXT NOT NULL,
+  logo_url            TEXT,
+  redirect_uris       JSONB NOT NULL DEFAULT '[]'::jsonb,
+  scopes              JSONB NOT NULL DEFAULT '["profile","email"]'::jsonb,
+  is_first_party      BOOLEAN NOT NULL DEFAULT false,
+  -- Self-service developer registration (Developer Dashboard). NULL for
+  -- first-party/seeded clients that predate self-service registration.
+  owner_id            UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  -- 'public' clients (mobile/SPA) authenticate with PKCE only, per OAuth 2.1.
+  -- 'confidential' clients (server-side apps) must also present client_secret.
+  client_type         TEXT NOT NULL DEFAULT 'public' CHECK (client_type IN ('public', 'confidential')),
+  -- SHA-256 hex digest of the client secret. Only set for confidential
+  -- clients. The plaintext secret is shown to the developer exactly once
+  -- (at creation or rotation) and is never stored or retrievable again.
+  client_secret_hash  TEXT,
+  -- Lets AfuMail suspend an abusive or compromised app without deleting its
+  -- registration or the developer's ownership record.
+  status              TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX IF NOT EXISTS oauth_clients_owner_idx ON public.oauth_clients (owner_id);
 
 CREATE TABLE IF NOT EXISTS public.oauth_authorization_codes (
   code                    TEXT PRIMARY KEY,
@@ -118,9 +134,12 @@ CREATE INDEX IF NOT EXISTS oauth_tokens_user_client_idx ON public.oauth_tokens (
 CREATE INDEX IF NOT EXISTS oauth_codes_expires_idx ON public.oauth_authorization_codes (expires_at);
 
 -- All writes to these three tables go through the api-server using the
--- Supabase service-role key, never directly from the client. RLS is enabled
--- with no INSERT/UPDATE/DELETE policies for anon/authenticated roles, so a
--- browser or mobile client can never mint or forge its own tokens/codes.
+-- Supabase service-role key, never directly from the client — including
+-- developer app registration (POST/PATCH/DELETE /api/developer/apps/*),
+-- which validates ownership server-side before touching the database. RLS
+-- is enabled with no INSERT/UPDATE/DELETE policies for anon/authenticated
+-- roles, so a browser or mobile client can never mint or forge its own
+-- tokens/codes, or edit another developer's app registration.
 ALTER TABLE public.oauth_clients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.oauth_authorization_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.oauth_tokens ENABLE ROW LEVEL SECURITY;

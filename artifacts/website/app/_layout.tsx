@@ -23,9 +23,10 @@ function RootLayoutNav() {
     if (isLoading) return;
     const inAuthGroup = segments[0] === "(auth)";
     const inOAuthFlow = segments[0] === "oauth";
+    const inDeveloperDashboard = segments[0] === "developer";
 
     if (!isAuthenticated && !inAuthGroup) {
-      if (inOAuthFlow && typeof window !== "undefined") {
+      if ((inOAuthFlow || inDeveloperDashboard) && typeof window !== "undefined") {
         // Preserve the OAuth consent request so the user lands back on it
         // after signing in, instead of losing client_id/redirect_uri/state.
         sessionStorage.setItem("oauth_return_to", window.location.pathname + window.location.search);
@@ -55,6 +56,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(auth)" options={{ animation: "fade" }} />
       <Stack.Screen name="oauth/authorize" options={{ animation: "fade" }} />
+      <Stack.Screen name="developer/apps" options={{ animation: "fade" }} />
     </Stack>
   );
 }
