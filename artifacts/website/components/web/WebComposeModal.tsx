@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { useAuth } from "@/context/AuthContext";
 import { useEmails } from "@/context/EmailContext";
 import { getProfile } from "@/lib/supabase";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { W } from "./webColors";
 
 interface ComposeConfig {
@@ -33,7 +34,7 @@ function FormatBtn({
       style={[styles.fmtBtn, { backgroundColor: hovered ? W.bgHover : "transparent" }]}
       accessibilityLabel={label}
     >
-      <Feather name={icon} size={13} color={W.textSecondary} />
+      <Feather name={icon} size={14} color={W.textSecondary} />
     </Pressable>
   );
 }
@@ -41,6 +42,7 @@ function FormatBtn({
 export default function WebComposeModal({ config, onClose }: Props) {
   const { user } = useAuth();
   const { sendEmail } = useEmails();
+  const { isMobile } = useBreakpoint();
 
   const [to, setTo] = useState(config.to ?? "");
   const [cc, setCc] = useState("");
@@ -102,7 +104,12 @@ export default function WebComposeModal({ config, onClose }: Props) {
     setSending(true);
     try {
       await sendEmail(
-        { to: to.trim(), cc: [cc.trim(), bcc.trim()].filter(Boolean).join(", ") || undefined, subject: subject.trim() || "(No Subject)", body },
+        {
+          to: to.trim(),
+          cc: [cc.trim(), bcc.trim()].filter(Boolean).join(", ") || undefined,
+          subject: subject.trim() || "(No Subject)",
+          body,
+        },
         user?.email ?? "me@afuchat.com",
         user?.name ?? "Me",
       );
@@ -116,6 +123,126 @@ export default function WebComposeModal({ config, onClose }: Props) {
 
   const minimized = winState === "minimized";
 
+  // ── MOBILE: full-screen sheet ──────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <View style={[StyleSheet.absoluteFillObject, styles.mobileSheet, { backgroundColor: W.bgCard }]}>
+        {/* Mobile header bar */}
+        <View style={[styles.mobileTitleBar, { backgroundColor: W.textPrimary }]}>
+          <Pressable onPress={onClose} hitSlop={8} style={styles.mobileCloseBtn}>
+            <Feather name="x" size={18} color="#94A3B8" />
+          </Pressable>
+          <Text style={[styles.mobileTitleText, { fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+            {subject.trim() || "New Message"}
+          </Text>
+          <Pressable
+            onPress={handleSend}
+            disabled={sending || sent}
+            style={[styles.mobileSendBtn, { backgroundColor: sent ? W.success : "transparent", opacity: (sending || sent) ? 0.85 : 1 }]}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Feather name={sent ? "check" : "send"} size={18} color={sent ? "#fff" : W.accent} />
+            )}
+          </Pressable>
+        </View>
+
+        {/* To */}
+        <View style={[styles.field, { borderBottomColor: W.border }]}>
+          <Text style={[styles.fieldKey, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>To</Text>
+          <TextInput
+            style={[styles.fieldVal, styles.fieldValMobile, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
+            value={to}
+            onChangeText={(t) => { setTo(t); setError(""); }}
+            placeholder="Recipients"
+            placeholderTextColor={W.textMuted}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            autoFocus={!config.to}
+          />
+          <View style={styles.fieldBtns}>
+            <Pressable onPress={() => setShowCc((v) => !v)} hitSlop={8}>
+              <Text style={[styles.ccToggle, { fontFamily: "Inter_500Medium", color: showCc ? W.accent : W.textMuted }]}>Cc</Text>
+            </Pressable>
+            <Pressable onPress={() => setShowBcc((v) => !v)} hitSlop={8}>
+              <Text style={[styles.ccToggle, { fontFamily: "Inter_500Medium", color: showBcc ? W.accent : W.textMuted }]}>Bcc</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {showCc && (
+          <View style={[styles.field, { borderBottomColor: W.border }]}>
+            <Text style={[styles.fieldKey, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>Cc</Text>
+            <TextInput
+              style={[styles.fieldVal, styles.fieldValMobile, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
+              value={cc} onChangeText={setCc} placeholder="Carbon copy"
+              placeholderTextColor={W.textMuted} autoCapitalize="none" autoCorrect={false} keyboardType="email-address"
+            />
+          </View>
+        )}
+
+        {showBcc && (
+          <View style={[styles.field, { borderBottomColor: W.border }]}>
+            <Text style={[styles.fieldKey, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>Bcc</Text>
+            <TextInput
+              style={[styles.fieldVal, styles.fieldValMobile, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
+              value={bcc} onChangeText={setBcc} placeholder="Blind carbon copy"
+              placeholderTextColor={W.textMuted} autoCapitalize="none" autoCorrect={false} keyboardType="email-address"
+            />
+          </View>
+        )}
+
+        {/* Subject */}
+        <View style={[styles.field, { borderBottomColor: W.border }]}>
+          <Text style={[styles.fieldKey, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>Subject</Text>
+          <TextInput
+            style={[styles.fieldVal, styles.fieldValMobile, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
+            value={subject} onChangeText={setSubject} placeholder="Subject"
+            placeholderTextColor={W.textMuted} autoFocus={!!config.to}
+          />
+        </View>
+
+        {/* Body */}
+        <TextInput
+          ref={bodyRef}
+          style={[styles.bodyMobile, { fontFamily: "Inter_400Regular", color: W.textPrimary, backgroundColor: W.bgCard }]}
+          value={body}
+          onChangeText={setBody}
+          placeholder="Write your message…"
+          placeholderTextColor={W.textMuted}
+          multiline
+          textAlignVertical="top"
+        />
+
+        {/* Error */}
+        {!!error && (
+          <View style={[styles.errorRow, { backgroundColor: W.destructiveLight, marginHorizontal: 14, marginBottom: 8 }]}>
+            <Feather name="alert-circle" size={13} color={W.destructive} />
+            <Text style={[styles.errorText, { fontFamily: "Inter_400Regular", color: W.destructive }]}>{error}</Text>
+          </View>
+        )}
+
+        {/* Formatting toolbar at bottom */}
+        <View style={[styles.fmtToolbar, { borderTopColor: W.border, backgroundColor: W.bgSecondary }]}>
+          <FormatBtn icon="bold" label="Bold" onPress={() => execFormat("b")} />
+          <FormatBtn icon="italic" label="Italic" onPress={() => execFormat("i")} />
+          <FormatBtn icon="underline" label="Underline" onPress={() => execFormat("u")} />
+          <View style={[styles.fmtDivider, { backgroundColor: W.border }]} />
+          <FormatBtn icon="link" label="Link" onPress={() => execFormat("a")} />
+          <FormatBtn icon="list" label="Bullet list" onPress={() => execFormat("ul")} />
+          <FormatBtn icon="align-left" label="Quote" onPress={() => execFormat("blockquote")} />
+          <View style={{ flex: 1 }} />
+          <Pressable onPress={onClose} hitSlop={6} style={[styles.discardBtn, { backgroundColor: W.bgSecondary }]}>
+            <Feather name="trash-2" size={16} color={W.textMuted} />
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  // ── DESKTOP: floating window ────────────────────────────────────────────────
   return (
     <View style={[styles.root, minimized && styles.rootMin]}>
       {/* Title bar */}
@@ -141,19 +268,13 @@ export default function WebComposeModal({ config, onClose }: Props) {
 
       {!minimized && (
         <>
-          {/* To */}
           <View style={[styles.field, { borderBottomColor: W.border }]}>
             <Text style={[styles.fieldKey, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>To</Text>
             <TextInput
               style={[styles.fieldVal, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
-              value={to}
-              onChangeText={(t) => { setTo(t); setError(""); }}
-              placeholder="Recipients"
-              placeholderTextColor={W.textMuted}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="email-address"
-              autoFocus={!config.to}
+              value={to} onChangeText={(t) => { setTo(t); setError(""); }}
+              placeholder="Recipients" placeholderTextColor={W.textMuted}
+              autoCapitalize="none" autoCorrect={false} keyboardType="email-address" autoFocus={!config.to}
             />
             <View style={styles.fieldBtns}>
               <Pressable onPress={() => setShowCc((v) => !v)} hitSlop={6}>
@@ -170,13 +291,8 @@ export default function WebComposeModal({ config, onClose }: Props) {
               <Text style={[styles.fieldKey, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>Cc</Text>
               <TextInput
                 style={[styles.fieldVal, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
-                value={cc}
-                onChangeText={setCc}
-                placeholder="Carbon copy"
-                placeholderTextColor={W.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="email-address"
+                value={cc} onChangeText={setCc} placeholder="Carbon copy"
+                placeholderTextColor={W.textMuted} autoCapitalize="none" autoCorrect={false} keyboardType="email-address"
               />
             </View>
           )}
@@ -186,31 +302,21 @@ export default function WebComposeModal({ config, onClose }: Props) {
               <Text style={[styles.fieldKey, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>Bcc</Text>
               <TextInput
                 style={[styles.fieldVal, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
-                value={bcc}
-                onChangeText={setBcc}
-                placeholder="Blind carbon copy"
-                placeholderTextColor={W.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="email-address"
+                value={bcc} onChangeText={setBcc} placeholder="Blind carbon copy"
+                placeholderTextColor={W.textMuted} autoCapitalize="none" autoCorrect={false} keyboardType="email-address"
               />
             </View>
           )}
 
-          {/* Subject */}
           <View style={[styles.field, { borderBottomColor: W.border }]}>
             <Text style={[styles.fieldKey, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>Subject</Text>
             <TextInput
               style={[styles.fieldVal, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
-              value={subject}
-              onChangeText={setSubject}
-              placeholder="Subject"
-              placeholderTextColor={W.textMuted}
-              autoFocus={!!config.to}
+              value={subject} onChangeText={setSubject}
+              placeholder="Subject" placeholderTextColor={W.textMuted} autoFocus={!!config.to}
             />
           </View>
 
-          {/* Formatting toolbar */}
           <View style={[styles.fmtToolbar, { borderBottomColor: W.border, backgroundColor: W.bgSecondary }]}>
             <FormatBtn icon="bold" label="Bold" onPress={() => execFormat("b")} />
             <FormatBtn icon="italic" label="Italic" onPress={() => execFormat("i")} />
@@ -224,19 +330,14 @@ export default function WebComposeModal({ config, onClose }: Props) {
             <FormatBtn icon="paperclip" label="Attach" onPress={() => {}} />
           </View>
 
-          {/* Body */}
           <TextInput
             ref={bodyRef}
             style={[styles.body, { fontFamily: "Inter_400Regular", color: W.textPrimary, backgroundColor: W.bgCard }]}
-            value={body}
-            onChangeText={setBody}
-            placeholder="Write your message…"
-            placeholderTextColor={W.textMuted}
-            multiline
-            textAlignVertical="top"
+            value={body} onChangeText={setBody}
+            placeholder="Write your message…" placeholderTextColor={W.textMuted}
+            multiline textAlignVertical="top"
           />
 
-          {/* Footer */}
           <View style={[styles.footer, { borderTopColor: W.border, backgroundColor: W.bgCard }]}>
             {!!error && (
               <View style={[styles.errorRow, { backgroundColor: W.destructiveLight }]}>
@@ -276,6 +377,7 @@ export default function WebComposeModal({ config, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
+  // ── Desktop floating window ────────────────────────────────────────────────
   root: {
     position: "absolute",
     bottom: 0,
@@ -306,40 +408,68 @@ const styles = StyleSheet.create({
   titleText: { flex: 1, fontSize: 13, color: "#94A3B8" },
   titleBtns: { flexDirection: "row", gap: 8 },
   winBtn: { padding: 2 },
+
+  // ── Mobile sheet ───────────────────────────────────────────────────────────
+  mobileSheet: {
+    flexDirection: "column",
+    zIndex: 300,
+  },
+  mobileTitleBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingTop: 52,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  mobileCloseBtn: { padding: 6 },
+  mobileTitleText: { flex: 1, fontSize: 15, color: "#94A3B8", textAlign: "center" },
+  mobileSendBtn: {
+    padding: 8,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 36,
+  },
+
+  // ── Shared fields ──────────────────────────────────────────────────────────
   field: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 8,
     backgroundColor: W.bgCard,
   },
-  fieldKey: { fontSize: 12, width: 46, flexShrink: 0 },
+  fieldKey: { fontSize: 13, width: 52, flexShrink: 0 },
   fieldVal: { flex: 1, fontSize: 13, paddingVertical: 2, outlineWidth: 0 } as any,
-  fieldBtns: { flexDirection: "row", gap: 8 },
-  ccToggle: { fontSize: 12 },
+  fieldValMobile: { fontSize: 15, paddingVertical: 4 } as any,
+  fieldBtns: { flexDirection: "row", gap: 10 },
+  ccToggle: { fontSize: 13 },
+
   fmtToolbar: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: StyleSheet.hairlineWidth,
     gap: 2,
   },
-  fmtBtn: {
-    padding: 5,
-    borderRadius: 4,
-  },
-  fmtDivider: {
-    width: 1,
-    height: 14,
-    marginHorizontal: 3,
-  },
+  fmtBtn: { padding: 6, borderRadius: 4 },
+  fmtDivider: { width: 1, height: 14, marginHorizontal: 3 },
+
   body: {
     flex: 1, padding: 14, fontSize: 13,
     lineHeight: 20, minHeight: 190, outlineWidth: 0,
   } as any,
+  bodyMobile: {
+    flex: 1, padding: 16, fontSize: 15,
+    lineHeight: 24, outlineWidth: 0,
+    textAlignVertical: "top",
+  } as any,
+
   footer: {
     borderTopWidth: 1,
     paddingHorizontal: 14,
@@ -357,11 +487,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 9, borderRadius: 20,
   },
   sendBtnLabel: { color: "#fff", fontSize: 13 },
-  draftBtn: {
-    flexDirection: "row", alignItems: "center", gap: 5,
-    paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1,
-  },
-  draftBtnLabel: { fontSize: 12 },
   discardBtn: { padding: 9, borderRadius: 7, marginLeft: "auto" as any },
 });

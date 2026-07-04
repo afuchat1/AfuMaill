@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import type { Email, EmailFolder } from "@/context/EmailContext";
 import { useEmails } from "@/context/EmailContext";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { W } from "./webColors";
 
 function formatFull(ts: string) {
@@ -27,10 +28,10 @@ function HtmlBody({ html }: { html: string }) {
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
       *{box-sizing:border-box}
-      html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;font-size:14px;line-height:1.65;color:#111827;background:#FFFFFF}
+      html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;font-size:15px;line-height:1.7;color:#111827;background:#FFFFFF}
       a{color:#2563EB;word-break:break-all}
       img{max-width:100%;height:auto;border-radius:4px}
-      p{margin:0 0 12px}
+      p{margin:0 0 14px}
       pre,code{white-space:pre-wrap;font-family:monospace;background:#F0F2F5;padding:12px;border-radius:6px;font-size:13px}
       blockquote{border-left:3px solid #E8EAED;margin:0;padding-left:16px;color:#4B5563}
     </style>
@@ -61,9 +62,17 @@ function HtmlBody({ html }: { html: string }) {
   );
 }
 
+// ── Toolbar button — shows label only on desktop ───────────────────────────────
+
 function ToolbarBtn({
-  icon, label, onPress, danger,
-}: { icon: keyof typeof Feather.glyphMap; label: string; onPress: () => void; danger?: boolean }) {
+  icon, label, onPress, danger, iconOnly,
+}: {
+  icon: keyof typeof Feather.glyphMap;
+  label: string;
+  onPress: () => void;
+  danger?: boolean;
+  iconOnly?: boolean;
+}) {
   const [hovered, setHovered] = useState(false);
   return (
     <Pressable
@@ -75,15 +84,25 @@ function ToolbarBtn({
         { backgroundColor: hovered ? (danger ? W.destructiveLight : W.bgSecondary) : "transparent" },
       ]}
     >
-      <Feather name={icon} size={14} color={danger ? W.destructive : W.textSecondary} />
-      <Text style={[styles.toolbarBtnLabel, { fontFamily: "Inter_500Medium", color: danger ? W.destructive : W.textSecondary }]}>
-        {label}
-      </Text>
+      <Feather name={icon} size={iconOnly ? 18 : 14} color={danger ? W.destructive : W.textSecondary} />
+      {!iconOnly && (
+        <Text style={[styles.toolbarBtnLabel, {
+          fontFamily: "Inter_500Medium",
+          color: danger ? W.destructive : W.textSecondary,
+        }]}>
+          {label}
+        </Text>
+      )}
     </Pressable>
   );
 }
 
-function ReplyChip({ icon, label, onPress }: { icon: keyof typeof Feather.glyphMap; label: string; onPress: () => void }) {
+function ReplyChip({ icon, label, onPress, isMobile }: {
+  icon: keyof typeof Feather.glyphMap;
+  label: string;
+  onPress: () => void;
+  isMobile?: boolean;
+}) {
   const [hovered, setHovered] = useState(false);
   return (
     <Pressable
@@ -91,12 +110,19 @@ function ReplyChip({ icon, label, onPress }: { icon: keyof typeof Feather.glyphM
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
       style={[
-        styles.replyChip,
+        isMobile ? styles.replyChipMobile : styles.replyChip,
         { backgroundColor: hovered ? W.bgHover : W.bgSecondary },
+        isMobile && { flex: 1 },
       ]}
     >
-      <Feather name={icon} size={13} color={W.textPrimary} />
-      <Text style={[styles.replyChipLabel, { fontFamily: "Inter_600SemiBold", color: W.textPrimary }]}>{label}</Text>
+      <Feather name={icon} size={isMobile ? 16 : 13} color={W.textPrimary} />
+      <Text style={[styles.replyChipLabel, {
+        fontFamily: "Inter_600SemiBold",
+        color: W.textPrimary,
+        fontSize: isMobile ? 14 : 13,
+      }]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -116,6 +142,7 @@ interface Props {
 
 export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
   const { getEmailById, toggleStar, archiveEmail, deleteEmail, markAsRead, markAsUnread, moveToFolder } = useEmails();
+  const { isMobile } = useBreakpoint();
   const [toast, setToast] = useState<string | null>(null);
   const [showMore, setShowMore] = useState(false);
 
@@ -131,6 +158,9 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
   }
 
   if (!email) {
+    // On mobile this state is never visible (detail only shown when email selected)
+    // On desktop show the empty state placeholder
+    if (isMobile) return null;
     return (
       <View style={[styles.placeholder, { backgroundColor: W.bgCard }]}>
         <View style={[styles.placeholderIcon, { backgroundColor: W.bgSecondary }]}>
@@ -190,6 +220,8 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
     updates: "#64748B", social: "#F97316",
   };
 
+  const scrollPadding = isMobile ? 16 : 28;
+
   return (
     <View style={[styles.root, { backgroundColor: W.bgCard }]}>
       {toast && (
@@ -200,19 +232,55 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
       )}
 
       {/* Toolbar */}
-      <View style={[styles.topBar, { backgroundColor: W.bgCard }]}>
+      <View style={[styles.topBar, isMobile && styles.topBarMobile, { backgroundColor: W.bgCard }]}>
+        {/* Back / close button */}
         <Pressable onPress={onClose} hitSlop={8} style={[styles.backBtn, { backgroundColor: W.bgSecondary }]}>
-          <Feather name="arrow-left" size={15} color={W.textSecondary} />
+          <Feather name="arrow-left" size={isMobile ? 18 : 15} color={W.textSecondary} />
         </Pressable>
+
         <View style={styles.toolbarActions}>
-          <ToolbarBtn icon={email.starred ? "star" : "star"} label={email.starred ? "Unstar" : "Star"} onPress={handleStar} />
-          <ToolbarBtn icon={email.folder === "archived" ? "inbox" : "archive"} label={email.folder === "archived" ? "Move to Inbox" : "Archive"} onPress={handleArchive} />
-          <ToolbarBtn icon="mail" label="Mark unread" onPress={handleMarkUnread} />
-          <ToolbarBtn icon="trash-2" label="Delete" onPress={handleDelete} danger />
+          <ToolbarBtn
+            icon={email.starred ? "star" : "star"}
+            label={email.starred ? "Unstar" : "Star"}
+            onPress={handleStar}
+            iconOnly={isMobile}
+          />
+          <ToolbarBtn
+            icon={email.folder === "archived" ? "inbox" : "archive"}
+            label={email.folder === "archived" ? "Move to Inbox" : "Archive"}
+            onPress={handleArchive}
+            iconOnly={isMobile}
+          />
+          {!isMobile && (
+            <ToolbarBtn icon="mail" label="Mark unread" onPress={handleMarkUnread} />
+          )}
+          <ToolbarBtn
+            icon="trash-2"
+            label="Delete"
+            onPress={handleDelete}
+            danger
+            iconOnly={isMobile}
+          />
           <View>
-            <ToolbarBtn icon="more-horizontal" label="More" onPress={() => setShowMore((v) => !v)} />
+            <ToolbarBtn
+              icon="more-horizontal"
+              label="More"
+              onPress={() => setShowMore((v) => !v)}
+              iconOnly={isMobile}
+            />
             {showMore && (
               <View style={[styles.dropdown, { backgroundColor: W.bgCard }]}>
+                {isMobile && (
+                  <Pressable
+                    onPress={() => { handleMarkUnread(); setShowMore(false); }}
+                    style={({ pressed }) => [styles.dropdownItem, { backgroundColor: pressed ? W.bgHover : "transparent" }]}
+                  >
+                    <Feather name="mail" size={13} color={W.textSecondary} />
+                    <Text style={[styles.dropdownItemLabel, { fontFamily: "Inter_500Medium", color: W.textPrimary }]}>
+                      Mark as unread
+                    </Text>
+                  </Pressable>
+                )}
                 {MOVE_FOLDERS.filter((f) => f.folder !== email.folder).map((f) => (
                   <Pressable
                     key={f.folder}
@@ -232,8 +300,12 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
       </View>
 
       {/* Body */}
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.subject, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, { padding: scrollPadding, paddingBottom: 32 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={[styles.subject, { fontFamily: "Inter_700Bold", color: W.textPrimary, fontSize: isMobile ? 19 : 22 }]}>
           {email.subject}
         </Text>
 
@@ -246,15 +318,15 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
           </View>
         )}
 
-        {/* Sender — flat, no border */}
-        <View style={[styles.senderCard, { backgroundColor: W.bgSecondary }]}>
-          <Avatar name={email.from.name} size={42} fontSize={16} />
+        {/* Sender card */}
+        <View style={[styles.senderCard, isMobile && styles.senderCardMobile, { backgroundColor: W.bgSecondary }]}>
+          <Avatar name={email.from.name} size={isMobile ? 36 : 42} fontSize={isMobile ? 14 : 16} />
           <View style={styles.senderMeta}>
             <View style={styles.senderTopRow}>
-              <Text style={[styles.senderName, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>
+              <Text style={[styles.senderName, { fontFamily: "Inter_700Bold", color: W.textPrimary, fontSize: isMobile ? 14 : 15 }]}>
                 {email.from.name}
               </Text>
-              <Text style={[styles.timestamp, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
+              <Text style={[styles.timestamp, { fontFamily: "Inter_400Regular", color: W.textMuted, fontSize: isMobile ? 11 : 12 }]}>
                 {formatFull(email.timestamp)}
               </Text>
             </View>
@@ -272,12 +344,12 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
           </View>
         </View>
 
-        {/* Body — flat, no border */}
-        <View style={[styles.bodyWrap, { backgroundColor: W.bgCard }]}>
+        {/* Email body */}
+        <View style={[styles.bodyWrap, { backgroundColor: W.bgCard, padding: isMobile ? 14 : 20 }]}>
           {isHtml ? (
             <HtmlBody html={email.body} />
           ) : (
-            <Text selectable style={[styles.bodyText, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}>
+            <Text selectable style={[styles.bodyText, { fontFamily: "Inter_400Regular", color: W.textPrimary, fontSize: isMobile ? 15 : 15 }]}>
               {email.body}
             </Text>
           )}
@@ -312,10 +384,14 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
       </ScrollView>
 
       {/* Reply bar */}
-      <View style={[styles.replyBar, { borderTopColor: W.borderLight, backgroundColor: W.bgCard }]}>
-        <ReplyChip icon="corner-up-left" label="Reply" onPress={handleReply} />
-        <ReplyChip icon="users" label="Reply All" onPress={handleReplyAll} />
-        <ReplyChip icon="corner-up-right" label="Forward" onPress={handleForward} />
+      <View style={[
+        styles.replyBar,
+        isMobile && styles.replyBarMobile,
+        { borderTopColor: W.borderLight, backgroundColor: W.bgCard },
+      ]}>
+        <ReplyChip icon="corner-up-left" label="Reply"    onPress={handleReply}    isMobile={isMobile} />
+        <ReplyChip icon="users"          label="Reply All" onPress={handleReplyAll} isMobile={isMobile} />
+        <ReplyChip icon="corner-up-right" label="Forward" onPress={handleForward}  isMobile={isMobile} />
       </View>
     </View>
   );
@@ -334,24 +410,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 10,
     gap: 12,
   },
+  topBarMobile: {
+    paddingHorizontal: 12, paddingVertical: 10,
+  },
   backBtn: { padding: 7, borderRadius: 7 },
   toolbarActions: { flexDirection: "row", alignItems: "center", gap: 2, flex: 1 },
   toolbarBtn: {
     flexDirection: "row", alignItems: "center", gap: 5,
-    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6,
+    paddingHorizontal: 10, paddingVertical: 8, borderRadius: 6,
   },
   toolbarBtnLabel: { fontSize: 12 },
   dropdown: {
-    position: "absolute", top: 34, right: 0, width: 190,
+    position: "absolute", top: 38, right: 0, width: 200,
     borderRadius: 10, zIndex: 100,
     shadowColor: "#111827", shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08, shadowRadius: 16, elevation: 8, overflow: "hidden",
   },
-  dropdownItem: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 10 },
+  dropdownItem: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
   dropdownItemLabel: { fontSize: 13 },
   scroll: { flex: 1 },
-  scrollContent: { padding: 28, paddingBottom: 32 },
-  subject: { fontSize: 22, lineHeight: 30, letterSpacing: -0.4, marginBottom: 12 },
+  scrollContent: {},
+  subject: { lineHeight: 30, letterSpacing: -0.4, marginBottom: 12 },
   catBadge: {
     flexDirection: "row", alignItems: "center", gap: 6,
     alignSelf: "flex-start", borderRadius: 20,
@@ -363,14 +442,17 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "flex-start", gap: 14,
     padding: 16, borderRadius: 12, marginBottom: 16,
   },
+  senderCardMobile: {
+    gap: 10, padding: 12,
+  },
   senderMeta: { flex: 1, gap: 3 },
-  senderTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  senderName: { fontSize: 15, flex: 1 },
-  timestamp: { fontSize: 12, flexShrink: 0 },
+  senderTopRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 8, flexWrap: "wrap" },
+  senderName: { flex: 1 },
+  timestamp: { flexShrink: 0 },
   senderEmail: { fontSize: 13 },
   recipientRow: { fontSize: 12, marginTop: 1 },
-  bodyWrap: { padding: 20, borderRadius: 12, marginBottom: 16 },
-  bodyText: { fontSize: 15, lineHeight: 27 },
+  bodyWrap: { borderRadius: 12, marginBottom: 16 },
+  bodyText: { lineHeight: 27 },
   attachSection: { gap: 8 },
   attachHeader: { fontSize: 10, letterSpacing: 1.2, marginBottom: 4 },
   attachCard: {
@@ -386,12 +468,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28, paddingVertical: 14,
     borderTopWidth: 1,
   },
+  replyBarMobile: {
+    paddingHorizontal: 12, paddingVertical: 12, gap: 8,
+  },
   replyChip: {
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 16, paddingVertical: 8,
     borderRadius: 20,
   },
-  replyChipLabel: { fontSize: 13 },
+  replyChipMobile: {
+    flexDirection: "row", alignItems: "center", gap: 8, justifyContent: "center",
+    paddingHorizontal: 8, paddingVertical: 12,
+    borderRadius: 12,
+  },
+  replyChipLabel: {},
   toast: {
     position: "absolute", bottom: 80, alignSelf: "center",
     flexDirection: "row", alignItems: "center", gap: 7,

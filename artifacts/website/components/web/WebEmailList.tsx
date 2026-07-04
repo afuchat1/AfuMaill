@@ -1,10 +1,11 @@
 import { Feather } from "@expo/vector-icons";
 import React, { useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Avatar } from "@/components/Avatar";
 import type { Email, EmailCategory, EmailFolder } from "@/context/EmailContext";
 import { useEmails } from "@/context/EmailContext";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { W } from "./webColors";
 
 const INBOX_TABS: { label: string; category: EmailCategory | "all" }[] = [
@@ -31,6 +32,8 @@ function formatDate(ts: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// ── Desktop email row ──────────────────────────────────────────────────────────
+
 interface RowProps {
   email: Email;
   selected: boolean;
@@ -38,13 +41,81 @@ interface RowProps {
   onStar: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  isMobile: boolean;
 }
 
-function EmailRow({ email, selected, onSelect, onStar, onArchive, onDelete }: RowProps) {
+function EmailRow({ email, selected, onSelect, onStar, onArchive, onDelete, isMobile }: RowProps) {
   const [hovered, setHovered] = useState(false);
   const bg = selected ? W.bgSelected : hovered ? W.bgHover : W.bgCard;
   const bold = !email.read;
 
+  if (isMobile) {
+    // ── Mobile row: taller, touch-friendly, always-visible star ─────────────
+    return (
+      <Pressable
+        onPress={onSelect}
+        style={({ pressed }) => [
+          mStyles.row,
+          { backgroundColor: pressed ? W.bgHover : bg, borderBottomColor: W.borderLight },
+        ]}
+      >
+        {/* Unread dot */}
+        <View style={[mStyles.unreadDot, { backgroundColor: bold ? W.accent : "transparent" }]} />
+
+        <Avatar name={email.from.name} size={42} fontSize={16} />
+
+        <View style={mStyles.content}>
+          <View style={mStyles.topLine}>
+            <Text
+              style={[mStyles.sender, {
+                fontFamily: bold ? "Inter_700Bold" : "Inter_500Medium",
+                color: bold ? W.textPrimary : W.textSecondary,
+                flex: 1,
+              }]}
+              numberOfLines={1}
+            >
+              {email.from.name}
+            </Text>
+            <Text style={[mStyles.date, {
+              fontFamily: bold ? "Inter_600SemiBold" : "Inter_400Regular",
+              color: bold ? W.textSecondary : W.textMuted,
+            }]}>
+              {formatDate(email.timestamp)}
+            </Text>
+          </View>
+
+          <Text
+            style={[mStyles.subject, {
+              fontFamily: bold ? "Inter_600SemiBold" : "Inter_400Regular",
+              color: bold ? W.textPrimary : W.textSecondary,
+            }]}
+            numberOfLines={1}
+          >
+            {email.subject}
+          </Text>
+
+          <Text style={[mStyles.preview, { fontFamily: "Inter_400Regular", color: W.textMuted }]} numberOfLines={1}>
+            {email.preview}
+          </Text>
+        </View>
+
+        {/* Always-visible star on mobile */}
+        <Pressable
+          onPress={(e) => { e.stopPropagation?.(); onStar(); }}
+          hitSlop={10}
+          style={mStyles.starBtn}
+        >
+          <Feather
+            name="star"
+            size={18}
+            color={email.starred ? "#D97706" : W.borderLight}
+          />
+        </Pressable>
+      </Pressable>
+    );
+  }
+
+  // ── Desktop row ──────────────────────────────────────────────────────────────
   return (
     <Pressable
       onPress={onSelect}
@@ -128,6 +199,8 @@ function EmailRow({ email, selected, onSelect, onStar, onArchive, onDelete }: Ro
   );
 }
 
+// ── Main component ─────────────────────────────────────────────────────────────
+
 interface Props {
   currentFolder: EmailFolder;
   selectedId: string | null;
@@ -137,6 +210,7 @@ interface Props {
 
 export default function WebEmailList({ currentFolder, selectedId, onSelectEmail, searchQuery }: Props) {
   const { getEmailsByFolder, getEmailsByCategory, toggleStar, archiveEmail, deleteEmail, isLoading, refreshEmails } = useEmails();
+  const { isMobile } = useBreakpoint();
   const [activeTab, setActiveTab] = useState<EmailCategory | "all">("primary");
   const [refreshing, setRefreshing] = useState(false);
 
@@ -168,43 +242,86 @@ export default function WebEmailList({ currentFolder, selectedId, onSelectEmail,
   };
 
   return (
-    <View style={[styles.root, { backgroundColor: W.bg }]}>
-      <View style={[styles.toolbar, { backgroundColor: W.bg }]}>
-        <Text style={[styles.folderTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>
-          {FOLDER_LABELS[currentFolder] ?? "Inbox"}
-        </Text>
-        <View style={styles.toolbarRight}>
-          <Text style={[styles.count, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
+    <View style={[styles.root, isMobile && styles.rootMobile, { backgroundColor: W.bg }]}>
+      {/* Toolbar — hidden on mobile (handled by MobileHeader) */}
+      {!isMobile && (
+        <View style={[styles.toolbar, { backgroundColor: W.bg }]}>
+          <Text style={[styles.folderTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>
+            {FOLDER_LABELS[currentFolder] ?? "Inbox"}
+          </Text>
+          <View style={styles.toolbarRight}>
+            <Text style={[styles.count, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
+              {emails.length} {emails.length === 1 ? "message" : "messages"}
+            </Text>
+            <Pressable onPress={handleRefresh} hitSlop={8} style={[styles.refreshBtn, { backgroundColor: W.bgSecondary }]}>
+              <Feather name="refresh-cw" size={13} color={W.textSecondary} />
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {/* Mobile count + refresh bar */}
+      {isMobile && (
+        <View style={[styles.mobileCountBar, { backgroundColor: W.bg }]}>
+          <Text style={[styles.mobileCount, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
             {emails.length} {emails.length === 1 ? "message" : "messages"}
           </Text>
           <Pressable onPress={handleRefresh} hitSlop={8} style={[styles.refreshBtn, { backgroundColor: W.bgSecondary }]}>
             <Feather name="refresh-cw" size={13} color={W.textSecondary} />
           </Pressable>
         </View>
-      </View>
+      )}
 
+      {/* Category tabs */}
       {currentFolder === "inbox" && !searchQuery && (
-        <View style={[styles.tabs, { borderBottomColor: W.borderLight, backgroundColor: W.bg }]}>
-          {INBOX_TABS.map((tab) => {
-            const active = activeTab === tab.category;
-            return (
-              <Pressable
-                key={tab.category}
-                onPress={() => setActiveTab(tab.category)}
-                style={[styles.tab, active && { borderBottomColor: W.accent, borderBottomWidth: 2 }]}
-              >
-                <Text
-                  style={[
+        isMobile ? (
+          // Mobile: horizontally scrollable tabs
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={[styles.tabsScrollView, { borderBottomColor: W.borderLight }]}
+            contentContainerStyle={styles.tabsScrollContent}
+          >
+            {INBOX_TABS.map((tab) => {
+              const active = activeTab === tab.category;
+              return (
+                <Pressable
+                  key={tab.category}
+                  onPress={() => setActiveTab(tab.category)}
+                  style={[styles.tab, active && { borderBottomColor: W.accent, borderBottomWidth: 2 }]}
+                >
+                  <Text style={[
                     styles.tabLabel,
                     { color: active ? W.accent : W.textSecondary, fontFamily: active ? "Inter_600SemiBold" : "Inter_400Regular" },
-                  ]}
+                    isMobile && { fontSize: 13 },
+                  ]}>
+                    {tab.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : (
+          <View style={[styles.tabs, { borderBottomColor: W.borderLight, backgroundColor: W.bg }]}>
+            {INBOX_TABS.map((tab) => {
+              const active = activeTab === tab.category;
+              return (
+                <Pressable
+                  key={tab.category}
+                  onPress={() => setActiveTab(tab.category)}
+                  style={[styles.tab, active && { borderBottomColor: W.accent, borderBottomWidth: 2 }]}
                 >
-                  {tab.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+                  <Text style={[
+                    styles.tabLabel,
+                    { color: active ? W.accent : W.textSecondary, fontFamily: active ? "Inter_600SemiBold" : "Inter_400Regular" },
+                  ]}>
+                    {tab.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )
       )}
 
       {isLoading && emails.length === 0 ? (
@@ -228,6 +345,8 @@ export default function WebEmailList({ currentFolder, selectedId, onSelectEmail,
           data={emails}
           keyExtractor={(e) => e.id}
           showsVerticalScrollIndicator={false}
+          onRefresh={isMobile ? handleRefresh : undefined}
+          refreshing={isMobile ? refreshing : undefined}
           renderItem={({ item }) => (
             <EmailRow
               email={item}
@@ -236,6 +355,7 @@ export default function WebEmailList({ currentFolder, selectedId, onSelectEmail,
               onStar={() => toggleStar(item.id)}
               onArchive={() => archiveEmail(item.id)}
               onDelete={() => deleteEmail(item.id)}
+              isMobile={isMobile}
             />
           )}
         />
@@ -244,8 +364,10 @@ export default function WebEmailList({ currentFolder, selectedId, onSelectEmail,
   );
 }
 
+// ── Desktop styles ─────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   root: { width: 340, flexDirection: "column" },
+  rootMobile: { width: undefined, flex: 1 },
   toolbar: {
     flexDirection: "row",
     alignItems: "center",
@@ -256,12 +378,26 @@ const styles = StyleSheet.create({
   folderTitle: { fontSize: 15 },
   toolbarRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   count: { fontSize: 12 },
+  mobileCountBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  mobileCount: { fontSize: 12 },
   refreshBtn: { padding: 6, borderRadius: 6 },
   tabs: {
     flexDirection: "row",
     borderBottomWidth: 1,
     paddingHorizontal: 8,
     overflow: "hidden",
+  },
+  tabsScrollView: {
+    borderBottomWidth: 1,
+  },
+  tabsScrollContent: {
+    paddingHorizontal: 8,
   },
   tab: { paddingHorizontal: 10, paddingVertical: 9 },
   tabLabel: { fontSize: 12 },
@@ -289,4 +425,26 @@ const styles = StyleSheet.create({
   emptyIcon: { width: 64, height: 64, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   emptyTitle: { fontSize: 15 },
   emptyText: { fontSize: 13 },
+});
+
+// ── Mobile-specific row styles ─────────────────────────────────────────────────
+const mStyles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 12,
+    minHeight: 76,
+    backgroundColor: W.bgCard,
+  },
+  unreadDot: { width: 7, height: 7, borderRadius: 4, flexShrink: 0 },
+  content: { flex: 1, gap: 3 },
+  topLine: { flexDirection: "row", alignItems: "center", gap: 8 },
+  sender: { fontSize: 15 },
+  date: { fontSize: 12, flexShrink: 0 },
+  subject: { fontSize: 14, lineHeight: 19 },
+  preview: { fontSize: 13, lineHeight: 17 },
+  starBtn: { padding: 8, flexShrink: 0 },
 });

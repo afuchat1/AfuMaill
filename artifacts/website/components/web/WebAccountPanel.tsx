@@ -13,9 +13,10 @@ import {
   saveVacationReply,
   type Profile,
 } from "@/lib/supabase";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { W } from "./webColors";
 
-// ── reusable field components ──────────────────────────────────────────────────
+// ── Section wrapper ────────────────────────────────────────────────────────────
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -28,29 +29,34 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 const sec = StyleSheet.create({
   root: { marginBottom: 28 },
   title: { fontSize: 13, letterSpacing: 0.3, marginBottom: 10 },
-  body: { borderRadius: 12, overflow: "hidden" },
+  body: { borderRadius: 12, overflow: "hidden", borderWidth: 1 },
 });
+
+// ── Field row — stacks vertically on mobile ────────────────────────────────────
 
 function FieldRow({
   label, value, onChange, placeholder, editable = true, type = "text",
-  hint, last = false,
+  hint, last = false, isMobile = false,
 }: {
   label: string; value: string; onChange?: (v: string) => void;
   placeholder?: string; editable?: boolean; type?: string;
-  hint?: string; last?: boolean;
+  hint?: string; last?: boolean; isMobile?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   return (
     <View style={[
       fld.root,
+      isMobile && fld.rootMobile,
       !last && { borderBottomWidth: 1, borderBottomColor: W.border },
       focused && { backgroundColor: W.bgAccentSubtle },
     ]}>
-      <Text style={[fld.label, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>{label}</Text>
-      <View style={fld.right}>
+      <Text style={[fld.label, isMobile && fld.labelMobile, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>
+        {label}
+      </Text>
+      <View style={[fld.right, isMobile && fld.rightMobile]}>
         {editable && onChange ? (
           <TextInput
-            style={[fld.input, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
+            style={[fld.input, isMobile && fld.inputMobile, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
             value={value}
             onChangeText={onChange}
             placeholder={placeholder ?? `Enter ${label.toLowerCase()}`}
@@ -63,7 +69,7 @@ function FieldRow({
             onBlur={() => setFocused(false)}
           />
         ) : (
-          <Text style={[fld.readOnly, { fontFamily: "Inter_400Regular", color: editable ? W.textPrimary : W.textMuted }]}>
+          <Text style={[fld.readOnly, isMobile && fld.inputMobile, { fontFamily: "Inter_400Regular", color: editable ? W.textPrimary : W.textMuted }]}>
             {value || "—"}
           </Text>
         )}
@@ -79,13 +85,19 @@ function FieldRow({
 }
 const fld = StyleSheet.create({
   root: { paddingHorizontal: 20, paddingVertical: 14, flexDirection: "row", alignItems: "center", gap: 12 },
+  rootMobile: { flexDirection: "column", alignItems: "flex-start", paddingHorizontal: 16, paddingVertical: 14, gap: 6 },
   label: { fontSize: 13, width: 160, flexShrink: 0 },
+  labelMobile: { width: undefined, fontSize: 12 },
   right: { flex: 1 },
+  rightMobile: { width: "100%" },
   input: { fontSize: 14, paddingVertical: 2, outlineWidth: 0 } as any,
+  inputMobile: { fontSize: 15, paddingVertical: 2 } as any,
   readOnly: { fontSize: 14 },
   lockedBadge: { alignSelf: "flex-start", marginTop: 4, padding: 4, borderRadius: 4 },
   hint: { fontSize: 11, marginTop: 4 },
 });
+
+// ── Save button ────────────────────────────────────────────────────────────────
 
 function SaveBtn({ onPress, loading, saved }: { onPress: () => void; loading?: boolean; saved?: boolean }) {
   const [hovered, setHovered] = useState(false);
@@ -120,25 +132,20 @@ const btn = StyleSheet.create({
 
 export default function WebAccountPanel() {
   const { user, logout } = useAuth();
+  const { isMobile } = useBreakpoint();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Editable states
   const [displayName, setDisplayName] = useState("");
   const [phone, setPhone] = useState("");
   const [notifEmail, setNotifEmail] = useState("");
   const [signature, setSignature] = useState("");
   const [vacationEnabled, setVacationEnabled] = useState(false);
   const [vacationMsg, setVacationMsg] = useState("");
-
-  // Placeholder extras (UI-only for now)
   const [country, setCountry] = useState("");
   const [language, setLanguage] = useState("");
-  const [timezone, setTimezone] = useState(
-    Intl.DateTimeFormat().resolvedOptions().timeZone
-  );
+  const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
 
-  // Save states
   const [savingIdentity, setSavingIdentity] = useState(false);
   const [savedIdentity, setSavedIdentity] = useState(false);
   const [savingContact, setSavingContact] = useState(false);
@@ -147,7 +154,6 @@ export default function WebAccountPanel() {
   const [savedSignature, setSavedSignature] = useState(false);
   const [savingVacation, setSavingVacation] = useState(false);
   const [savedVacation, setSavedVacation] = useState(false);
-
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -169,7 +175,6 @@ export default function WebAccountPanel() {
   async function saveIdentity() {
     if (!user) return;
     setSavingIdentity(true); setError("");
-    // display name is part of the auth user; phone is stored in profile
     const { error: err } = await savePhoneNumber(user.id, phone);
     if (err) { setError(err); setSavingIdentity(false); return; }
     setSavedIdentity(true);
@@ -211,7 +216,9 @@ export default function WebAccountPanel() {
     return (
       <View style={[styles.loadingWrap, { backgroundColor: W.bg }]}>
         <ActivityIndicator size="large" color={W.accent} />
-        <Text style={[styles.loadingText, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>Loading profile…</Text>
+        <Text style={[styles.loadingText, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
+          Loading profile…
+        </Text>
       </View>
     );
   }
@@ -220,20 +227,30 @@ export default function WebAccountPanel() {
     ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
     : "Unknown";
 
+  const hPad = isMobile ? 16 : 40;
+  const maxW = isMobile ? undefined : 760;
+
   return (
-    <ScrollView style={[styles.root, { backgroundColor: W.bg }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={[styles.root, { backgroundColor: W.bg }]}
+      contentContainerStyle={[styles.content, { paddingHorizontal: hPad, maxWidth: maxW }]}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Page header */}
-      <View style={[styles.pageHeader, { borderBottomColor: W.border }]}>
+      <View style={[styles.pageHeader, isMobile && styles.pageHeaderMobile, { borderBottomColor: W.border }]}>
         <View>
-          <Text style={[styles.pageTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>Profile &amp; Account</Text>
+          <Text style={[styles.pageTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary, fontSize: isMobile ? 20 : 22 }]}>
+            Profile &amp; Account
+          </Text>
           <Text style={[styles.pageSub, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
             Manage your Afu identity and preferences
           </Text>
         </View>
-        {/* Ecosystem badge */}
         <View style={[styles.ecosystemPill, { backgroundColor: W.bgAccentSubtle, borderColor: W.accentLight }]}>
           <Feather name="globe" size={12} color={W.accent} />
-          <Text style={[styles.ecosystemText, { fontFamily: "Inter_600SemiBold", color: W.accentText }]}>Afu Ecosystem Account</Text>
+          <Text style={[styles.ecosystemText, { fontFamily: "Inter_600SemiBold", color: W.accentText }]}>
+            Afu Ecosystem Account
+          </Text>
         </View>
       </View>
 
@@ -245,56 +262,65 @@ export default function WebAccountPanel() {
         </View>
       )}
 
-      {/* Avatar + identity summary */}
-      <View style={[styles.identityCard, { backgroundColor: W.bgCard, borderColor: W.border }]}>
+      {/* Identity card — column on mobile */}
+      <View style={[
+        styles.identityCard,
+        isMobile && styles.identityCardMobile,
+        { backgroundColor: W.bgCard, borderColor: W.border },
+      ]}>
         <View style={styles.avatarWrap}>
-          <Avatar name={user?.name ?? ""} size={72} fontSize={26} />
+          <Avatar name={user?.name ?? ""} size={isMobile ? 60 : 72} fontSize={isMobile ? 22 : 26} />
           <View style={[styles.verifiedBadge, { backgroundColor: W.success }]}>
             <Feather name="check" size={10} color="#fff" />
           </View>
         </View>
-        <View style={styles.identitySummary}>
-          <Text style={[styles.identityName, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>
+        <View style={[styles.identitySummary, isMobile && { alignItems: "center" }]}>
+          <Text style={[styles.identityName, { fontFamily: "Inter_700Bold", color: W.textPrimary, fontSize: isMobile ? 18 : 20 }]}>
             {user?.name ?? ""}
           </Text>
           <Text style={[styles.identityEmail, { fontFamily: "Inter_400Regular", color: W.textSecondary }]}>
             {user?.username}@afuchat.com
           </Text>
-          <View style={styles.identityMeta}>
+          <View style={[styles.identityMeta, isMobile && { justifyContent: "center" }]}>
             <View style={[styles.chip, { backgroundColor: W.successLight }]}>
               <Feather name="shield" size={11} color={W.success} />
               <Text style={[styles.chipText, { fontFamily: "Inter_500Medium", color: W.success }]}>Verified</Text>
             </View>
             <View style={[styles.chip, { backgroundColor: W.bgSecondary }]}>
               <Feather name="calendar" size={11} color={W.textMuted} />
-              <Text style={[styles.chipText, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>Joined {joinedDate}</Text>
+              <Text style={[styles.chipText, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
+                Joined {joinedDate}
+              </Text>
             </View>
           </View>
         </View>
-        <View style={styles.accountId}>
-          <Text style={[styles.accountIdLabel, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>Account ID</Text>
-          <Text style={[styles.accountIdValue, { fontFamily: "Inter_400Regular", color: W.textSecondary }]} numberOfLines={1}>
-            {user?.id}
-          </Text>
-        </View>
+        {!isMobile && (
+          <View style={styles.accountId}>
+            <Text style={[styles.accountIdLabel, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>Account ID</Text>
+            <Text style={[styles.accountIdValue, { fontFamily: "Inter_400Regular", color: W.textSecondary }]} numberOfLines={1}>
+              {user?.id}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Identity section */}
       <Section title="Identity">
-        <FieldRow label="Full name"  value={displayName} onChange={setDisplayName} placeholder="Jane Smith" />
-        <FieldRow label="Username"   value={`@${user?.username ?? ""}`} editable={false} />
-        <FieldRow label="Email address" value={`${user?.username}@afuchat.com`} editable={false} hint="This is your AfuMail identity — it cannot be changed." />
-        <FieldRow label="Phone number" value={phone} onChange={setPhone} placeholder="+1 234 567 8900" last />
+        <FieldRow label="Full name"    value={displayName} onChange={setDisplayName} placeholder="Jane Smith" isMobile={isMobile} />
+        <FieldRow label="Username"     value={`@${user?.username ?? ""}`} editable={false} isMobile={isMobile} />
+        <FieldRow label="Email address" value={`${user?.username}@afuchat.com`} editable={false}
+          hint="This is your AfuMail identity — it cannot be changed." isMobile={isMobile} />
+        <FieldRow label="Phone number" value={phone} onChange={setPhone} placeholder="+1 234 567 8900" last isMobile={isMobile} />
       </Section>
       <View style={styles.sectionActions}>
         <SaveBtn onPress={saveIdentity} loading={savingIdentity} saved={savedIdentity} />
       </View>
 
-      {/* Preferences section */}
+      {/* Preferences */}
       <Section title="Preferences">
-        <FieldRow label="Country"   value={country}   onChange={setCountry}   placeholder="e.g. United States" />
-        <FieldRow label="Language"  value={language}  onChange={setLanguage}  placeholder="e.g. English" />
-        <FieldRow label="Time zone" value={timezone}  onChange={setTimezone}  placeholder="e.g. America/New_York" last />
+        <FieldRow label="Country"   value={country}   onChange={setCountry}   placeholder="e.g. United States" isMobile={isMobile} />
+        <FieldRow label="Language"  value={language}  onChange={setLanguage}  placeholder="e.g. English"       isMobile={isMobile} />
+        <FieldRow label="Time zone" value={timezone}  onChange={setTimezone}  placeholder="e.g. America/New_York" last isMobile={isMobile} />
       </Section>
       <View style={styles.sectionActions}>
         <Text style={[styles.infoText, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
@@ -312,6 +338,7 @@ export default function WebAccountPanel() {
           type="email"
           hint="Used for password resets and security alerts."
           last
+          isMobile={isMobile}
         />
       </Section>
       <View style={styles.sectionActions}>
@@ -320,7 +347,7 @@ export default function WebAccountPanel() {
 
       {/* Email signature */}
       <Section title="Email Signature">
-        <View style={[styles.textAreaWrap, { borderBottomColor: W.border }]}>
+        <View style={styles.textAreaWrap}>
           <TextInput
             style={[styles.textArea, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
             value={signature}
@@ -340,7 +367,9 @@ export default function WebAccountPanel() {
       {/* Vacation reply */}
       <Section title="Vacation Reply">
         <View style={[styles.toggleRow, { borderBottomColor: W.border }]}>
-          <Text style={[styles.toggleLabel, { fontFamily: "Inter_500Medium", color: W.textPrimary }]}>Auto-reply when away</Text>
+          <Text style={[styles.toggleLabel, { fontFamily: "Inter_500Medium", color: W.textPrimary }]}>
+            Auto-reply when away
+          </Text>
           <Pressable
             onPress={() => setVacationEnabled((v) => !v)}
             style={[styles.toggle, { backgroundColor: vacationEnabled ? W.accent : W.border }]}
@@ -388,11 +417,11 @@ export default function WebAccountPanel() {
 
       {/* Danger zone */}
       <Section title="Danger Zone">
-        <View style={[styles.dangerRow, { borderBottomColor: W.border, borderBottomWidth: 1 }]}>
+        <View style={[styles.dangerRow, isMobile && styles.dangerRowMobile, { borderBottomColor: W.border, borderBottomWidth: 1 }]}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.dangerTitle, { fontFamily: "Inter_600SemiBold", color: W.textPrimary }]}>Sign out</Text>
             <Text style={[styles.dangerSub, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
-              Sign out of your Afu account on this device. You can sign back in at any time.
+              Sign out of your Afu account on this device.
             </Text>
           </View>
           <Pressable
@@ -401,22 +430,22 @@ export default function WebAccountPanel() {
                 logout();
               }
             }}
-            style={[styles.dangerBtn, { borderColor: W.accent + "88" }]}
+            style={[styles.dangerBtn, isMobile && styles.dangerBtnMobile, { borderColor: W.accent + "88" }]}
           >
             <Feather name="log-out" size={14} color={W.accent} />
             <Text style={[styles.dangerBtnLabel, { fontFamily: "Inter_600SemiBold", color: W.accent }]}>Sign out</Text>
           </Pressable>
         </View>
-        <View style={[styles.dangerRow, { borderBottomColor: W.border }]}>
+        <View style={[styles.dangerRow, isMobile && styles.dangerRowMobile]}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.dangerTitle, { fontFamily: "Inter_600SemiBold", color: W.textPrimary }]}>Delete account</Text>
             <Text style={[styles.dangerSub, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
-              Permanently delete your Afu account and all associated data. This cannot be undone.
+              Permanently delete your account and all data. Cannot be undone.
             </Text>
           </View>
-          <Pressable style={[styles.dangerBtn, { borderColor: W.destructive }]}>
+          <Pressable style={[styles.dangerBtn, isMobile && styles.dangerBtnMobile, { borderColor: W.destructive }]}>
             <Feather name="trash-2" size={14} color={W.destructive} />
-            <Text style={[styles.dangerBtnLabel, { fontFamily: "Inter_600SemiBold", color: W.destructive }]}>Delete account</Text>
+            <Text style={[styles.dangerBtnLabel, { fontFamily: "Inter_600SemiBold", color: W.destructive }]}>Delete</Text>
           </Pressable>
         </View>
       </Section>
@@ -428,27 +457,31 @@ const styles = StyleSheet.create({
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
   loadingText: { fontSize: 14 },
   root: { flex: 1 },
-  content: { paddingHorizontal: 40, paddingTop: 28, paddingBottom: 60, maxWidth: 760, alignSelf: "center", width: "100%" },
+  content: { paddingTop: 28, paddingBottom: 60, alignSelf: "center", width: "100%" },
   pageHeader: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    marginBottom: 28, paddingBottom: 20,
+    marginBottom: 28, paddingBottom: 20, borderBottomWidth: StyleSheet.hairlineWidth,
+    flexWrap: "wrap", gap: 12,
   },
-  pageTitle: { fontSize: 22, letterSpacing: -0.4 },
+  pageHeaderMobile: { flexDirection: "column", alignItems: "flex-start" },
+  pageTitle: { letterSpacing: -0.4 },
   pageSub: { fontSize: 14, marginTop: 4 },
   ecosystemPill: {
     flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1,
   },
   ecosystemText: { fontSize: 12 },
   errorBanner: {
     flexDirection: "row", alignItems: "center", gap: 8,
-    padding: 12, borderRadius: 8, marginBottom: 20,
+    padding: 12, borderRadius: 8, marginBottom: 20, borderWidth: 1,
   },
   errorText: { fontSize: 13, flex: 1 },
   identityCard: {
     flexDirection: "row", alignItems: "center", gap: 20,
-    padding: 24, borderRadius: 14, marginBottom: 32,
+    padding: 24, borderRadius: 14, marginBottom: 32, borderWidth: 1,
+  },
+  identityCardMobile: {
+    flexDirection: "column", alignItems: "center", padding: 20, gap: 12,
   },
   avatarWrap: { position: "relative" },
   verifiedBadge: {
@@ -458,7 +491,7 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: W.bgCard,
   },
   identitySummary: { flex: 1, gap: 6 },
-  identityName: { fontSize: 20, letterSpacing: -0.3 },
+  identityName: { letterSpacing: -0.3 },
   identityEmail: { fontSize: 14 },
   identityMeta: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20 },
@@ -475,7 +508,7 @@ const styles = StyleSheet.create({
   textArea: { fontSize: 14, lineHeight: 22, minHeight: 96, outlineWidth: 0 } as any,
   toggleRow: {
     flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 20, paddingVertical: 14,
+    paddingHorizontal: 20, paddingVertical: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   toggleLabel: { flex: 1, fontSize: 14 },
@@ -488,6 +521,9 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 16,
     paddingHorizontal: 20, paddingVertical: 16,
   },
+  dangerRowMobile: {
+    flexDirection: "column", alignItems: "flex-start", gap: 12,
+  },
   dangerTitle: { fontSize: 14, marginBottom: 4 },
   dangerSub: { fontSize: 13, lineHeight: 20 },
   dangerBtn: {
@@ -495,5 +531,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 9,
     borderRadius: 8, borderWidth: 1.5,
   },
+  dangerBtnMobile: { alignSelf: "flex-start" },
   dangerBtnLabel: { fontSize: 13 },
 });

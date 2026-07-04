@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { useAuth } from "@/context/AuthContext";
 import { apiUrl } from "@/lib/api-base";
 import { setNewPassword, supabase } from "@/lib/supabase";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { W } from "./webColors";
 
 interface OAuthGrant {
@@ -21,7 +22,12 @@ interface Props {
   initialTab?: Tab;
 }
 
-function TabBtn({ label, icon, active, onPress }: { label: string; icon: keyof typeof Feather.glyphMap; active: boolean; onPress: () => void }) {
+// ── Tab button ─────────────────────────────────────────────────────────────────
+
+function TabBtn({ label, icon, active, onPress, compact }: {
+  label: string; icon: keyof typeof Feather.glyphMap;
+  active: boolean; onPress: () => void; compact?: boolean;
+}) {
   const [hovered, setHovered] = useState(false);
   return (
     <Pressable
@@ -30,22 +36,29 @@ function TabBtn({ label, icon, active, onPress }: { label: string; icon: keyof t
       onPointerLeave={() => setHovered(false)}
       style={[
         styles.tabBtn,
+        compact && styles.tabBtnCompact,
         active && { borderBottomColor: W.accent, borderBottomWidth: 2 },
         hovered && !active && { backgroundColor: W.bgHover },
       ]}
     >
-      <Feather name={icon} size={14} color={active ? W.accent : W.textSecondary} />
-      <Text style={[styles.tabLabel, {
-        fontFamily: active ? "Inter_700Bold" : "Inter_400Regular",
-        color: active ? W.accent : W.textSecondary,
-      }]}>
-        {label}
-      </Text>
+      <Feather name={icon} size={compact ? 16 : 14} color={active ? W.accent : W.textSecondary} />
+      {!compact && (
+        <Text style={[styles.tabLabel, {
+          fontFamily: active ? "Inter_700Bold" : "Inter_400Regular",
+          color: active ? W.accent : W.textSecondary,
+        }]}>
+          {label}
+        </Text>
+      )}
     </Pressable>
   );
 }
 
-function StatusCard({ icon, label, value, color, bg }: { icon: keyof typeof Feather.glyphMap; label: string; value: string; color: string; bg: string }) {
+// ── Status card ────────────────────────────────────────────────────────────────
+
+function StatusCard({ icon, label, value, color, bg }: {
+  icon: keyof typeof Feather.glyphMap; label: string; value: string; color: string; bg: string;
+}) {
   return (
     <View style={[styles.statusCard, { backgroundColor: bg, borderColor: color + "33" }]}>
       <View style={[styles.statusIconWrap, { backgroundColor: color + "18" }]}>
@@ -58,6 +71,8 @@ function StatusCard({ icon, label, value, color, bg }: { icon: keyof typeof Feat
     </View>
   );
 }
+
+// ── Section ────────────────────────────────────────────────────────────────────
 
 function Section({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
   return (
@@ -73,54 +88,85 @@ function Section({ title, sub, children }: { title: string; sub?: string; childr
   );
 }
 
-function Row({ icon, label, value, status, last }: {
+// ── Info row ───────────────────────────────────────────────────────────────────
+
+function Row({ icon, label, value, status, last, isMobile }: {
   icon: keyof typeof Feather.glyphMap; label: string; value?: string;
-  status?: { text: string; color: string; bg: string }; last?: boolean;
+  status?: { text: string; color: string; bg: string }; last?: boolean; isMobile?: boolean;
 }) {
   return (
-    <View style={[styles.row, !last && { borderBottomColor: W.border, borderBottomWidth: 1 }]}>
+    <View style={[
+      styles.row,
+      isMobile && styles.rowMobile,
+      !last && { borderBottomColor: W.border, borderBottomWidth: 1 },
+    ]}>
       <Feather name={icon} size={15} color={W.textSecondary} />
-      <Text style={[styles.rowLabel, { fontFamily: "Inter_500Medium", color: W.textPrimary }]}>{label}</Text>
-      {value && <Text style={[styles.rowValue, { fontFamily: "Inter_400Regular", color: W.textSecondary }]}>{value}</Text>}
+      <Text style={[styles.rowLabel, { fontFamily: "Inter_500Medium", color: W.textPrimary, flex: 1 }]}>{label}</Text>
+      {value && (
+        <Text style={[styles.rowValue, {
+          fontFamily: "Inter_400Regular",
+          color: W.textSecondary,
+          textAlign: isMobile ? "left" : "right",
+          flex: isMobile ? 1 : 0,
+        }]}>
+          {value}
+        </Text>
+      )}
       {status && (
         <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
-          <Text style={[styles.statusPillText, { fontFamily: "Inter_600SemiBold", color: status.color }]}>{status.text}</Text>
+          <Text style={[styles.statusPillText, { fontFamily: "Inter_600SemiBold", color: status.color }]}>
+            {status.text}
+          </Text>
         </View>
       )}
     </View>
   );
 }
 
-// ── Session card ─────────────────────────────────────────────────────────────
+// ── Session card ───────────────────────────────────────────────────────────────
 
-function SessionCard({ isCurrent, device, location, lastSeen, onRevoke }: {
-  isCurrent: boolean; device: string; location: string; lastSeen: string; onRevoke?: () => void;
+function SessionCard({ isCurrent, device, location, lastSeen, onRevoke, compact }: {
+  isCurrent: boolean; device: string; location: string;
+  lastSeen: string; onRevoke?: () => void; compact?: boolean;
 }) {
   const [revokeHovered, setRevokeHovered] = useState(false);
   return (
-    <View style={[styles.sessionCard, { backgroundColor: W.bgCard, borderColor: isCurrent ? W.accent + "44" : W.border }]}>
-      <View style={[styles.deviceIconWrap, { backgroundColor: isCurrent ? W.accentLight : W.bgSecondary }]}>
-        <Feather name="monitor" size={20} color={isCurrent ? W.accent : W.textMuted} />
+    <View style={[
+      styles.sessionCard,
+      compact && styles.sessionCardCompact,
+      { backgroundColor: W.bgCard, borderColor: isCurrent ? W.accent + "44" : W.border },
+    ]}>
+      <View style={[styles.deviceIconWrap, compact && styles.deviceIconWrapCompact, { backgroundColor: isCurrent ? W.accentLight : W.bgSecondary }]}>
+        <Feather name="monitor" size={compact ? 16 : 20} color={isCurrent ? W.accent : W.textMuted} />
       </View>
-      <View style={styles.sessionInfo}>
+      <View style={[styles.sessionInfo, compact && { gap: 2 }]}>
         <View style={styles.sessionTopRow}>
-          <Text style={[styles.sessionDevice, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>{device}</Text>
+          <Text style={[styles.sessionDevice, { fontFamily: "Inter_700Bold", color: W.textPrimary, fontSize: compact ? 13 : 14 }]}>
+            {device}
+          </Text>
           {isCurrent && (
             <View style={[styles.currentBadge, { backgroundColor: W.successLight }]}>
               <View style={[styles.currentDot, { backgroundColor: W.success }]} />
-              <Text style={[styles.currentBadgeText, { fontFamily: "Inter_600SemiBold", color: W.success }]}>Current session</Text>
+              <Text style={[styles.currentBadgeText, { fontFamily: "Inter_600SemiBold", color: W.success }]}>
+                {compact ? "Current" : "Current session"}
+              </Text>
             </View>
           )}
         </View>
         <Text style={[styles.sessionLocation, { fontFamily: "Inter_400Regular", color: W.textSecondary }]}>{location}</Text>
-        <Text style={[styles.sessionLast, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>Last active: {lastSeen}</Text>
+        <Text style={[styles.sessionLast, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
+          Last active: {lastSeen}
+        </Text>
       </View>
       {!isCurrent && onRevoke && (
         <Pressable
           onPress={onRevoke}
           onPointerEnter={() => setRevokeHovered(true)}
           onPointerLeave={() => setRevokeHovered(false)}
-          style={[styles.revokeBtn, { backgroundColor: revokeHovered ? W.destructiveLight : W.bgSecondary, borderColor: revokeHovered ? W.destructive : W.border }]}
+          style={[styles.revokeBtn, {
+            backgroundColor: revokeHovered ? W.destructiveLight : W.bgSecondary,
+            borderColor: revokeHovered ? W.destructive : W.border,
+          }]}
         >
           <Text style={[styles.revokeBtnLabel, { fontFamily: "Inter_600SemiBold", color: revokeHovered ? W.destructive : W.textSecondary }]}>
             Revoke
@@ -135,27 +181,21 @@ function SessionCard({ isCurrent, device, location, lastSeen, onRevoke }: {
 
 export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
   const { user, logout } = useAuth();
+  const { isMobile } = useBreakpoint();
   const [tab, setTab] = useState<Tab>(initialTab);
 
-  // Password change
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [pwLoading, setPwLoading] = useState(false);
   const [pwError, setPwError] = useState("");
   const [pwSuccess, setPwSuccess] = useState(false);
-
-  // Sessions
   const [signOutAllLoading, setSignOutAllLoading] = useState(false);
-
-  // OAuth grants
   const [grants, setGrants] = useState<OAuthGrant[]>([]);
   const [grantsLoading, setGrantsLoading] = useState(true);
   const [revokingClientId, setRevokingClientId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setTab(initialTab);
-  }, [initialTab]);
+  useEffect(() => { setTab(initialTab); }, [initialTab]);
 
   useEffect(() => {
     async function loadGrants() {
@@ -172,7 +212,7 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
           setGrants(json.grants ?? []);
         }
       } catch {
-        // best-effort — leave grants empty
+        // best-effort
       } finally {
         setGrantsLoading(false);
       }
@@ -215,62 +255,76 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
     setSignOutAllLoading(false);
   }
 
-  // Detect current device via web APIs
   const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
   const deviceName = ua.includes("Mac") ? "macOS" : ua.includes("Windows") ? "Windows PC" : ua.includes("Linux") ? "Linux" : "Web Browser";
   const browserName = ua.includes("Chrome") ? "Chrome" : ua.includes("Firefox") ? "Firefox" : ua.includes("Safari") ? "Safari" : "Browser";
   const currentDevice = `${deviceName} · ${browserName}`;
 
+  const hPad = isMobile ? 16 : 32;
+
   return (
     <View style={[styles.root, { backgroundColor: W.bg }]}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: W.border, backgroundColor: W.bg }]}>
-        <View>
-          <Text style={[styles.headerTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary }]}>
+      <View style={[
+        styles.header,
+        isMobile && styles.headerMobile,
+        { borderBottomColor: W.border, backgroundColor: W.bg },
+      ]}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.headerTitle, { fontFamily: "Inter_700Bold", color: W.textPrimary, fontSize: isMobile ? 18 : 20 }]}>
             Security &amp; Privacy
           </Text>
-          <Text style={[styles.headerSub, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
-            Manage how your Afu account is protected
-          </Text>
+          {!isMobile && (
+            <Text style={[styles.headerSub, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
+              Manage how your Afu account is protected
+            </Text>
+          )}
         </View>
         <View style={[styles.ecosystemPill, { backgroundColor: W.bgAccentSubtle, borderColor: W.accentLight }]}>
           <Feather name="shield" size={12} color={W.accent} />
-          <Text style={[styles.ecosystemText, { fontFamily: "Inter_600SemiBold", color: W.accentText }]}>Identity Provider</Text>
+          {!isMobile && (
+            <Text style={[styles.ecosystemText, { fontFamily: "Inter_600SemiBold", color: W.accentText }]}>
+              Identity Provider
+            </Text>
+          )}
         </View>
       </View>
 
       {/* Tabs */}
-      <View style={[styles.tabs, { borderBottomColor: W.border, backgroundColor: W.bg }]}>
-        <TabBtn icon="shield" label="Overview" active={tab === "overview"} onPress={() => setTab("overview")} />
-        <TabBtn icon="lock" label="Password" active={tab === "password"} onPress={() => setTab("password")} />
-        <TabBtn icon="monitor" label="Sessions &amp; Devices" active={tab === "sessions"} onPress={() => setTab("sessions")} />
+      <View style={[styles.tabs, { borderBottomColor: W.border, backgroundColor: W.bg, paddingHorizontal: isMobile ? 12 : 24 }]}>
+        <TabBtn icon="shield" label="Overview" active={tab === "overview"} onPress={() => setTab("overview")} compact={isMobile} />
+        <TabBtn icon="lock"   label="Password" active={tab === "password"} onPress={() => setTab("password")} compact={isMobile} />
+        <TabBtn icon="monitor" label="Sessions & Devices" active={tab === "sessions"} onPress={() => setTab("sessions")} compact={isMobile} />
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-        {/* ── OVERVIEW ─────────────────────────────────────────────── */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: hPad, maxWidth: isMobile ? undefined : 800 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── OVERVIEW ──────────────────────────────────────────────────────── */}
         {tab === "overview" && (
           <>
-            {/* Status cards */}
-            <View style={styles.statusGrid}>
-              <StatusCard icon="shield" label="Account security" value="Good" color={W.success} bg={W.successLight} />
-              <StatusCard icon="mail" label="Email verification" value="Verified" color={W.success} bg={W.successLight} />
-              <StatusCard icon="monitor" label="Active sessions" value="1" color={W.accent} bg={W.accentLight} />
-              <StatusCard icon="smartphone" label="Two-factor auth" value="Not set up" color={W.warning} bg={W.warningLight} />
+            {/* Status grid: 2 cols on mobile, 4 on desktop */}
+            <View style={[styles.statusGrid, isMobile && styles.statusGridMobile]}>
+              <StatusCard icon="shield"     label="Account security"  value="Good"       color={W.success}  bg={W.successLight} />
+              <StatusCard icon="mail"       label="Email verification" value="Verified"   color={W.success}  bg={W.successLight} />
+              <StatusCard icon="monitor"    label="Active sessions"   value="1"          color={W.accent}   bg={W.accentLight} />
+              <StatusCard icon="smartphone" label="Two-factor auth"   value="Not set up" color={W.warning}  bg={W.warningLight} />
             </View>
 
             <Section title="Account status" sub="Your current security and account configuration">
-              <Row icon="user-check" label="Account status" status={{ text: "Active", color: W.success, bg: W.successLight }} />
-              <Row icon="mail" label="Email verified" status={{ text: "Verified", color: W.success, bg: W.successLight }} />
-              <Row icon="shield" label="Two-factor authentication" status={{ text: "Not enabled", color: W.warning, bg: W.warningLight }} />
-              <Row icon="lock" label="Password" value="Last changed recently" last />
+              <Row icon="user-check" label="Account status"          status={{ text: "Active",      color: W.success,  bg: W.successLight }} isMobile={isMobile} />
+              <Row icon="mail"       label="Email verified"          status={{ text: "Verified",    color: W.success,  bg: W.successLight }} isMobile={isMobile} />
+              <Row icon="shield"     label="Two-factor authentication" status={{ text: "Not enabled", color: W.warning, bg: W.warningLight }} isMobile={isMobile} />
+              <Row icon="lock"       label="Password"                value="Last changed recently" last isMobile={isMobile} />
             </Section>
 
             <Section title="Authentication platform" sub="AfuMail is the identity provider for all Afu applications">
-              <Row icon="key" label="OAuth 2.1 (Authorization Code + PKCE)" status={{ text: "Live", color: W.success, bg: W.successLight }} />
-              <Row icon="user" label="OpenID Connect (/oauth/userinfo)" status={{ text: "Live", color: W.success, bg: W.successLight }} />
-              <Row icon="link" label="Sign in with AfuMail (other Afu apps)" status={{ text: `${grants.length} app${grants.length === 1 ? "" : "s"} connected`, color: grants.length > 0 ? W.success : W.textMuted, bg: grants.length > 0 ? W.successLight : W.bgSecondary }} />
-              <Row icon="code" label="Developer API access" status={{ text: "Coming soon", color: W.textMuted, bg: W.bgSecondary }} last />
+              <Row icon="key"    label="OAuth 2.1 (Authorization Code + PKCE)" status={{ text: "Live",  color: W.success,   bg: W.successLight }} isMobile={isMobile} />
+              <Row icon="user"   label="OpenID Connect (/oauth/userinfo)"       status={{ text: "Live",  color: W.success,   bg: W.successLight }} isMobile={isMobile} />
+              <Row icon="link"   label="Sign in with AfuMail (other Afu apps)"  status={{ text: `${grants.length} app${grants.length === 1 ? "" : "s"} connected`, color: grants.length > 0 ? W.success : W.textMuted, bg: grants.length > 0 ? W.successLight : W.bgSecondary }} isMobile={isMobile} />
+              <Row icon="code"   label="Developer API access"                   status={{ text: "Coming soon", color: W.textMuted, bg: W.bgSecondary }} last isMobile={isMobile} />
             </Section>
 
             <Section title="Connected apps" sub="Third-party Afu apps you've signed into with AfuMail">
@@ -282,7 +336,7 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
               {!grantsLoading && grants.length === 0 && (
                 <View style={{ padding: 20 }}>
                   <Text style={{ fontFamily: "Inter_400Regular", color: W.textMuted, fontSize: 13, lineHeight: 19 }}>
-                    No apps have used "Sign in with AfuMail" yet. Try the live demo to see the real OAuth flow end-to-end.
+                    No apps have used "Sign in with AfuMail" yet. Try the live demo to see the OAuth flow end-to-end.
                   </Text>
                 </View>
               )}
@@ -291,6 +345,7 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
                   key={grant.clientId}
                   style={[
                     styles.recommendRow,
+                    isMobile && styles.recommendRowMobile,
                     i === grants.length - 1 ? { borderBottomWidth: 0 } : { borderBottomColor: W.border },
                   ]}
                 >
@@ -323,7 +378,7 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
             </Section>
 
             <Section title="Security recommendations" sub="Actions to improve your account security">
-              <View style={[styles.recommendRow, { borderBottomColor: W.border }]}>
+              <View style={[styles.recommendRow, isMobile && styles.recommendRowMobile, { borderBottomColor: W.border }]}>
                 <View style={[styles.recommendIcon, { backgroundColor: W.warningLight }]}>
                   <Feather name="smartphone" size={16} color={W.warning} />
                 </View>
@@ -332,14 +387,16 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
                     Set up two-factor authentication
                   </Text>
                   <Text style={[styles.recommendSub, { fontFamily: "Inter_400Regular", color: W.textMuted }]}>
-                    Add an extra layer of protection to your Afu account.
+                    Add an extra layer of protection to your account.
                   </Text>
                 </View>
                 <View style={[styles.comingSoonBadge, { backgroundColor: W.bgSecondary }]}>
-                  <Text style={[styles.comingSoonText, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>Coming soon</Text>
+                  <Text style={[styles.comingSoonText, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>
+                    Coming soon
+                  </Text>
                 </View>
               </View>
-              <View style={styles.recommendRow}>
+              <View style={[styles.recommendRow, isMobile && styles.recommendRowMobile]}>
                 <View style={[styles.recommendIcon, { backgroundColor: W.accentLight }]}>
                   <Feather name="mail" size={16} color={W.accent} />
                 </View>
@@ -351,9 +408,7 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
                     Ensure you can always recover access to your account.
                   </Text>
                 </View>
-                <Pressable
-                  style={[styles.actionLink, { borderColor: W.accent }]}
-                >
+                <Pressable style={[styles.actionLink, { borderColor: W.accent }]}>
                   <Text style={[styles.actionLinkText, { fontFamily: "Inter_600SemiBold", color: W.accent }]}>Set up</Text>
                 </Pressable>
               </View>
@@ -361,7 +416,7 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
           </>
         )}
 
-        {/* ── PASSWORD ─────────────────────────────────────────────── */}
+        {/* ── PASSWORD ──────────────────────────────────────────────────────── */}
         {tab === "password" && (
           <>
             <Section title="Change password" sub="Your password must be at least 6 characters long">
@@ -379,8 +434,10 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
                   <Text style={[styles.errorText, { fontFamily: "Inter_400Regular", color: W.destructive }]}>{pwError}</Text>
                 </View>
               )}
-              <View style={[styles.inputRow, { borderBottomColor: W.border }]}>
-                <Text style={[styles.inputLabel, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>New password</Text>
+              <View style={[styles.inputRow, isMobile && styles.inputRowMobile, { borderBottomColor: W.border }]}>
+                <Text style={[styles.inputLabel, isMobile && styles.inputLabelMobile, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>
+                  New password
+                </Text>
                 <TextInput
                   style={[styles.inputField, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
                   value={newPw}
@@ -390,8 +447,10 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
                   placeholderTextColor={W.textMuted}
                 />
               </View>
-              <View style={styles.inputRow}>
-                <Text style={[styles.inputLabel, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>Confirm password</Text>
+              <View style={[styles.inputRow, isMobile && styles.inputRowMobile]}>
+                <Text style={[styles.inputLabel, isMobile && styles.inputLabelMobile, { fontFamily: "Inter_500Medium", color: W.textMuted }]}>
+                  Confirm password
+                </Text>
                 <TextInput
                   style={[styles.inputField, { fontFamily: "Inter_400Regular", color: W.textPrimary }]}
                   value={confirmPw}
@@ -408,6 +467,7 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
                 disabled={pwLoading}
                 style={({ pressed }) => [
                   styles.primaryBtn,
+                  isMobile && styles.primaryBtnMobile,
                   { backgroundColor: W.accent, opacity: (pwLoading || pressed) ? 0.85 : 1 },
                 ]}
               >
@@ -438,7 +498,7 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
           </>
         )}
 
-        {/* ── SESSIONS ─────────────────────────────────────────────── */}
+        {/* ── SESSIONS ──────────────────────────────────────────────────────── */}
         {tab === "sessions" && (
           <>
             <View style={styles.sessionsHeader}>
@@ -457,7 +517,7 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
                   <>
                     <Feather name="log-out" size={13} color={W.destructive} />
                     <Text style={[styles.signOutAllLabel, { fontFamily: "Inter_600SemiBold", color: W.destructive }]}>
-                      Sign out all devices
+                      {isMobile ? "Sign out all" : "Sign out all devices"}
                     </Text>
                   </>
                 )}
@@ -470,14 +530,15 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
                 device={currentDevice}
                 location="Current location"
                 lastSeen="Just now"
+                compact={isMobile}
               />
             </View>
 
             <Section title="About session management" sub="How AfuMail handles your sessions">
-              <Row icon="shield" label="Session encryption" status={{ text: "HTTPS", color: W.success, bg: W.successLight }} />
-              <Row icon="refresh-cw" label="Token rotation" status={{ text: "Enabled", color: W.success, bg: W.successLight }} />
-              <Row icon="clock" label="Session timeout" value="7 days of inactivity" />
-              <Row icon="globe" label="SSO scope" value="All Afu applications" last />
+              <Row icon="shield"     label="Session encryption" status={{ text: "HTTPS",   color: W.success, bg: W.successLight }} isMobile={isMobile} />
+              <Row icon="refresh-cw" label="Token rotation"     status={{ text: "Enabled", color: W.success, bg: W.successLight }} isMobile={isMobile} />
+              <Row icon="clock"      label="Session timeout"    value="7 days of inactivity" isMobile={isMobile} />
+              <Row icon="globe"      label="SSO scope"          value="All Afu applications" last isMobile={isMobile} />
             </Section>
 
             <View style={[styles.infoBox, { backgroundColor: W.bgAccentSubtle, borderColor: W.accentLight }]}>
@@ -495,86 +556,100 @@ export default function WebSecurityPanel({ initialTab = "overview" }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: "column" },
+
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 32, paddingVertical: 20, borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 20, letterSpacing: -0.3 },
+  headerMobile: { paddingHorizontal: 16, paddingVertical: 14 },
+  headerTitle: { letterSpacing: -0.3 },
   headerSub: { fontSize: 14, marginTop: 4 },
   ecosystemPill: {
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1,
   },
   ecosystemText: { fontSize: 12 },
-  tabs: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    paddingHorizontal: 24,
-  },
+
+  tabs: { flexDirection: "row", borderBottomWidth: 1 },
   tabBtn: {
     flexDirection: "row", alignItems: "center", gap: 7,
     paddingHorizontal: 14, paddingVertical: 12, borderRadius: 4,
     marginBottom: -1,
   },
-  tabLabel: { fontSize: 13 },
-  scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 32, paddingTop: 28, paddingBottom: 60, maxWidth: 800, alignSelf: "center", width: "100%" },
-  statusGrid: {
-    flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 28,
+  tabBtnCompact: {
+    flex: 1, justifyContent: "center",
+    paddingHorizontal: 8, paddingVertical: 12,
   },
+  tabLabel: { fontSize: 13 },
+
+  scroll: { flex: 1 },
+  scrollContent: { paddingTop: 28, paddingBottom: 60, alignSelf: "center", width: "100%" },
+
+  statusGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 28 },
+  statusGridMobile: { gap: 8 },
   statusCard: {
-    flex: 1, minWidth: 160, flexDirection: "row", alignItems: "center",
-    gap: 12, padding: 16, borderRadius: 10, borderWidth: 1,
+    flex: 1, minWidth: 140, flexDirection: "row", alignItems: "center",
+    gap: 12, padding: 14, borderRadius: 10, borderWidth: 1,
   },
   statusIconWrap: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  statusValue: { fontSize: 16 },
+  statusValue: { fontSize: 15 },
   statusLabel: { fontSize: 12, marginTop: 2 },
+
   section: { marginBottom: 24 },
   sectionHeader: { marginBottom: 10 },
   sectionTitle: { fontSize: 14 },
   sectionSub: { fontSize: 12, marginTop: 3 },
   sectionBody: { borderWidth: 1, borderRadius: 10, overflow: "hidden" },
   sectionAction: { flexDirection: "row", justifyContent: "flex-end", marginTop: -12, marginBottom: 24 },
+
   row: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 18, paddingVertical: 14, gap: 12,
   },
-  rowLabel: { flex: 1, fontSize: 13 },
+  rowMobile: { paddingHorizontal: 14, paddingVertical: 13, gap: 10, flexWrap: "wrap" },
+  rowLabel: { fontSize: 13 },
   rowValue: { fontSize: 13 },
   statusPill: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20 },
   statusPillText: { fontSize: 11 },
+
   recommendRow: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 18, paddingVertical: 14, gap: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  recommendIcon: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  recommendRowMobile: { paddingHorizontal: 14, gap: 10 },
+  recommendIcon: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   recommendContent: { flex: 1 },
   recommendTitle: { fontSize: 13 },
   recommendSub: { fontSize: 12, marginTop: 3 },
   comingSoonBadge: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 6 },
   comingSoonText: { fontSize: 11 },
-  actionLink: {
-    paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: 7, borderWidth: 1.5,
-  },
+  actionLink: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 7, borderWidth: 1.5 },
   actionLinkText: { fontSize: 13 },
+
   inputRow: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 18, paddingVertical: 14, gap: 16,
   },
+  inputRowMobile: { flexDirection: "column", alignItems: "flex-start", gap: 6, paddingHorizontal: 14 },
   inputLabel: { width: 150, fontSize: 13 },
-  inputField: { flex: 1, fontSize: 14, paddingVertical: 2, outlineWidth: 0 } as any,
+  inputLabelMobile: { width: undefined, fontSize: 12 },
+  inputField: { flex: 1, fontSize: 14, paddingVertical: 2, outlineWidth: 0, width: "100%" } as any,
+
   primaryBtn: {
     flexDirection: "row", alignItems: "center", gap: 7,
     paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20,
   },
+  primaryBtnMobile: { flex: 1, justifyContent: "center" },
   primaryBtnLabel: { color: "#fff", fontSize: 13 },
+
   tipRow: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 18, paddingVertical: 12, gap: 12,
   },
   tipDot: { width: 24, height: 24, borderRadius: 6, alignItems: "center", justifyContent: "center" },
   tipText: { flex: 1, fontSize: 13, lineHeight: 20 },
+
   successBanner: {
     flexDirection: "row", alignItems: "center", gap: 8,
     margin: 14, padding: 12, borderRadius: 8, borderWidth: 1,
@@ -585,6 +660,7 @@ const styles = StyleSheet.create({
     margin: 14, padding: 12, borderRadius: 8, borderWidth: 1,
   },
   errorText: { fontSize: 13, flex: 1 },
+
   sessionsHeader: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     marginBottom: 16,
@@ -600,10 +676,12 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 16,
     padding: 18, borderRadius: 12, borderWidth: 1.5,
   },
+  sessionCardCompact: { padding: 14, gap: 10 },
   deviceIconWrap: { width: 48, height: 48, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  deviceIconWrapCompact: { width: 38, height: 38, borderRadius: 9 },
   sessionInfo: { flex: 1, gap: 4 },
-  sessionTopRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  sessionDevice: { fontSize: 14 },
+  sessionTopRow: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
+  sessionDevice: {},
   currentBadge: {
     flexDirection: "row", alignItems: "center", gap: 5,
     paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20,
@@ -612,11 +690,9 @@ const styles = StyleSheet.create({
   currentBadgeText: { fontSize: 11 },
   sessionLocation: { fontSize: 13 },
   sessionLast: { fontSize: 12 },
-  revokeBtn: {
-    paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: 7, borderWidth: 1.5,
-  },
+  revokeBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 7, borderWidth: 1.5 },
   revokeBtnLabel: { fontSize: 13 },
+
   infoBox: {
     flexDirection: "row", alignItems: "flex-start", gap: 10,
     padding: 14, borderRadius: 10, borderWidth: 1, marginTop: 4,
