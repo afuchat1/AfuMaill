@@ -73,16 +73,13 @@
         }
       },
       {
-        "@type": "MobileApplication",
+        "@type": "WebApplication",
         "name": "AfuMail",
-        "operatingSystem": "iOS, Android",
+        "url": "https://mail.afuchat.com/login",
         "applicationCategory": "CommunicationApplication",
+        "operatingSystem": "Any",
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-        "description": "Private email built for the Afu community. Send, receive, and manage your @afuchat.com messages.",
-        "downloadUrl": [
-          "https://apps.apple.com/app/id982107779",
-          "https://play.google.com/store/apps/details?id=host.exp.exponent"
-        ]
+        "description": "Private email built for the Afu community. Send, receive, and manage your @afuchat.com messages from any browser."
       }
     ]
   }
@@ -910,14 +907,14 @@
 
   <!-- Announcement banner -->
   <div class="banner" id="banner" role="banner">
-    🎉 AfuMail is in early access — <a href="#download">Download the app</a> and be among the first to try it.
+    🎉 AfuMail is in early access — <a href="#download">Open the web app</a> and be among the first to try it.
     <button class="banner-close" id="banner-close" aria-label="Close announcement">×</button>
   </div>
 
   <!-- Navigation -->
   <nav class="nav" role="navigation" aria-label="Main navigation">
     <div class="nav-inner">
-      <a href="#" class="nav-logo" aria-label="AfuMail home">
+      <a href="BASE_URL_PLACEHOLDER/" class="nav-logo" aria-label="AfuMail home">
         <div class="nav-logo-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="4" width="20" height="16" rx="2"/>
@@ -938,9 +935,9 @@
         <a href="BASE_URL_PLACEHOLDER/login" class="nav-signin" style="margin-right:12px;color:inherit;text-decoration:none;font-weight:600;font-size:14px">
           Sign in
         </a>
-        <a href="#download" class="nav-download">
+        <a href="BASE_URL_PLACEHOLDER/login" class="nav-download">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Get the app
+          Get started
         </a>
       </div>
 
@@ -959,9 +956,10 @@
       <li><a href="#developers" class="nav-drawer-link">Developers</a></li>
     </ul>
     <div class="nav-drawer-cta">
-      <a href="#download" class="btn-primary nav-drawer-link">
+      <a href="BASE_URL_PLACEHOLDER/login" class="btn-secondary nav-drawer-link">Sign in</a>
+      <a href="BASE_URL_PLACEHOLDER/login" class="btn-primary nav-drawer-link">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Get the app
+        Get started
       </a>
       <a href="#how-it-works" class="btn-secondary nav-drawer-link">How it works</a>
     </div>
@@ -983,9 +981,9 @@
           Your own <strong>@afuchat.com</strong> address — clean inbox, zero noise.
         </p>
         <div class="hero-actions">
-          <a href="#download" class="btn-primary">
+          <a href="BASE_URL_PLACEHOLDER/login" class="btn-primary">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download the app
+            Get started
           </a>
           <a href="#features" class="btn-secondary">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
@@ -1096,7 +1094,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
             </div>
             <h3 class="feature-title">Works everywhere</h3>
-            <p class="feature-body">Native iOS and Android apps plus a web interface — your AfuMail goes wherever you do, perfectly synced across all your devices.</p>
+            <p class="feature-body">Use AfuMail from any browser on desktop or mobile today, with native iOS and Android apps rolling out in early access — perfectly synced across your devices.</p>
           </article>
 
           <article class="feature-card" role="listitem">
@@ -1130,8 +1128,8 @@
           <div class="how-step active" role="listitem">
             <div class="how-num" aria-hidden="true">1</div>
             <div class="how-content">
-              <h3 class="how-title">Download the app</h3>
-              <p class="how-body">Install AfuMail from the App Store or Google Play. The app is free — no subscription required.</p>
+              <h3 class="how-title">Open the web app</h3>
+              <p class="how-body">Create your account at mail.afuchat.com — it's free, no install required. Native iOS and Android apps are in early access.</p>
             </div>
           </div>
 
@@ -1159,35 +1157,34 @@
     <section class="section download-bg" id="download" aria-labelledby="download-title">
       <div class="download-inner">
         <div class="download-text">
-          <span class="section-label">Download</span>
-          <h2 class="section-title" id="download-title">Get AfuMail on your phone</h2>
-          <p class="section-desc">Available on iOS and Android. Scan the QR code with your camera or choose your store.</p>
+          <span class="section-label">Get started</span>
+          <h2 class="section-title" id="download-title">Use AfuMail right now</h2>
+          <p class="section-desc">Sign in from any browser, on desktop or mobile. Scan the QR code with your camera to open it on your phone.</p>
 
           <div class="store-row" style="margin-top:28px">
-            <a id="app-store-btn" href="https://apps.apple.com/app/id982107779" class="store-btn" target="_blank" rel="noopener noreferrer" aria-label="Download on App Store">
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-              App Store
-            </a>
-            <a id="play-store-btn" href="https://play.google.com/store/apps/details?id=host.exp.exponent" class="store-btn" target="_blank" rel="noopener noreferrer" aria-label="Get it on Google Play">
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/></svg>
-              Google Play
+            <a id="app-store-btn" href="BASE_URL_PLACEHOLDER/login" class="store-btn" aria-label="Open AfuMail in your browser">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              Open the web app
             </a>
           </div>
+          <p style="font-size:13px;color:#8A8F98;margin-top:10px">
+            Native iOS and Android apps are in early access testing — the web app works everywhere today.
+          </p>
         </div>
 
         <div class="download-right">
-          <!-- QR code block linking straight to the app store listings -->
+          <!-- QR code block linking to the real, working web sign-in -->
           <div class="qr-block" id="qr-block">
-            <div class="qr-wrap" id="qr-code" role="img" aria-label="QR code to download AfuMail">
+            <div class="qr-wrap" id="qr-code" role="img" aria-label="QR code to open AfuMail in your browser">
               <!-- Rendered by JS — fallback below for crawlers / noscript -->
               <noscript>
                 <p style="font-size:12px;color:#555;text-align:center;padding:8px">
-                  Get AfuMail:<br/>
-                  <a href="https://mail.afuchat.com/get" style="color:#1D6FE0;word-break:break-all">mail.afuchat.com/get</a>
+                  Open AfuMail:<br/>
+                  <a href="https://mail.afuchat.com/login" style="color:#1D6FE0;word-break:break-all">mail.afuchat.com/login</a>
                 </p>
               </noscript>
             </div>
-            <p class="qr-label">Scan to download the app</p>
+            <p class="qr-label">Scan to open AfuMail</p>
           </div>
         </div>
       </div>
@@ -1339,7 +1336,7 @@
           <ul role="list">
             <li><a href="#features">Features</a></li>
             <li><a href="#how-it-works">How it works</a></li>
-            <li><a href="#download">Download</a></li>
+            <li><a href="#download">Get started</a></li>
           </ul>
         </div>
         <div class="footer-links-col">
@@ -1436,27 +1433,9 @@
 
     var isMobile = (isIOS || isAndroid) && !isCrawler;
 
-    // Smart-link users land on after downloading: falls through to the
-    // respective app store; used only for the QR code (not an auto-redirect).
-    var appLink = 'BASE_URL_PLACEHOLDER/get';
-
-    // Reorder store buttons by platform
-    var appStoreBtn  = document.getElementById('app-store-btn');
-    var playStoreBtn = document.getElementById('play-store-btn');
-    var storeRow     = appStoreBtn && appStoreBtn.parentElement;
-
-    if (storeRow) {
-      if (isIOS && playStoreBtn) {
-        // De-emphasise Play Store for iOS
-        playStoreBtn.style.opacity = '0.55';
-        playStoreBtn.style.fontSize = '13px';
-      } else if (isAndroid && appStoreBtn) {
-        // Move Play Store to top for Android
-        storeRow.insertBefore(playStoreBtn, appStoreBtn);
-        appStoreBtn.style.opacity = '0.55';
-        appStoreBtn.style.fontSize = '13px';
-      }
-    }
+    // QR code and "Open the web app" link both point at the real sign-in
+    // page — there is no published App Store / Play Store listing yet.
+    var appLink = 'BASE_URL_PLACEHOLDER/login';
 
     // ── QR code (desktop) ──────────────────────────────────────
     function renderQR() {

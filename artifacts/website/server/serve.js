@@ -164,19 +164,12 @@ const server = http.createServer((req, res) => {
     return serveLandingPage(req, res, landingPageTemplate, appName);
   }
 
-  // Smart app-store link: redirect based on the visitor's platform instead of
-  // ever auto-navigating them without a click (the QR code and "download the
-  // app" links point here).
+  // AfuMail has no published App Store / Play Store listing yet — it runs as
+  // a web app (and via Expo Go in development). The QR code and "Get the app"
+  // links point here; redirect to the real, working web sign-in instead of a
+  // fake/unrelated store listing.
   if (pathname === "/get") {
-    const ua = req.headers["user-agent"] || "";
-    const isAndroid = /Android/i.test(ua);
-    const isIOS = /iPhone|iPad|iPod/i.test(ua);
-    const dest = isAndroid
-      ? "https://play.google.com/store/apps/details?id=host.exp.exponent"
-      : isIOS
-        ? "https://apps.apple.com/app/id982107779"
-        : "https://apps.apple.com/app/id982107779";
-    res.writeHead(302, { Location: dest });
+    res.writeHead(302, { Location: `${basePath}/login` });
     res.end();
     return;
   }
