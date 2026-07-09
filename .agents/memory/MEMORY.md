@@ -7,3 +7,4 @@
 - [AfuMail auth architecture](afumail-auth-arch.md) — auth email = username@afuchat.com; real email stored as notification_email in profiles for password resets; detectSessionInUrl must be true for web reset flow.
 - [Vercel static export notes](vercel-static-export-notes.md) — Node<22 WebSocket crash during `expo export --platform web`; vercel.json routing contract for artifacts/website (api-server rewrite, SPA fallback).
 - [AfuMail OAuth production hardening](afumail-oauth-hardening.md) — RFC 6749 error contract, mandatory `state`, rate limiting, domain canonicalization; website `dev` workflow serves a static export, not live source.
+- [AfuMail inbound email body should stay HTML](afumail-html-email-bodies.md) — receive-email must store raw HTML, not flattened text, or image-heavy emails look blank.
