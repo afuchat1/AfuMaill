@@ -11,3 +11,4 @@ run = "pnpm --filter @workspace/website run dev"
 
 [services.env]
 PORT = "3000"
+BASE_PATH = "/site"

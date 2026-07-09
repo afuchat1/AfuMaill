@@ -77,7 +77,7 @@ function serveLandingPage(req, res, landingPageTemplate, appName) {
   const forwardedProto = req.headers["x-forwarded-proto"];
   const protocol = forwardedProto || "https";
   const host = req.headers["x-forwarded-host"] || req.headers["host"];
-  const baseUrl = `${protocol}://${host}`;
+  const baseUrl = `${protocol}://${host}${basePath}`;
   const expsUrl = `${host}`;
 
   const html = landingPageTemplate
@@ -163,6 +163,23 @@ const server = http.createServer((req, res) => {
     if (!hasWebBuild) {
       return serveLandingPage(req, res, landingPageTemplate, appName);
     }
+  }
+
+  // Smart app-store link: redirect based on the visitor's platform instead of
+  // ever auto-navigating them without a click (the QR code and "download the
+  // app" links point here).
+  if (pathname === "/get") {
+    const ua = req.headers["user-agent"] || "";
+    const isAndroid = /Android/i.test(ua);
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+    const dest = isAndroid
+      ? "https://play.google.com/store/apps/details?id=host.exp.exponent"
+      : isIOS
+        ? "https://apps.apple.com/app/id982107779"
+        : "https://apps.apple.com/app/id982107779";
+    res.writeHead(302, { Location: dest });
+    res.end();
+    return;
   }
 
   // Try to serve an exact static file (JS chunks, fonts, images, favicon, etc.)

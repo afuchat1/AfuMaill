@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SVC_ROLE_KEY") ?? "";
 
     const rawText = await req.text();
-    console.log("[receive-email] raw payload (first 3000 chars):", rawText.slice(0, 3000));
+    console.log(`[receive-email] raw payload received (${rawText.length} bytes)`);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let payload: any;
@@ -108,11 +108,12 @@ Deno.serve(async (req) => {
     const allKeys = Object.keys(email ?? {});
     console.log("[receive-email] email-level keys:", allKeys.join(", "));
 
-    // Log every field's type + length for debugging (first 200 chars of value)
+    // Log field types/lengths only — never the content itself (email bodies
+    // and addresses are user PII and must not end up in function logs).
     for (const k of allKeys) {
       const v = email[k];
-      const preview = typeof v === "string" ? v.slice(0, 200) : JSON.stringify(v)?.slice(0, 200);
-      console.log(`  [field] ${k} (${typeof v}): ${preview}`);
+      const len = typeof v === "string" ? v.length : JSON.stringify(v)?.length ?? 0;
+      console.log(`  [field] ${k} (${typeof v}, length=${len})`);
     }
 
     // ── Extract fields — try every known variant ──────────────────────────────
@@ -171,7 +172,7 @@ Deno.serve(async (req) => {
         });
         if (fetchRes.ok) {
           const fetched = await fetchRes.json();
-          console.log("[receive-email] fetched email by id:", JSON.stringify(fetched).slice(0, 500));
+          console.log("[receive-email] fetched email by id, keys:", Object.keys(fetched ?? {}).join(", "));
           finalTextBody = pick(fetched, "text", "text_body", "textBody");
           finalHtmlBody = pick(fetched, "html", "html_body", "htmlBody");
         } else {
