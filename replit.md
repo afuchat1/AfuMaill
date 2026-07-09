@@ -39,10 +39,11 @@ Express 5 + TypeScript. Implements the OpenAPI spec in `lib/api-spec/openapi.yam
 
 ## Current setup (as of 2026-07-09)
 
-Running in preview only, fully on Supabase — no custom backend calls are used by the app:
-- The mobile/web app (`artifacts/afumail`) talks directly to Supabase (auth, Postgres via `@supabase/supabase-js`, and the deployed Edge Functions `send-email`, `reset-password`, `receive-email`, `oauth`, `developer-apps`) using the hardcoded fallback project constants in `artifacts/afumail/lib/supabase-config.ts` (project `lqowocmjmhbkoxlwyxku`, org `AfuMail`). No `EXPO_PUBLIC_SUPABASE_URL`/`EXPO_PUBLIC_SUPABASE_ANON_KEY` secrets are required for preview since those constants match the live project.
-- `artifacts/api-server` (Express REST/OAuth server) is still configured as a workflow but is **not** used by the app in this mode — it has no Supabase secrets set and will 404/fail Supabase calls. It's not needed as long as the app talks to Supabase directly.
-- `artifacts/website` serves a static landing-page export only (not the live app source).
+Running in preview only, fully on Supabase — no custom backend/API server is called by either app:
+- The mobile app (`artifacts/afumail`) and the website SPA (`artifacts/website`) both talk directly to Supabase (auth, Postgres via `@supabase/supabase-js`, and the deployed Edge Functions `send-email`, `reset-password`, `receive-email`, `oauth`, `developer-apps`) using the hardcoded fallback project constants in each app's `lib/supabase-config.ts` (project `lqowocmjmhbkoxlwyxku`, org `AfuMail`). No `EXPO_PUBLIC_SUPABASE_URL`/`EXPO_PUBLIC_SUPABASE_ANON_KEY` secrets are required for preview since those constants match the live project.
+- OAuth 2.1/OIDC (`/oauth/authorize`, developer app management, connected-accounts/grants) is served entirely by Supabase Edge Functions (`oauth`, `developer-apps`) — both apps' `lib/api-base.ts` resolves `apiUrl()` straight to `https://lqowocmjmhbkoxlwyxku.supabase.co/functions/v1/...`, derived from the same `supabase-config.ts` constant (no hardcoded second copy of the project URL).
+- `artifacts/api-server` (Express REST/OAuth server) is still configured as a workflow for reference but is **not called by either app** — it has no Supabase secrets set and isn't part of the request path. Its `vercel.json` `/api-server/*` rewrite was removed from the website since nothing points there anymore.
+- `artifacts/website` now serves the full built SPA (landing page at `/`, sign-in at `/login`, OAuth authorize screen, developer apps dashboard) via `expo export --platform web` output in `dist/`, not just the marketing landing page. Rebuild with `pnpm --filter @workspace/website run build` after changing website source, then restart the `artifacts/website: web` workflow to pick it up.
 
 ## Key environment variables
 

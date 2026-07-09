@@ -5,7 +5,6 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/api-server/(.*)", "destination": "https://api.mail.afuchat.com/$1" },
     { "source": "/((?!.*\\..*).*)", "destination": "/index.html" }
   ],
   "headers": [

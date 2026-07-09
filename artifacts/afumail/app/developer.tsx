@@ -335,7 +335,7 @@ function OverviewTab({ colors }: { colors: ReturnType<typeof useColors> }) {
               Production API
             </Text>
             <Text style={[styles.urlValue, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
-              https://api.mail.afuchat.com
+              https://lqowocmjmhbkoxlwyxku.supabase.co/functions/v1
             </Text>
           </View>
           <View style={[styles.urlDivider, { backgroundColor: colors.border }]} />
@@ -353,7 +353,7 @@ function OverviewTab({ colors }: { colors: ReturnType<typeof useColors> }) {
               OIDC Discovery
             </Text>
             <Text style={[styles.urlValue, { color: colors.accent, fontFamily: "Inter_400Regular" }]}>
-              /api/oauth/.well-known/openid-configuration
+              /functions/v1/oauth/.well-known/openid-configuration
             </Text>
           </View>
         </View>
@@ -393,8 +393,8 @@ function FlowTab({ colors }: { colors: ReturnType<typeof useColors> }) {
         <FlowStep n={2} title="Redirect to consent screen" body="Send the user to mail.afuchat.com/oauth/authorize with your client_id, redirect_uri, code_challenge, and scopes." colors={colors} />
         <FlowStep n={3} title="User signs in and approves" body="AfuMail handles the login UI. The user sees exactly what your app is requesting and taps Allow or Deny." colors={colors} />
         <FlowStep n={4} title="Receive authorization code" body="AfuMail redirects back to your redirect_uri with ?code=...&state=... The code expires in 60 seconds and is single-use." colors={colors} />
-        <FlowStep n={5} title="Exchange code for tokens" body="POST the code and your code_verifier to /api/oauth/token. AfuMail verifies the PKCE hash and issues an access + refresh token." colors={colors} />
-        <FlowStep n={6} title="Fetch user profile" body="GET /api/oauth/userinfo with Authorization: Bearer <access_token>. Returns the user's ID, name, username, and email." colors={colors} />
+        <FlowStep n={5} title="Exchange code for tokens" body="POST the code and your code_verifier to /functions/v1/oauth/token. AfuMail verifies the PKCE hash and issues an access + refresh token." colors={colors} />
+        <FlowStep n={6} title="Fetch user profile" body="GET /functions/v1/oauth/userinfo with Authorization: Bearer <access_token>. Returns the user's ID, name, username, and email." colors={colors} />
       </View>
 
       <Callout
@@ -437,24 +437,23 @@ function EndpointsTab({ colors }: { colors: ReturnType<typeof useColors> }) {
     <View>
       <Section title="All OAuth Endpoints">
         <Text style={[styles.body, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-          All endpoints are under <Text style={{ color: colors.foreground }}>https://api.mail.afuchat.com/api/oauth/</Text>
+          All endpoints are under <Text style={{ color: colors.foreground }}>https://lqowocmjmhbkoxlwyxku.supabase.co/functions/v1/oauth/</Text>
         </Text>
       </Section>
 
-      <EndpointRow method="GET" path="/api/oauth/.well-known/openid-configuration" desc="OIDC Discovery document. Auto-configure any OIDC library from this URL." auth="Public" colors={colors} />
-      <EndpointRow method="GET" path="/api/oauth/clients/:clientId" desc="Client metadata and redirect URI validation. Used by the consent screen." auth="Public" colors={colors} />
-      <EndpointRow method="POST" path="/api/oauth/authorize" desc="Mint a one-time authorization code after user approves consent." auth="AfuMail session" colors={colors} />
-      <EndpointRow method="POST" path="/api/oauth/token" desc="Exchange authorization code for tokens, or rotate a refresh token." auth="Public" colors={colors} />
-      <EndpointRow method="GET" path="/api/oauth/userinfo" desc="OIDC userinfo — returns name, username, email for the token's user." auth="OAuth access token" colors={colors} />
-      <EndpointRow method="POST" path="/api/oauth/revoke" desc="RFC 7009 token revocation. Accepts access or refresh tokens." auth="Public" colors={colors} />
-      <EndpointRow method="POST" path="/api/oauth/introspect" desc="RFC 7662 token introspection — check if a token is active." auth="AfuMail session" colors={colors} />
-      <EndpointRow method="GET" path="/api/oauth/grants" desc="List all apps the signed-in user has authorized." auth="AfuMail session" colors={colors} />
-      <EndpointRow method="DELETE" path="/api/oauth/grants/:clientId" desc="Revoke all tokens issued to a specific client (user-initiated)." auth="AfuMail session" colors={colors} />
-      <EndpointRow method="GET" path="/docs" desc="Full HTML developer documentation — no auth required." auth="Public" colors={colors} />
+      <EndpointRow method="GET" path="/functions/v1/oauth/.well-known/openid-configuration" desc="OIDC Discovery document. Auto-configure any OIDC library from this URL." auth="Public" colors={colors} />
+      <EndpointRow method="GET" path="/functions/v1/oauth/clients/:clientId" desc="Client metadata and redirect URI validation. Used by the consent screen." auth="Public" colors={colors} />
+      <EndpointRow method="POST" path="/functions/v1/oauth/authorize" desc="Mint a one-time authorization code after user approves consent." auth="AfuMail session" colors={colors} />
+      <EndpointRow method="POST" path="/functions/v1/oauth/token" desc="Exchange authorization code for tokens, or rotate a refresh token." auth="Public" colors={colors} />
+      <EndpointRow method="GET" path="/functions/v1/oauth/userinfo" desc="OIDC userinfo — returns name, username, email for the token's user." auth="OAuth access token" colors={colors} />
+      <EndpointRow method="POST" path="/functions/v1/oauth/revoke" desc="RFC 7009 token revocation. Accepts access or refresh tokens." auth="Public" colors={colors} />
+      <EndpointRow method="POST" path="/functions/v1/oauth/introspect" desc="RFC 7662 token introspection — check if a token is active." auth="AfuMail session" colors={colors} />
+      <EndpointRow method="GET" path="/functions/v1/oauth/grants" desc="List all apps the signed-in user has authorized." auth="AfuMail session" colors={colors} />
+      <EndpointRow method="DELETE" path="/functions/v1/oauth/grants/:clientId" desc="Revoke all tokens issued to a specific client (user-initiated)." auth="AfuMail session" colors={colors} />
 
       <Callout
         icon="info"
-        text={`"AfuMail session" means Authorization: Bearer <supabase-access-token> from the user's AfuMail login. "OAuth access token" means the opaque token returned by /api/oauth/token.`}
+        text={`"AfuMail session" means Authorization: Bearer <supabase-access-token> from the user's AfuMail login. "OAuth access token" means the opaque token returned by /functions/v1/oauth/token.`}
         colors={colors}
       />
     </View>

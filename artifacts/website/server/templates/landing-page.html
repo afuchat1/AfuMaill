@@ -1257,7 +1257,7 @@
           <div class="dev-card" role="listitem">
             <div class="dev-card-header">
               <span class="dev-badge badge-get">GET</span>
-              <span class="dev-endpoint">/api/oauth/authorize</span>
+              <span class="dev-endpoint">/functions/v1/oauth/authorize</span>
             </div>
             <p class="dev-desc">Start the authorization flow. Redirect your user here with client_id, scope, redirect_uri, and a PKCE challenge.</p>
           </div>
@@ -1265,7 +1265,7 @@
           <div class="dev-card" role="listitem">
             <div class="dev-card-header">
               <span class="dev-badge badge-post">POST</span>
-              <span class="dev-endpoint">/api/oauth/token</span>
+              <span class="dev-endpoint">/functions/v1/oauth/token</span>
             </div>
             <p class="dev-desc">Exchange an authorization code for access and refresh tokens. Supports the authorization_code and refresh_token grants.</p>
           </div>
@@ -1273,7 +1273,7 @@
           <div class="dev-card" role="listitem">
             <div class="dev-card-header">
               <span class="dev-badge badge-get">GET</span>
-              <span class="dev-endpoint">/api/oauth/userinfo</span>
+              <span class="dev-endpoint">/functions/v1/oauth/userinfo</span>
             </div>
             <p class="dev-desc">Fetch the authenticated user's profile — name, username, and email — filtered by the scopes granted.</p>
           </div>
@@ -1281,7 +1281,7 @@
           <div class="dev-card" role="listitem">
             <div class="dev-card-header">
               <span class="dev-badge badge-post">POST</span>
-              <span class="dev-endpoint">/api/oauth/revoke</span>
+              <span class="dev-endpoint">/functions/v1/oauth/revoke</span>
             </div>
             <p class="dev-desc">Revoke an access or refresh token when the user signs out of your app. RFC 7009 compliant.</p>
           </div>
@@ -1305,7 +1305,7 @@
         </div>
 
         <div class="dev-cta">
-          <a href="BASE_URL_PLACEHOLDER/api/docs" class="btn-primary" target="_blank" rel="noopener noreferrer">
+          <a href="BASE_URL_PLACEHOLDER/developer/apps" class="btn-primary" target="_blank" rel="noopener noreferrer">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             Read the docs
           </a>
@@ -1345,8 +1345,8 @@
         <div class="footer-links-col">
           <h4>Developers</h4>
           <ul role="list">
-            <li><a href="BASE_URL_PLACEHOLDER/api/docs" target="_blank" rel="noopener noreferrer">API Docs</a></li>
-            <li><a href="BASE_URL_PLACEHOLDER/api/oauth/.well-known/openid-configuration" target="_blank" rel="noopener noreferrer">OIDC Discovery</a></li>
+            <li><a href="BASE_URL_PLACEHOLDER/developer/apps" target="_blank" rel="noopener noreferrer">API Docs</a></li>
+            <li><a href="https://lqowocmjmhbkoxlwyxku.supabase.co/functions/v1/oauth/.well-known/openid-configuration" target="_blank" rel="noopener noreferrer">OIDC Discovery</a></li>
             <li><a href="#developers">OAuth Guide</a></li>
           </ul>
         </div>

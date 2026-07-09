@@ -9,7 +9,8 @@
  * The Express api-server artifact is no longer required.
  */
 
-const SUPABASE_URL = "https://lqowocmjmhbkoxlwyxku.supabase.co";
+import { SUPABASE_URL } from "@/lib/supabase-config";
+
 const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;
 
 /**
