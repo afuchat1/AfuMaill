@@ -157,12 +157,11 @@ const server = http.createServer((req, res) => {
     return serveManifest(platform, res);
   }
 
-  // Root path for web visitors with no web build → landing page directly
+  // Root path is always the marketing homepage — the SPA (sign-in, inbox,
+  // OAuth, developer dashboard) lives at its own routes (e.g. /login,
+  // /oauth/authorize, /developer/apps) and is served further below.
   if (pathname === "/" && !platform) {
-    const hasWebBuild = fs.existsSync(path.join(WEB_DIST, "index.html"));
-    if (!hasWebBuild) {
-      return serveLandingPage(req, res, landingPageTemplate, appName);
-    }
+    return serveLandingPage(req, res, landingPageTemplate, appName);
   }
 
   // Smart app-store link: redirect based on the visitor's platform instead of
