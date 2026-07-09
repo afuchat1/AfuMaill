@@ -157,7 +157,10 @@ Deno.serve(async (req) => {
     console.log(`[receive-email] toList: ${toList.join("; ")}`);
     console.log(`[receive-email] textBody.length=${textBody.length} htmlBody.length=${htmlBody.length}`);
 
-    let body = textBody || htmlToText(htmlBody);
+    // Prefer real HTML (rendered in a WebView by the client) over plain text,
+    // since marketing/transactional emails are frequently image- and layout-heavy
+    // and lose almost all meaningful content when flattened to text.
+    let body = htmlBody || textBody;
 
     // ── Debug fallback: if body is STILL empty, build a readable summary of all
     //   fields so the user can see what Resend actually sent (temporary diagnostic). ──
@@ -182,7 +185,8 @@ Deno.serve(async (req) => {
     const fromAddr = parseAddress(rawFrom);
     const toAddresses = toList.map(parseAddress);
     const ccAddresses = ccList.map(parseAddress);
-    const preview = body.startsWith("[Debug:") ? "" : body.slice(0, 140).replace(/\n/g, " ");
+    const previewSource = textBody || (htmlBody ? htmlToText(htmlBody) : "");
+    const preview = body.startsWith("[Debug:") ? "" : previewSource.slice(0, 140).replace(/\n/g, " ");
     const category = guessCategory(fromAddr.email, rawSubject);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
