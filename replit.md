@@ -37,6 +37,13 @@ Expo web-only build. Serves the landing page (from `server/templates/landing-pag
 ### API server (`artifacts/api-server/`)
 Express 5 + TypeScript. Implements the OpenAPI spec in `lib/api-spec/openapi.yaml`. Includes OAuth 2.1 / OIDC identity provider endpoints.
 
+## Current setup (as of 2026-07-09)
+
+Running in preview only, fully on Supabase — no custom backend calls are used by the app:
+- The mobile/web app (`artifacts/afumail`) talks directly to Supabase (auth, Postgres via `@supabase/supabase-js`, and the deployed Edge Functions `send-email`, `reset-password`, `receive-email`, `oauth`, `developer-apps`) using the hardcoded fallback project constants in `artifacts/afumail/lib/supabase-config.ts` (project `lqowocmjmhbkoxlwyxku`, org `AfuMail`). No `EXPO_PUBLIC_SUPABASE_URL`/`EXPO_PUBLIC_SUPABASE_ANON_KEY` secrets are required for preview since those constants match the live project.
+- `artifacts/api-server` (Express REST/OAuth server) is still configured as a workflow but is **not** used by the app in this mode — it has no Supabase secrets set and will 404/fail Supabase calls. It's not needed as long as the app talks to Supabase directly.
+- `artifacts/website` serves a static landing-page export only (not the live app source).
+
 ## Key environment variables
 
 | Variable | Used by |
@@ -45,7 +52,7 @@ Express 5 + TypeScript. Implements the OpenAPI spec in `lib/api-spec/openapi.yam
 | `SUPABASE_SERVICE_ROLE_KEY` | API server (secret) |
 | `SUPABASE_DB_URL` | Drizzle ORM (secret) |
 | `EXPO_PUBLIC_SUPABASE_URL` | Mobile app + website |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Mobile app + website (secret) |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Mobile app + website (public client key, not a secret) |
 | `EXPO_PUBLIC_SITE_URL` | Mobile app + website |
 
 ## Package manager
