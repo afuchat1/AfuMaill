@@ -30,9 +30,12 @@ Replit's build sandbox has no outbound DNS during the Edge Function bundle step.
 
 ## receive-email: empty body fallback
 
-External emails arrive from Resend's inbound webhook with empty `text`/`html` fields.
-Updated to also check field aliases: `body_html`, `htmlBody`, `plain`, `body_text`, `textBody`.
-If all are empty but `email_id` is present, fetches full content from `GET https://api.resend.com/emails/{email_id}` using `RESEND_API_KEY`.
+Resend's inbound webhook payload is metadata-only (from/to/subject/email_id) — it never
+includes `text`/`html` fields. **Always** fetch the real content by id: `GET
+https://api.resend.com/emails/{email_id}` with `Authorization: Bearer {RESEND_API_KEY}`,
+then re-extract `text`/`html` from that response. Only fall back to the "[Debug: ...]"
+placeholder body if that fetch also comes back empty — that placeholder should never
+appear for a normal inbound email; if it does, the fetch-by-id step regressed.
 
 ## reset-password: real error messages (not silent ok)
 
