@@ -37,7 +37,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="AfuMail" />
   <meta name="application-name" content="AfuMail" />
-  <meta name="theme-color" content="#FF3C00" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1D6FE0" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)" />
 
   <!-- Favicon -->
@@ -93,8 +93,8 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --accent:       #FF3C00;
-      --accent-light: #ff6633;
+      --accent:       #1D6FE0;
+      --accent-light: #4D8EF0;
       --bg:           #ffffff;
       --bg-alt:       #f7f7f5;
       --bg-card:      #fafaf8;
@@ -1005,7 +1005,7 @@
             </div>
             <div class="phone-content">
               <div class="phone-email-item phone-unread">
-                <div class="phone-avatar" style="background:#FF3C00">A</div>
+                <div class="phone-avatar" style="background:#1D6FE0">A</div>
                 <div class="phone-meta">
                   <div class="phone-sender">alex@afuchat.com</div>
                   <div class="phone-subject">Welcome to AfuMail 🎉</div>
@@ -1173,28 +1173,18 @@
         </div>
 
         <div class="download-right">
-          <!-- Redirect spinner (shown when auto-deep-linking on mobile) -->
-          <div class="redirect-loading" id="redirect-loading" aria-live="polite" aria-label="Opening AfuMail">
-            <div class="spinner" aria-hidden="true"></div>
-            <p style="color:rgba(255,255,255,.7);font-size:14px">Opening AfuMail…</p>
-          </div>
-
-          <!-- QR code block (hidden on mobile when redirecting) -->
+          <!-- QR code block linking straight to the app store listings -->
           <div class="qr-block" id="qr-block">
-            <div class="qr-wrap" id="qr-code" role="img" aria-label="QR code to open AfuMail in Expo Go">
+            <div class="qr-wrap" id="qr-code" role="img" aria-label="QR code to download AfuMail">
               <!-- Rendered by JS — fallback below for crawlers / noscript -->
               <noscript>
                 <p style="font-size:12px;color:#555;text-align:center;padding:8px">
-                  Scan this link to open AfuMail:<br/>
-                  <a href="exps://EXPS_URL_PLACEHOLDER" style="color:#FF3C00;word-break:break-all">exps://EXPS_URL_PLACEHOLDER</a>
+                  Get AfuMail:<br/>
+                  <a href="https://mail.afuchat.com/get" style="color:#1D6FE0;word-break:break-all">mail.afuchat.com/get</a>
                 </p>
               </noscript>
             </div>
-            <p class="qr-label">Scan with your camera or Expo Go</p>
-            <a href="exps://EXPS_URL_PLACEHOLDER" id="open-expo-btn" class="open-expo-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              Open in Expo Go
-            </a>
+            <p class="qr-label">Scan to download the app</p>
           </div>
         </div>
       </div>
@@ -1443,7 +1433,9 @@
 
     var isMobile = (isIOS || isAndroid) && !isCrawler;
 
-    var deepLink = 'exps://EXPS_URL_PLACEHOLDER';
+    // Smart-link users land on after downloading: falls through to the
+    // respective app store; used only for the QR code (not an auto-redirect).
+    var appLink = 'BASE_URL_PLACEHOLDER/get';
 
     // Reorder store buttons by platform
     var appStoreBtn  = document.getElementById('app-store-btn');
@@ -1477,7 +1469,7 @@
       var qr = new QRCodeStyling({
         width: 300,
         height: 300,
-        data: deepLink,
+        data: appLink,
         dotsOptions: { color: '#111111', type: 'rounded' },
         backgroundOptions: { color: '#ffffff' },
         cornersSquareOptions: { type: 'extra-rounded' },
@@ -1487,26 +1479,10 @@
       qr.append(qrContainer);
     }
 
-    // ── Mobile: auto redirect + show spinner ───────────────────
-    var redirectLoading = document.getElementById('redirect-loading');
-    var qrBlock         = document.getElementById('qr-block');
-
-    if (isMobile) {
-      // Show spinner, hide QR block
-      if (redirectLoading) redirectLoading.classList.add('visible');
-      if (qrBlock) qrBlock.style.display = 'none';
-
-      // Attempt deep link
-      window.location.href = deepLink;
-
-      // After a brief wait, show the QR/store section as fallback
-      setTimeout(function () {
-        if (redirectLoading) redirectLoading.classList.remove('visible');
-        if (qrBlock) qrBlock.style.display = '';
-        renderQR();
-      }, 1200);
-    } else {
-      // Desktop: render QR immediately when library is ready
+    // ── QR code: render on both mobile and desktop. No auto-redirect —
+    //    a website must never force-navigate a visitor into a third-party
+    //    app (Expo Go) or app-store deep link without an explicit tap. ──
+    if (true) {
       renderQR();
     }
 
