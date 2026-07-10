@@ -37,7 +37,9 @@ function jsonResp(data: unknown, status = 200): Response {
 }
 
 function svcKey(): string {
-  return Deno.env.get("SVC_ROLE_KEY") ?? "";
+  // SUPABASE_SERVICE_ROLE_KEY is automatically injected by Supabase into every
+  // deployed edge function — no manual secret needed for this one.
+  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SVC_ROLE_KEY") ?? "";
 }
 
 async function getUserFromBearerToken(

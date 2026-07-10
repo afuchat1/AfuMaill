@@ -47,3 +47,11 @@ export async function aiSummarize(params: {
   const { content } = await callAiAssist<{ content: string }>({ mode: "summarize", ...params });
   return content;
 }
+
+/** Send a chat message to the AI assistant and get a reply. */
+export async function aiChat(params: {
+  messages: { role: "user" | "assistant" | "system"; content: string }[];
+}): Promise<string> {
+  const { content } = await callAiAssist<{ content: string }>({ mode: "chat", ...params });
+  return content;
+}

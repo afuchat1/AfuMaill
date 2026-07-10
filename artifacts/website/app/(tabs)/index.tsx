@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import WebAccountPanel from "@/components/web/WebAccountPanel";
+import WebAiChat from "@/components/web/WebAiChat";
 import WebComposeModal from "@/components/web/WebComposeModal";
 import WebEmailDetail from "@/components/web/WebEmailDetail";
 import WebEmailList from "@/components/web/WebEmailList";
