@@ -39,15 +39,6 @@ export async function aiSmartReplies(params: {
   return replies;
 }
 
-/** Summarize an email in a couple of sentences. */
-export async function aiSummarize(params: {
-  emailBody: string;
-  emailSubject?: string;
-}): Promise<string> {
-  const { content } = await callAiAssist<{ content: string }>({ mode: "summarize", ...params });
-  return content;
-}
-
 /** Send a chat message to the AI assistant and get a reply. */
 export async function aiChat(params: {
   messages: { role: "user" | "assistant" | "system"; content: string }[];

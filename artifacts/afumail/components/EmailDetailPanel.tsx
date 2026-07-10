@@ -20,7 +20,7 @@ import { BottomSheet } from "@/components/ui/BottomSheet";
 import type { EmailFolder } from "@/context/EmailContext";
 import { useEmails } from "@/context/EmailContext";
 import { useColors } from "@/hooks/useColors";
-import { aiSummarize, aiSmartReplies } from "@/lib/ai";
+import { aiSmartReplies } from "@/lib/ai";
 
 function formatFullDate(timestamp: string): string {
   const date = new Date(timestamp);
@@ -71,10 +71,6 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
   const [moveVisible,    setMoveVisible]    = useState(false);
   const [toast,          setToast]          = useState<string | null>(null);
   const [webHeight,      setWebHeight]      = useState(300);
-
-  const [summary, setSummary] = useState<string | null>(null);
-  const [isSummarizing, setIsSummarizing] = useState(false);
-  const [summaryError, setSummaryError] = useState<string | null>(null);
 
   const [smartReplies, setSmartReplies] = useState<string[] | null>(null);
   const [isRepliesLoading, setIsRepliesLoading] = useState(false);
@@ -180,25 +176,6 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
     } catch {}
   }
 
-  async function handleSummarize() {
-    if (!email) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setIsSummarizing(true);
-    setSummaryError(null);
-    try {
-      const result = await aiSummarize({
-        emailBody: email.body,
-        emailSubject: email.subject,
-      });
-      setSummary(result);
-    } catch (err: any) {
-      setSummaryError(err.message || "Failed to summarize email.");
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setIsSummarizing(false);
-    }
-  }
-
   function handleSmartReply(replyText: string) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({ pathname: "/email/compose", params: { to: email!.from.email, subject: `Re: ${email!.subject}`, body: replyText } });
@@ -301,20 +278,6 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
               </View>
             )}
             {!email.read && <View style={[styles.unreadDot, { backgroundColor: colors.accent }]} />}
-            <Pressable
-              onPress={handleSummarize}
-              disabled={isSummarizing || !!summary}
-              style={[styles.summarizeBtn, { backgroundColor: colors.secondary }]}
-            >
-              {isSummarizing ? (
-                <ActivityIndicator color={colors.foreground} size={12} />
-              ) : (
-                <>
-                  <Feather name="zap" size={12} color={colors.accent} />
-                  <Text style={[styles.summarizeBtnText, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Summarize</Text>
-                </>
-              )}
-            </Pressable>
           </View>
         </View>
 
@@ -343,33 +306,6 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
             )}
           </View>
         </View>
-
-        {/* AI Summary Banner */}
-        {summary && (
-          <View style={[styles.summaryBanner, { backgroundColor: colors.accent + "11", borderColor: colors.accent + "33" }]}>
-            <View style={styles.summaryHeader}>
-              <Feather name="zap" size={16} color={colors.accent} />
-              <Text style={[styles.summaryTitle, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>AI Summary</Text>
-              <View style={{ flex: 1 }} />
-              <Pressable onPress={() => setSummary(null)} hitSlop={8}>
-                <Feather name="x" size={16} color={colors.mutedForeground} />
-              </Pressable>
-            </View>
-            <Text style={[styles.summaryText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{summary}</Text>
-          </View>
-        )}
-        {summaryError && (
-          <View style={[styles.summaryBanner, { backgroundColor: colors.destructive + "11", borderColor: colors.destructive + "33" }]}>
-            <View style={styles.summaryHeader}>
-              <Text style={[styles.summaryTitle, { color: colors.destructive, fontFamily: "Inter_600SemiBold" }]}>Summary Failed</Text>
-              <View style={{ flex: 1 }} />
-              <Pressable onPress={() => setSummaryError(null)} hitSlop={8}>
-                <Feather name="x" size={16} color={colors.mutedForeground} />
-              </Pressable>
-            </View>
-            <Text style={[styles.summaryText, { color: colors.destructive, fontFamily: "Inter_400Regular" }]}>{summaryError}</Text>
-          </View>
-        )}
 
         {/* Body */}
         <View style={[styles.bodySection, isHtml && { paddingHorizontal: 12, paddingTop: 12 }]}>
@@ -627,18 +563,6 @@ const styles = StyleSheet.create({
   sheetLabel: { flex: 1, fontSize: 15 },
   sheetCancel: { borderRadius: 100, paddingVertical: 14, alignItems: "center", marginTop: 4 },
   sheetCancelText: { fontSize: 15 },
-  summarizeBtn: {
-    flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, gap: 4, marginLeft: "auto"
-  },
-  summarizeBtnText: { fontSize: 12 },
-  summaryBanner: {
-    marginHorizontal: 20, marginBottom: 16, padding: 16, borderRadius: 16, borderWidth: 1, gap: 8
-  },
-  summaryHeader: {
-    flexDirection: "row", alignItems: "center", gap: 6
-  },
-  summaryTitle: { fontSize: 13 },
-  summaryText: { fontSize: 15, lineHeight: 22 },
   smartRepliesContainer: {
     paddingHorizontal: 12, gap: 8, paddingBottom: 12
   },
