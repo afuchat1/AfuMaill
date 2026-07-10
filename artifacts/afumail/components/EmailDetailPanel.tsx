@@ -3,7 +3,8 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
+  ActivityIndicator,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -39,6 +40,29 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const URL_REGEX = /(https?:\/\/[^\s<>"']+)/g;
+
+/** Split plain-text into runs of normal text and tappable URL spans. */
+function linkifyText(text: string, linkColor: string): React.ReactNode[] {
+  const parts = text.split(URL_REGEX);
+  return parts.map((part, i) => {
+    if (URL_REGEX.test(part)) {
+      URL_REGEX.lastIndex = 0; // reset stateful regex after test
+      return (
+        <Text
+          key={i}
+          style={{ color: linkColor, textDecorationLine: "underline" }}
+          onPress={() => Linking.openURL(part).catch(() => {})}
+        >
+          {part}
+        </Text>
+      );
+    }
+    URL_REGEX.lastIndex = 0;
+    return part;
+  });
 }
 
 const ATTACHMENT_ICONS: Record<string, string> = {
@@ -185,30 +209,48 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
   if (!email) return null;
 
   const isWeb = Platform.OS === "web";
-  const isHtml = /^\s*</.test(email.body ?? "");
+
+  // Detect HTML emails robustly — check for any common HTML tag anywhere in the body
+  const isHtml = /<\s*(html|head|body|div|p|table|tr|td|span|br|img|a\s|h[1-6]|ul|ol|li|blockquote|style|font)\b/i.test(email.body ?? "");
 
   const htmlDoc = isHtml
     ? `<!DOCTYPE html><html><head>
         <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+        <meta http-equiv="Content-Security-Policy" content="script-src 'none'; object-src 'none';">
         <style>
           * { box-sizing: border-box; }
           html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
           body { padding: 8px 0; }
-          a { word-break: break-all; }
+          a { word-break: break-all; cursor: pointer; }
           img { max-width: 100%; height: auto; }
+          pre, code { white-space: pre-wrap; word-break: break-word; }
         </style>
       </head><body>${email.body}</body></html>`
     : "";
 
-  const heightScript = `
+  // Combined script: report height + intercept ALL link clicks and send them out
+  // instead of navigating inline. Messages are JSON: { type, value/url }.
+  const webViewScript = `
     (function() {
       function sendHeight() {
         var h = document.documentElement.scrollHeight || document.body.scrollHeight;
-        window.ReactNativeWebView.postMessage(String(h));
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'height', value: h }));
       }
       document.addEventListener('DOMContentLoaded', sendHeight);
       window.addEventListener('load', sendHeight);
       setTimeout(sendHeight, 400);
+      setTimeout(sendHeight, 1200);
+
+      // Intercept every link click — send URL to RN, never navigate inline
+      document.addEventListener('click', function(e) {
+        var el = e.target;
+        while (el && el.tagName !== 'A') el = el.parentElement;
+        if (el && el.href && el.href !== '' && !el.href.startsWith('javascript:')) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'link', url: el.href }));
+        }
+      }, true);
     })();
     true;
   `;
@@ -315,21 +357,41 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
               source={{ html: htmlDoc }}
               scrollEnabled={false}
               style={{ height: webHeight, width: "100%" }}
-              injectedJavaScript={heightScript}
+              injectedJavaScript={webViewScript}
               onMessage={(e) => {
-                const h = Number(e.nativeEvent.data);
-                if (!isNaN(h) && h > 0) setWebHeight(h + 32);
+                try {
+                  const msg = JSON.parse(e.nativeEvent.data);
+                  if (msg.type === "height") {
+                    const h = Number(msg.value);
+                    if (!isNaN(h) && h > 0) setWebHeight(h + 32);
+                  } else if (msg.type === "link" && msg.url) {
+                    Linking.openURL(msg.url).catch(() =>
+                      showToast("Could not open link")
+                    );
+                  }
+                } catch {
+                  // legacy plain-number height messages
+                  const h = Number(e.nativeEvent.data);
+                  if (!isNaN(h) && h > 0) setWebHeight(h + 32);
+                }
+              }}
+              // Belt-and-suspenders: block any navigation not caught by the JS interceptor
+              onShouldStartLoadWithRequest={(req) => {
+                if (req.url === "about:blank" || req.url.startsWith("data:")) return true;
+                Linking.openURL(req.url).catch(() => {});
+                return false;
               }}
               showsVerticalScrollIndicator={false}
               originWhitelist={["*"]}
               javaScriptEnabled
             />
           ) : (
+            // Plain-text body: render tappable URLs inline
             <Text
               selectable
               style={[styles.body, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
             >
-              {email.body}
+              {linkifyText(email.body ?? "", colors.accent)}
             </Text>
           )}
         </View>
