@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.reset-password]
 verify_jwt = false
+
+[functions.ai-assist]
+verify_jwt = false

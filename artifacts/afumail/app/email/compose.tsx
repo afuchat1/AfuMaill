@@ -18,6 +18,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useEmails } from "@/context/EmailContext";
 import { useColors } from "@/hooks/useColors";
 import { getProfile } from "@/lib/supabase";
+import { aiCompose } from "@/lib/ai";
 
 export default function ComposeScreen() {
   const colors = useColors();
@@ -33,6 +34,11 @@ export default function ComposeScreen() {
   const [showCc, setShowCc] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sent, setSent] = useState(false);
+
+  const [showAiInput, setShowAiInput] = useState(false);
+  const [aiInstruction, setAiInstruction] = useState("");
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const bodyRef = useRef<TextInput>(null);
   const goBackRef = useRef<() => void>(() => router.back());
@@ -68,6 +74,29 @@ export default function ComposeScreen() {
       console.warn("Failed to send email:", err);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setIsSending(false);
+    }
+  }
+
+  async function handleAiGenerate() {
+    if (!aiInstruction.trim()) return;
+    setIsAiLoading(true);
+    setAiError(null);
+    try {
+      const generated = await aiCompose({
+        instruction: aiInstruction.trim(),
+        draft: body.trim() ? body : undefined,
+        subject: subject.trim() ? subject : undefined,
+        to: to.trim() ? to : undefined,
+      });
+      setBody(generated);
+      setShowAiInput(false);
+      setAiInstruction("");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      setAiError(err.message || "Failed to generate email.");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsAiLoading(false);
     }
   }
 
@@ -196,6 +225,45 @@ export default function ComposeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ flexGrow: 1 }}
       >
+        {showAiInput && (
+          <View style={[styles.aiContainer, { backgroundColor: colors.accent + "11", borderColor: colors.accent + "33" }]}>
+            <View style={styles.aiHeader}>
+              <Feather name="zap" size={16} color={colors.accent} />
+              <Text style={[styles.aiTitle, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>Write with AI</Text>
+              <View style={{ flex: 1 }} />
+              <Pressable onPress={() => setShowAiInput(false)} hitSlop={8}>
+                <Feather name="x" size={16} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
+            <TextInput
+              style={[styles.aiInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+              placeholder="What do you want to say?"
+              placeholderTextColor={colors.mutedForeground}
+              value={aiInstruction}
+              onChangeText={setAiInstruction}
+              multiline
+            />
+            {aiError && (
+              <Text style={[styles.aiError, { color: colors.destructive, fontFamily: "Inter_400Regular" }]}>{aiError}</Text>
+            )}
+            <View style={styles.aiFooter}>
+              <Pressable
+                onPress={handleAiGenerate}
+                disabled={isAiLoading || !aiInstruction.trim()}
+                style={({ pressed }) => [
+                  styles.aiGenerateBtn,
+                  { backgroundColor: !aiInstruction.trim() || isAiLoading ? colors.muted : pressed ? "#1558B5" : colors.accent }
+                ]}
+              >
+                {isAiLoading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={[styles.aiGenerateText, { color: !aiInstruction.trim() ? colors.mutedForeground : "#FFFFFF", fontFamily: "Inter_600SemiBold" }]}>Generate</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        )}
         <TextInput
           ref={bodyRef}
           style={[
@@ -236,7 +304,7 @@ export default function ComposeScreen() {
           <Feather name="clock" size={20} color={colors.mutedForeground} />
         </Pressable>
         <View style={styles.toolbarSpacer} />
-        <Pressable hitSlop={8}>
+        <Pressable onPress={() => setShowAiInput(!showAiInput)} hitSlop={8}>
           <Feather name="zap" size={20} color={colors.accent} />
         </Pressable>
       </View>
@@ -316,5 +384,43 @@ const styles = StyleSheet.create({
   },
   toolbarSpacer: {
     flex: 1,
+  },
+  aiContainer: {
+    margin: 16,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 12,
+  },
+  aiHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  aiTitle: {
+    fontSize: 14,
+  },
+  aiInput: {
+    fontSize: 15,
+    minHeight: 60,
+    textAlignVertical: "top",
+  },
+  aiError: {
+    fontSize: 13,
+  },
+  aiFooter: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
+  aiGenerateBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 80,
+  },
+  aiGenerateText: {
+    fontSize: 14,
   },
 });

@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { useAuth } from "@/context/AuthContext";
 import { useEmails } from "@/context/EmailContext";
 import { getProfile } from "@/lib/supabase";
+import { aiCompose } from "@/lib/ai";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { W } from "./webColors";
 
@@ -55,6 +56,10 @@ export default function WebComposeModal({ config, onClose }: Props) {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [winState, setWinState] = useState<WinState>("full");
+  const [showAi, setShowAi] = useState(false);
+  const [aiInstruction, setAiInstruction] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
   const bodyRef = useRef<any>(null);
 
   useEffect(() => {
@@ -119,6 +124,72 @@ export default function WebComposeModal({ config, onClose }: Props) {
       setError("Failed to send. Please try again.");
     }
     setSending(false);
+  }
+
+  async function handleAiGenerate() {
+    if (!aiInstruction.trim()) return;
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const content = await aiCompose({
+        instruction: aiInstruction.trim(),
+        draft: body,
+        subject,
+        to,
+      });
+      setBody(content);
+      setShowAi(false);
+      setAiInstruction("");
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : "Couldn't reach the AI assistant.");
+    }
+    setAiLoading(false);
+  }
+
+  function AiPanel({ mobile }: { mobile?: boolean }) {
+    if (!showAi) return null;
+    return (
+      <View style={[styles.aiPanel, mobile && styles.aiPanelMobile, { backgroundColor: W.accentLight, borderColor: W.accent + "33" }]}>
+        <View style={styles.aiPanelHeader}>
+          <Feather name="zap" size={13} color={W.accent} />
+          <Text style={[styles.aiPanelTitle, { fontFamily: "Inter_600SemiBold", color: W.accentText }]}>
+            Write with AI
+          </Text>
+          <Pressable onPress={() => setShowAi(false)} hitSlop={8} style={{ marginLeft: "auto" }}>
+            <Feather name="x" size={14} color={W.textMuted} />
+          </Pressable>
+        </View>
+        <TextInput
+          value={aiInstruction}
+          onChangeText={setAiInstruction}
+          placeholder="e.g. Politely decline this meeting and suggest Thursday instead"
+          placeholderTextColor={W.textMuted}
+          style={[styles.aiInput, { fontFamily: "Inter_400Regular", color: W.textPrimary, backgroundColor: W.bgCard }]}
+          multiline
+          editable={!aiLoading}
+          onSubmitEditing={handleAiGenerate}
+        />
+        {!!aiError && (
+          <Text style={[styles.aiError, { fontFamily: "Inter_400Regular", color: W.destructive }]}>{aiError}</Text>
+        )}
+        <Pressable
+          onPress={handleAiGenerate}
+          disabled={aiLoading || !aiInstruction.trim()}
+          style={[styles.aiGenerateBtn, { backgroundColor: W.accent, opacity: aiLoading || !aiInstruction.trim() ? 0.6 : 1 }]}
+        >
+          {aiLoading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <Feather name="zap" size={13} color="#fff" />
+              <Text style={[styles.aiGenerateBtnLabel, { fontFamily: "Inter_600SemiBold" }]}>
+                {body.trim() ? "Rewrite" : "Generate"}
+              </Text>
+            </>
+          )}
+        </Pressable>
+      </View>
+    );
   }
 
   const minimized = winState === "minimized";
@@ -224,6 +295,8 @@ export default function WebComposeModal({ config, onClose }: Props) {
           </View>
         )}
 
+        <AiPanel mobile />
+
         {/* Formatting toolbar at bottom */}
         <View style={[styles.fmtToolbar, { borderTopColor: W.border, backgroundColor: W.bgSecondary }]}>
           <FormatBtn icon="bold" label="Bold" onPress={() => execFormat("b")} />
@@ -233,6 +306,8 @@ export default function WebComposeModal({ config, onClose }: Props) {
           <FormatBtn icon="link" label="Link" onPress={() => execFormat("a")} />
           <FormatBtn icon="list" label="Bullet list" onPress={() => execFormat("ul")} />
           <FormatBtn icon="align-left" label="Quote" onPress={() => execFormat("blockquote")} />
+          <View style={[styles.fmtDivider, { backgroundColor: W.border }]} />
+          <FormatBtn icon="zap" label="Write with AI" onPress={() => setShowAi((v) => !v)} />
           <View style={{ flex: 1 }} />
           <Pressable onPress={onClose} hitSlop={6} style={[styles.discardBtn, { backgroundColor: W.bgSecondary }]}>
             <Feather name="trash-2" size={16} color={W.textMuted} />
@@ -328,7 +403,11 @@ export default function WebComposeModal({ config, onClose }: Props) {
             <View style={[styles.fmtDivider, { backgroundColor: W.border }]} />
             <FormatBtn icon="at-sign" label="Mention" onPress={() => { setBody((b) => b + "@"); }} />
             <FormatBtn icon="paperclip" label="Attach" onPress={() => {}} />
+            <View style={[styles.fmtDivider, { backgroundColor: W.border }]} />
+            <FormatBtn icon="zap" label="Write with AI" onPress={() => setShowAi((v) => !v)} />
           </View>
+
+          <AiPanel />
 
           <TextInput
             ref={bodyRef}
@@ -488,4 +567,33 @@ const styles = StyleSheet.create({
   },
   sendBtnLabel: { color: "#fff", fontSize: 13 },
   discardBtn: { padding: 9, borderRadius: 7, marginLeft: "auto" as any },
+
+  aiPanel: {
+    margin: 14,
+    marginBottom: 0,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+  },
+  aiPanelMobile: { margin: 12, marginBottom: 0 },
+  aiPanelHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
+  aiPanelTitle: { fontSize: 13 },
+  aiInput: {
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 13,
+    minHeight: 44,
+    outlineWidth: 0,
+  } as any,
+  aiError: { fontSize: 12 },
+  aiGenerateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 8,
+  },
+  aiGenerateBtnLabel: { color: "#fff", fontSize: 13 },
 });

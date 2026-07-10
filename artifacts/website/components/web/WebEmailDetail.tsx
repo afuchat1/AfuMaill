@@ -1,11 +1,12 @@
 import { Feather } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Avatar } from "@/components/Avatar";
 import type { Email, EmailFolder } from "@/context/EmailContext";
 import { useEmails } from "@/context/EmailContext";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
+import { aiSmartReplies, aiSummarize } from "@/lib/ai";
 import { W } from "./webColors";
 
 function formatFull(ts: string) {
@@ -145,12 +146,57 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
   const { isMobile } = useBreakpoint();
   const [toast, setToast] = useState<string | null>(null);
   const [showMore, setShowMore] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState("");
+  const [smartReplies, setSmartReplies] = useState<string[]>([]);
+  const [repliesLoading, setRepliesLoading] = useState(false);
 
   const email = emailId ? getEmailById(emailId) : null;
 
   useEffect(() => {
     if (email && !email.read) markAsRead(email.id);
   }, [email?.id]);
+
+  // Reset AI state and fetch fresh smart replies whenever a different email opens.
+  useEffect(() => {
+    setSummary(null);
+    setSummaryError("");
+    setSmartReplies([]);
+    if (!email) return;
+    let cancelled = false;
+    setRepliesLoading(true);
+    aiSmartReplies({
+      emailBody: (email.body ?? "").replace(/<[^>]+>/g, " "),
+      emailSubject: email.subject,
+      emailFrom: email.from.email,
+    })
+      .then((replies) => { if (!cancelled) setSmartReplies(replies); })
+      .catch(() => { /* smart replies are a nice-to-have; fail silently */ })
+      .finally(() => { if (!cancelled) setRepliesLoading(false); });
+    return () => { cancelled = true; };
+  }, [email?.id]);
+
+  async function handleSummarize() {
+    if (!email) return;
+    if (summary) { setSummary(null); return; }
+    setSummaryLoading(true);
+    setSummaryError("");
+    try {
+      const result = await aiSummarize({
+        emailBody: (email.body ?? "").replace(/<[^>]+>/g, " "),
+        emailSubject: email.subject,
+      });
+      setSummary(result);
+    } catch (e) {
+      setSummaryError(e instanceof Error ? e.message : "Couldn't summarize this email.");
+    }
+    setSummaryLoading(false);
+  }
+
+  function handleSmartReply(reply: string) {
+    onCompose({ to: email!.from.email, subject: `Re: ${email!.subject}`, body: reply });
+  }
 
   function notify(msg: string) {
     setToast(msg);
@@ -255,6 +301,12 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
             <ToolbarBtn icon="mail" label="Mark unread" onPress={handleMarkUnread} />
           )}
           <ToolbarBtn
+            icon="zap"
+            label={summaryLoading ? "Summarizing…" : "Summarize"}
+            onPress={handleSummarize}
+            iconOnly={isMobile}
+          />
+          <ToolbarBtn
             icon="trash-2"
             label="Delete"
             onPress={handleDelete}
@@ -308,6 +360,31 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
         <Text style={[styles.subject, { fontFamily: "Inter_700Bold", color: W.textPrimary, fontSize: isMobile ? 19 : 22 }]}>
           {email.subject}
         </Text>
+
+        {summaryLoading && (
+          <View style={[styles.summaryBox, { backgroundColor: W.accentLight }]}>
+            <ActivityIndicator size="small" color={W.accent} />
+            <Text style={[styles.summaryText, { fontFamily: "Inter_400Regular", color: W.accentText }]}>
+              Summarizing with AI…
+            </Text>
+          </View>
+        )}
+        {!!summary && !summaryLoading && (
+          <View style={[styles.summaryBox, { backgroundColor: W.accentLight }]}>
+            <Feather name="zap" size={13} color={W.accent} style={{ marginTop: 2 }} />
+            <Text style={[styles.summaryText, { fontFamily: "Inter_500Medium", color: W.accentText }]}>
+              {summary}
+            </Text>
+          </View>
+        )}
+        {!!summaryError && !summaryLoading && (
+          <View style={[styles.summaryBox, { backgroundColor: W.destructiveLight }]}>
+            <Feather name="alert-circle" size={13} color={W.destructive} style={{ marginTop: 2 }} />
+            <Text style={[styles.summaryText, { fontFamily: "Inter_400Regular", color: W.destructive }]}>
+              {summaryError}
+            </Text>
+          </View>
+        )}
 
         {email.category && (
           <View style={[styles.catBadge, { backgroundColor: (CATEGORY_COLORS[email.category] ?? W.accent) + "18" }]}>
@@ -382,6 +459,35 @@ export default function WebEmailDetail({ emailId, onClose, onCompose }: Props) {
           </View>
         )}
       </ScrollView>
+
+      {/* Smart replies */}
+      {(repliesLoading || smartReplies.length > 0) && (
+        <View style={[styles.smartReplyRow, isMobile && styles.smartReplyRowMobile]}>
+          {repliesLoading ? (
+            <View style={styles.smartReplyLoading}>
+              <ActivityIndicator size="small" color={W.textMuted} />
+            </View>
+          ) : (
+            smartReplies.map((reply, i) => (
+              <Pressable
+                key={i}
+                onPress={() => handleSmartReply(reply)}
+                style={({ pressed }) => [
+                  styles.smartReplyChip,
+                  { backgroundColor: pressed ? W.bgHover : W.bgSecondary, borderColor: W.border },
+                ]}
+              >
+                <Text
+                  numberOfLines={1}
+                  style={[styles.smartReplyText, { fontFamily: "Inter_500Medium", color: W.textPrimary }]}
+                >
+                  {reply}
+                </Text>
+              </Pressable>
+            ))
+          )}
+        </View>
+      )}
 
       {/* Reply bar */}
       <View style={[
@@ -489,4 +595,21 @@ const styles = StyleSheet.create({
     borderRadius: 20, backgroundColor: W.textPrimary, zIndex: 999,
   },
   toastText: { color: "#fff", fontSize: 13 },
+  summaryBox: {
+    flexDirection: "row", alignItems: "flex-start", gap: 8,
+    borderRadius: 10, padding: 12, marginBottom: 16,
+  },
+  summaryText: { flex: 1, fontSize: 13, lineHeight: 19 },
+  smartReplyRow: {
+    flexDirection: "row", flexWrap: "wrap", gap: 8,
+    paddingHorizontal: 28, paddingTop: 12,
+  },
+  smartReplyRowMobile: { paddingHorizontal: 12, paddingTop: 10 },
+  smartReplyLoading: { paddingVertical: 4 },
+  smartReplyChip: {
+    borderWidth: 1, borderRadius: 16,
+    paddingHorizontal: 12, paddingVertical: 7,
+    maxWidth: 260,
+  },
+  smartReplyText: { fontSize: 12.5 },
 });
