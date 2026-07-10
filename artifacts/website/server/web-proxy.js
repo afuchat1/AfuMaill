@@ -92,8 +92,8 @@ const server = http.createServer((clientReq, clientRes) => {
   const pathname = url.pathname;
   const platform = clientReq.headers["expo-platform"];
 
-  // Root without an Expo client header → marketing landing page
-  if (pathname === "/" && !platform) {
+  // Root or /site (canvas preview path) without an Expo client header → marketing landing page
+  if ((pathname === "/" || pathname === "/site") && !platform) {
     return serveLandingPage(clientReq, clientRes);
   }
 
