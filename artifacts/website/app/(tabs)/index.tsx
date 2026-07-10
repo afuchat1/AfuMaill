@@ -141,6 +141,9 @@ export default function WebMainScreen() {
             onClose={() => setDrawerOpen(false)}
           />
         )}
+
+        {/* Floating AI chat — available on all views */}
+        <WebAiChat />
       </View>
     );
   }
@@ -190,6 +193,9 @@ export default function WebMainScreen() {
           onClose={() => setComposeConfig(null)}
         />
       )}
+
+      {/* Floating AI chat — available on all views */}
+      <WebAiChat />
     </View>
   );
 }
