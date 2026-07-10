@@ -6,68 +6,37 @@ A private email platform built for the Afu community. Users get a `username@afuc
 
 ```
 artifacts/
-  afumail/        ← React Native mobile app (Android & iOS)
-  website/        ← Web app (browser, mail.afuchat.com)
-  api-server/     ← Node.js/Express REST + OAuth API server
+  afumail/    ← React Native / Expo mobile app (Android, iOS, web)
+  website/    ← Web app (static Expo web export + dev proxy)
 lib/
-  db/             ← Drizzle ORM schema & Supabase database client
-  api-spec/       ← OpenAPI specification (source of truth)
-  api-client-react/ ← Auto-generated React Query hooks (from spec)
-  api-zod/        ← Auto-generated Zod schemas (from spec)
-supabase/         ← Edge Functions (send-email, reset-password)
-scripts/          ← Monorepo utilities
+  db/         ← Drizzle ORM schema & Supabase Postgres client
+  api-spec/   ← OpenAPI specification (source of truth)
+  api-zod/    ← Auto-generated Zod schemas (from spec)
+supabase/
+  functions/  ← All backend logic lives here as Deno Edge Functions
+  migrations/ ← SQL migrations
+scripts/      ← Monorepo utilities
 ```
 
 ## Running the project
 
 | Workflow | Port | What it does |
 |---|---|---|
-| `artifacts/afumail: expo` | 5000 | Expo mobile dev server (native Android/iOS) |
-| `artifacts/website: web` | 3000 | Website (landing page / web app) |
-| `artifacts/api-server: API Server` | 8080 | REST + OAuth API |
+| `artifacts/afumail: expo` | 8099 | Expo Metro bundler — mobile app |
+| `artifacts/website: web` | 3000 | Dev proxy forwarding to port 8099 |
 
-## Apps overview
+Click **Run** to start both. No backend to start — apps talk directly to Supabase.
 
-### Mobile app (`artifacts/afumail/`)
-React Native with Expo Router. Dark-themed native UI for Android and iOS. Uses `AsyncStorage` for Supabase session persistence. See `artifacts/afumail/README.md` for details.
+## Architecture
 
-### Website (`artifacts/website/`)
-Expo web-only build. Serves the landing page (from `server/templates/landing-page.html`) until the web app is built (`pnpm --filter @workspace/website run build`). Uses browser `localStorage` for sessions. See `artifacts/website/README.md` for details.
+**Supabase only — no custom API server.** Every server-side operation runs as a Supabase Edge Function in `supabase/functions/`. The apps never call a custom Node.js/Express/Fastify backend.
 
-### API server (`artifacts/api-server/`)
-Express 5 + TypeScript. Implements the OpenAPI spec in `lib/api-spec/openapi.yaml`. Includes OAuth 2.1 / OIDC identity provider endpoints.
-
-## Current setup (as of 2026-07-09)
-
-Running in preview only, fully on Supabase — no custom backend/API server is called by either app:
-- The mobile app (`artifacts/afumail`) and the website SPA (`artifacts/website`) both talk directly to Supabase (auth, Postgres via `@supabase/supabase-js`, and the deployed Edge Functions `send-email`, `reset-password`, `receive-email`, `oauth`, `developer-apps`) using the hardcoded fallback project constants in each app's `lib/supabase-config.ts` (project `lqowocmjmhbkoxlwyxku`, org `AfuMail`). No `EXPO_PUBLIC_SUPABASE_URL`/`EXPO_PUBLIC_SUPABASE_ANON_KEY` secrets are required for preview since those constants match the live project.
-- OAuth 2.1/OIDC (`/oauth/authorize`, developer app management, connected-accounts/grants) is served entirely by Supabase Edge Functions (`oauth`, `developer-apps`) — both apps' `lib/api-base.ts` resolves `apiUrl()` straight to `https://lqowocmjmhbkoxlwyxku.supabase.co/functions/v1/...`, derived from the same `supabase-config.ts` constant (no hardcoded second copy of the project URL).
-- `artifacts/api-server` (Express REST/OAuth server) is still configured as a workflow for reference but is **not called by either app** — it has no Supabase secrets set and isn't part of the request path. Its `vercel.json` `/api-server/*` rewrite was removed from the website since nothing points there anymore.
-- `artifacts/website` now serves the full built SPA (landing page at `/`, sign-in at `/login`, OAuth authorize screen, developer apps dashboard) via `expo export --platform web` output in `dist/`, not just the marketing landing page. Rebuild with `pnpm --filter @workspace/website run build` after changing website source, then restart the `artifacts/website: web` workflow to pick it up.
-
-## Key environment variables
-
-| Variable | Used by |
-|---|---|
-| `SUPABASE_URL` | API server |
-| `SUPABASE_SERVICE_ROLE_KEY` | API server (secret) |
-| `SUPABASE_DB_URL` | Drizzle ORM (secret) |
-| `EXPO_PUBLIC_SUPABASE_URL` | Mobile app + website |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Mobile app + website (public client key, not a secret) |
-| `EXPO_PUBLIC_SITE_URL` | Mobile app + website |
-
-## Package manager
-
-`pnpm` with workspaces. Always use `pnpm` — the preinstall script rejects `npm` and `yarn`.
-
-## Code generation
-
-After changing `lib/api-spec/openapi.yaml`, regenerate client code:
-```bash
-pnpm --filter @workspace/api-spec run codegen
-```
+See `DEVELOPMENT.md` for the full guide: architecture, edge functions, auth flow, port rules, patterns, and what not to do.
 
 ## User preferences
 
-- Keep the mobile app (`artifacts/afumail/`) and website (`artifacts/website/`) fully separated — no shared app code between them (shared infrastructure lives in `lib/`).
+- Keep `artifacts/afumail` and `artifacts/website` app code fully separated — shared infrastructure goes in `lib/` only.
+- Never add a custom API server. All backend logic must be a Supabase Edge Function.
 - Do not migrate to a different package manager or restructure the monorepo.
+- Do not use `esm.sh` imports in Edge Functions (DNS blocked in Replit build environment).
+- Always use `pnpm` — the preinstall script rejects `npm` and `yarn`.
