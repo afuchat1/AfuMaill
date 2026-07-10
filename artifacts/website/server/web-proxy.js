@@ -1,25 +1,59 @@
 /**
  * web-proxy.js
  *
- * Listens on port 3000 (website frame) and transparently proxies all HTTP
- * and WebSocket traffic to port 8099 (expo-proxy.js / Expo Metro).
+ * Listens on port 3000 (website frame).
+ * - GET /         → serves the marketing landing page (templates/landing-page.html)
+ * - GET /get      → redirects to /login
+ * - Everything else → proxied to port 8099 (expo-proxy / Expo Metro)
  *
  * Port layout:
  *   3000 — this proxy   (what Replit's website frame sees)
  *   8099 — expo-proxy   (the mobile artifact / Expo Metro)
  *
- * Do NOT use serve.js as the dev command — that serves the static build and
+ * Do NOT use serve.js as the dev command — that serves a static build and
  * is only for production. See PORT_ASSIGNMENT.md and DEVELOPMENT.md.
  */
 
 const http = require("http");
 const net = require("net");
+const fs = require("fs");
+const path = require("path");
 
 const LISTEN_PORT = parseInt(process.env.PORT || "3000", 10);
 const TARGET_PORT = 8099;
+const TEMPLATE_PATH = path.resolve(__dirname, "templates", "landing-page.html");
 
-// ── 1. HTTP proxy: LISTEN_PORT → TARGET_PORT ─────────────────────────────────
-const server = http.createServer((clientReq, clientRes) => {
+// Load landing page template once at startup
+let landingPageTemplate = "";
+try {
+  landingPageTemplate = fs.readFileSync(TEMPLATE_PATH, "utf-8");
+} catch {
+  landingPageTemplate = "<html><body><h1>AfuMail</h1></body></html>";
+}
+
+function serveLandingPage(req, res) {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const protocol = forwardedProto || "https";
+  const host = req.headers["x-forwarded-host"] || req.headers["host"];
+  const baseUrl = `${protocol}://${host}`;
+  const expsUrl = host;
+
+  let appName = "AfuMail";
+  try {
+    const appJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, "..", "app.json"), "utf-8"));
+    appName = appJson.expo?.name || appName;
+  } catch {}
+
+  const html = landingPageTemplate
+    .replace(/BASE_URL_PLACEHOLDER/g, baseUrl)
+    .replace(/EXPS_URL_PLACEHOLDER/g, expsUrl)
+    .replace(/APP_NAME_PLACEHOLDER/g, appName);
+
+  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+  res.end(html);
+}
+
+function proxyToExpo(clientReq, clientRes) {
   const fwdHeaders = { ...clientReq.headers };
   delete fwdHeaders["origin"];
   delete fwdHeaders["referer"];
@@ -50,6 +84,28 @@ const server = http.createServer((clientReq, clientRes) => {
   });
 
   clientReq.pipe(proxy, { end: true });
+}
+
+// ── 1. HTTP handler ───────────────────────────────────────────────────────────
+const server = http.createServer((clientReq, clientRes) => {
+  const url = new URL(clientReq.url || "/", `http://${clientReq.headers.host}`);
+  const pathname = url.pathname;
+  const platform = clientReq.headers["expo-platform"];
+
+  // Root without an Expo client header → marketing landing page
+  if (pathname === "/" && !platform) {
+    return serveLandingPage(clientReq, clientRes);
+  }
+
+  // /get → redirect to the web sign-in
+  if (pathname === "/get") {
+    clientRes.writeHead(302, { Location: "/login" });
+    clientRes.end();
+    return;
+  }
+
+  // Everything else (including /login, /inbox, JS bundles, HMR) → Expo Metro
+  proxyToExpo(clientReq, clientRes);
 });
 
 // ── 2. WebSocket proxy: LISTEN_PORT → TARGET_PORT (Metro HMR / hot-reload) ───
