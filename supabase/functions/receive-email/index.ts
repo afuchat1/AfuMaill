@@ -167,7 +167,10 @@ Deno.serve(async (req) => {
     if (!finalTextBody && !finalHtmlBody && emailId) {
       const resendApiKey = Deno.env.get("RESEND_API_KEY") ?? "";
       try {
-        const fetchRes = await fetch(`https://api.resend.com/emails/${emailId}`, {
+        // Inbound (received) emails live under a dedicated /emails/receiving/
+        // path — the plain /emails/{id} endpoint is for outbound sent mail
+        // and 404s/400s for inbound ids.
+        const fetchRes = await fetch(`https://api.resend.com/emails/receiving/${emailId}`, {
           headers: { Authorization: `Bearer ${resendApiKey}` },
         });
         if (fetchRes.ok) {

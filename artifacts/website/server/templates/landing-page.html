@@ -5,6 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
+  <!-- If the visitor already has a valid AfuMail session, skip the marketing
+       page entirely and send them straight into the app — logged-in users
+       should never land back on this page. Runs synchronously, before any
+       content paints, to avoid a landing-page flash. -->
+  <script>
+    (function () {
+      try {
+        var key = "sb-lqowocmjmhbkoxlwyxku-auth-token";
+        var raw = window.localStorage.getItem(key);
+        if (!raw) return;
+        var session = JSON.parse(raw);
+        var expiresAt = session && (session.expires_at || (session.currentSession && session.currentSession.expires_at));
+        var hasToken = session && (session.access_token || (session.currentSession && session.currentSession.access_token));
+        if (hasToken && (!expiresAt || expiresAt * 1000 > Date.now())) {
+          window.location.replace("BASE_URL_PLACEHOLDER/login");
+        }
+      } catch (e) {
+        // Corrupt/unreadable session — fall through to the normal landing page.
+      }
+    })();
+  </script>
+
   <!-- Primary SEO -->
   <title>AfuMail — Private Email for the Afu Community</title>
   <meta name="description" content="AfuMail is a fast, private email platform built exclusively for the Afu community. Get your @afuchat.com address and connect securely with people you know." />
