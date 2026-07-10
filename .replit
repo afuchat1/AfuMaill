@@ -18,23 +18,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "artifacts/api-server: API Server"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "artifacts/website: web"
-
-[[workflows.workflow]]
-name = "artifacts/api-server: API Server"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd artifacts/api-server && PORT=8080 pnpm run dev"
-waitForPort = 8080
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [[workflows.workflow]]
 name = "artifacts/website: web"
@@ -61,8 +45,3 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
-
-[[ports]]
-localPort = 8080
-externalPort = 8080
-# artifacts/afumail: expo  →  expo-proxy.js  →  Expo Metro (native + web dev server)
