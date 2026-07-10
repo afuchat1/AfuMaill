@@ -20,6 +20,15 @@ import { useColors } from "@/hooks/useColors";
 import { getProfile } from "@/lib/supabase";
 import { aiCompose } from "@/lib/ai";
 
+type AiAction = "improve" | "grammar" | "shorter" | "longer";
+
+const AI_ACTIONS: { id: AiAction; label: string; icon: string; instruction: string }[] = [
+  { id: "improve",  label: "Improve tone",  icon: "edit-2",     instruction: "Improve the tone of this email to be more professional and engaging" },
+  { id: "grammar",  label: "Fix grammar",   icon: "check",      instruction: "Fix all grammar and spelling errors in this email" },
+  { id: "shorter",  label: "Make shorter",  icon: "minimize-2", instruction: "Make this email more concise and shorter while keeping the key message" },
+  { id: "longer",   label: "Make longer",   icon: "maximize-2", instruction: "Expand this email with more detail and context" },
+];
+
 export default function ComposeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -35,16 +44,13 @@ export default function ComposeScreen() {
   const [isSending, setIsSending] = useState(false);
   const [sent, setSent] = useState(false);
 
-  const [showAiInput, setShowAiInput] = useState(false);
-  const [aiInstruction, setAiInstruction] = useState("");
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
+  const [showAiMenu, setShowAiMenu] = useState(false);
+  const [activeAiAction, setActiveAiAction] = useState<AiAction | null>(null);
 
   const bodyRef = useRef<TextInput>(null);
   const goBackRef = useRef<() => void>(() => router.back());
 
   useEffect(() => {
-    // Only auto-insert signature for new emails (not replies/forwards that already have body)
     if (!user || params.body) return;
     getProfile(user.id)
       .then((p) => {
@@ -77,26 +83,24 @@ export default function ComposeScreen() {
     }
   }
 
-  async function handleAiGenerate() {
-    if (!aiInstruction.trim()) return;
-    setIsAiLoading(true);
-    setAiError(null);
+  async function handleAiAction(action: AiAction) {
+    const item = AI_ACTIONS.find((a) => a.id === action)!;
+    setShowAiMenu(false);
+    setActiveAiAction(action);
     try {
       const generated = await aiCompose({
-        instruction: aiInstruction.trim(),
+        instruction: item.instruction,
         draft: body.trim() ? body : undefined,
         subject: subject.trim() ? subject : undefined,
         to: to.trim() ? to : undefined,
       });
       setBody(generated);
-      setShowAiInput(false);
-      setAiInstruction("");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
-      setAiError(err.message || "Failed to generate email.");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      console.warn("AI assist failed:", err.message);
     } finally {
-      setIsAiLoading(false);
+      setActiveAiAction(null);
     }
   }
 
@@ -225,45 +229,6 @@ export default function ComposeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ flexGrow: 1 }}
       >
-        {showAiInput && (
-          <View style={[styles.aiContainer, { backgroundColor: colors.accent + "11", borderColor: colors.accent + "33" }]}>
-            <View style={styles.aiHeader}>
-              <Feather name="zap" size={16} color={colors.accent} />
-              <Text style={[styles.aiTitle, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>Write with AI</Text>
-              <View style={{ flex: 1 }} />
-              <Pressable onPress={() => setShowAiInput(false)} hitSlop={8}>
-                <Feather name="x" size={16} color={colors.mutedForeground} />
-              </Pressable>
-            </View>
-            <TextInput
-              style={[styles.aiInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-              placeholder="What do you want to say?"
-              placeholderTextColor={colors.mutedForeground}
-              value={aiInstruction}
-              onChangeText={setAiInstruction}
-              multiline
-            />
-            {aiError && (
-              <Text style={[styles.aiError, { color: colors.destructive, fontFamily: "Inter_400Regular" }]}>{aiError}</Text>
-            )}
-            <View style={styles.aiFooter}>
-              <Pressable
-                onPress={handleAiGenerate}
-                disabled={isAiLoading || !aiInstruction.trim()}
-                style={({ pressed }) => [
-                  styles.aiGenerateBtn,
-                  { backgroundColor: !aiInstruction.trim() || isAiLoading ? colors.muted : pressed ? "#1558B5" : colors.accent }
-                ]}
-              >
-                {isAiLoading ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <Text style={[styles.aiGenerateText, { color: !aiInstruction.trim() ? colors.mutedForeground : "#FFFFFF", fontFamily: "Inter_600SemiBold" }]}>Generate</Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        )}
         <TextInput
           ref={bodyRef}
           style={[
@@ -279,6 +244,35 @@ export default function ComposeScreen() {
           scrollEnabled={false}
         />
       </KeyboardAwareScrollView>
+
+      {/* AI Assist dropdown menu */}
+      {showAiMenu && (
+        <>
+          {/* Backdrop */}
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => setShowAiMenu(false)}
+          />
+          <View style={[styles.aiMenu, { backgroundColor: colors.card, borderColor: colors.border, shadowColor: colors.foreground }]}>
+            {AI_ACTIONS.map((action, idx) => (
+              <Pressable
+                key={action.id}
+                onPress={() => handleAiAction(action.id)}
+                style={({ pressed }) => [
+                  styles.aiMenuItem,
+                  pressed && { backgroundColor: colors.muted },
+                  idx < AI_ACTIONS.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                ]}
+              >
+                <Feather name={action.icon as any} size={15} color={colors.accent} />
+                <Text style={[styles.aiMenuLabel, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>
+                  {action.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      )}
 
       {/* Toolbar */}
       <View
@@ -304,9 +298,24 @@ export default function ComposeScreen() {
           <Feather name="clock" size={20} color={colors.mutedForeground} />
         </Pressable>
         <View style={styles.toolbarSpacer} />
-        <Pressable onPress={() => setShowAiInput(!showAiInput)} hitSlop={8}>
-          <Feather name="zap" size={20} color={colors.accent} />
-        </Pressable>
+        {/* AI Assist button */}
+        {activeAiAction ? (
+          <ActivityIndicator size="small" color={colors.accent} />
+        ) : (
+          <Pressable
+            onPress={() => setShowAiMenu((v) => !v)}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.aiAssistBtn,
+              { backgroundColor: showAiMenu ? colors.accent + "18" : pressed ? colors.muted : "transparent", borderColor: colors.accent + "44" },
+            ]}
+          >
+            <Feather name="zap" size={14} color={colors.accent} />
+            <Text style={[styles.aiAssistLabel, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>
+              AI Assist
+            </Text>
+          </Pressable>
+        )}
       </View>
     </View>
         );
@@ -385,42 +394,40 @@ const styles = StyleSheet.create({
   toolbarSpacer: {
     flex: 1,
   },
-  aiContainer: {
-    margin: 16,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 12,
-  },
-  aiHeader: {
+  aiAssistBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
   },
-  aiTitle: {
-    fontSize: 14,
-  },
-  aiInput: {
-    fontSize: 15,
-    minHeight: 60,
-    textAlignVertical: "top",
-  },
-  aiError: {
+  aiAssistLabel: {
     fontSize: 13,
   },
-  aiFooter: {
+  aiMenu: {
+    position: "absolute",
+    bottom: 64,
+    right: 16,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 8,
+    minWidth: 180,
+    overflow: "hidden",
+    zIndex: 100,
+  },
+  aiMenuItem: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-  },
-  aiGenerateBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
     alignItems: "center",
-    justifyContent: "center",
-    minWidth: 80,
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
   },
-  aiGenerateText: {
+  aiMenuLabel: {
     fontSize: 14,
   },
 });

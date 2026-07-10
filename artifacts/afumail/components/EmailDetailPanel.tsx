@@ -81,31 +81,28 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
 
   useEffect(() => {
     if (email && !email.read) markAsRead(email.id);
+    // Reset smart replies when a different email is opened
+    setSmartReplies(null);
+    setIsRepliesLoading(false);
   }, [email?.id]);
 
-  useEffect(() => {
-    if (!email) return;
-    let mounted = true;
-    
-    async function fetchReplies() {
-      setIsRepliesLoading(true);
-      try {
-        const replies = await aiSmartReplies({
-          emailBody: email!.body,
-          emailSubject: email!.subject,
-          emailFrom: email!.from.name || email!.from.email,
-        });
-        if (mounted) setSmartReplies(replies);
-      } catch (err) {
-        console.warn("Failed to fetch smart replies", err);
-      } finally {
-        if (mounted) setIsRepliesLoading(false);
-      }
+  async function handleFetchSmartReplies() {
+    if (!email || isRepliesLoading) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsRepliesLoading(true);
+    try {
+      const replies = await aiSmartReplies({
+        emailBody: email.body,
+        emailSubject: email.subject,
+        emailFrom: email.from.name || email.from.email,
+      });
+      setSmartReplies(replies);
+    } catch (err) {
+      console.warn("Failed to fetch smart replies", err);
+    } finally {
+      setIsRepliesLoading(false);
     }
-    
-    fetchReplies();
-    return () => { mounted = false; };
-  }, [email?.id]);
+  }
 
   function showToast(msg: string) {
     setToast(msg);
@@ -439,7 +436,8 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
       </ScrollView>
 
         {/* Reply bar */}
-        <View style={{ gap: 12 }}>
+        <View style={{ gap: 0 }}>
+          {/* Smart reply chips — shown after button tap */}
           {smartReplies && smartReplies.length > 0 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.smartRepliesContainer}>
               {smartReplies.map((reply, idx) => (
@@ -457,29 +455,40 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
             </ScrollView>
           )}
           <View style={[styles.replyBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 12 }]}>
-        <Pressable
-          onPress={handleReply}
-          style={({ pressed }) => [styles.replyButton, { backgroundColor: pressed ? colors.accent + "22" : colors.muted, borderColor: colors.border }]}
-        >
-          <Feather name="corner-up-left" size={15} color={colors.foreground} />
-          <Text style={[styles.replyBtnText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Reply</Text>
-        </Pressable>
-        <Pressable
-          onPress={handleReplyAll}
-          style={({ pressed }) => [styles.replyButton, { backgroundColor: pressed ? colors.accent + "22" : colors.muted, borderColor: colors.border }]}
-        >
-          <Feather name="corner-up-left" size={15} color={colors.foreground} />
-          <Text style={[styles.replyBtnText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Reply All</Text>
-        </Pressable>
-        <Pressable
-          onPress={handleForward}
-          style={({ pressed }) => [styles.replyButton, { backgroundColor: pressed ? colors.accent + "22" : colors.muted, borderColor: colors.border }]}
-        >
-          <Feather name="corner-up-right" size={15} color={colors.foreground} />
-          <Text style={[styles.replyBtnText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Forward</Text>
-        </Pressable>
-      </View>
-      </View>
+            <Pressable
+              onPress={handleReply}
+              style={({ pressed }) => [styles.replyButton, { backgroundColor: pressed ? colors.accent + "22" : colors.muted, borderColor: colors.border }]}
+            >
+              <Feather name="corner-up-left" size={15} color={colors.foreground} />
+              <Text style={[styles.replyBtnText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Reply</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleForward}
+              style={({ pressed }) => [styles.replyButton, { backgroundColor: pressed ? colors.accent + "22" : colors.muted, borderColor: colors.border }]}
+            >
+              <Feather name="corner-up-right" size={15} color={colors.foreground} />
+              <Text style={[styles.replyBtnText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Forward</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleFetchSmartReplies}
+              disabled={isRepliesLoading}
+              style={({ pressed }) => [
+                styles.replyButton,
+                {
+                  backgroundColor: pressed ? colors.accent + "22" : colors.muted,
+                  borderColor: smartReplies && smartReplies.length > 0 ? colors.accent + "44" : colors.border,
+                }
+              ]}
+            >
+              {isRepliesLoading ? (
+                <ActivityIndicator size={13} color={colors.accent} />
+              ) : (
+                <Feather name="zap" size={14} color={colors.accent} />
+              )}
+              <Text style={[styles.replyBtnText, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>Smart Reply</Text>
+            </Pressable>
+          </View>
+        </View>
 
       {/* More Actions Sheet */}
       <BottomSheet visible={actionsVisible} onClose={() => setActionsVisible(false)}>
