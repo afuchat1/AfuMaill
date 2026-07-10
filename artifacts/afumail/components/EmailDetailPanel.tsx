@@ -93,8 +93,9 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
         emailFrom: email.from.name || email.from.email,
       });
       setSmartReplies(replies);
-    } catch (err) {
-      console.warn("Failed to fetch smart replies", err);
+    } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showToast(err?.message ?? "Smart Reply unavailable — try again");
     } finally {
       setIsRepliesLoading(false);
     }

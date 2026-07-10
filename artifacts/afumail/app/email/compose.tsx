@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -46,9 +46,18 @@ export default function ComposeScreen() {
 
   const [showAiMenu, setShowAiMenu] = useState(false);
   const [activeAiAction, setActiveAiAction] = useState<AiAction | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const aiErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const bodyRef = useRef<TextInput>(null);
   const goBackRef = useRef<() => void>(() => router.back());
+
+  // Clear AI error timer on unmount to avoid stale state updates
+  useEffect(() => {
+    return () => {
+      if (aiErrorTimerRef.current) clearTimeout(aiErrorTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!user || params.body) return;
@@ -83,9 +92,17 @@ export default function ComposeScreen() {
     }
   }
 
+  function showAiError(msg: string) {
+    if (aiErrorTimerRef.current) clearTimeout(aiErrorTimerRef.current);
+    setAiError(msg);
+    aiErrorTimerRef.current = setTimeout(() => setAiError(null), 3500);
+  }
+
   async function handleAiAction(action: AiAction) {
     const item = AI_ACTIONS.find((a) => a.id === action)!;
     setShowAiMenu(false);
+    setAiError(null);
+    if (aiErrorTimerRef.current) clearTimeout(aiErrorTimerRef.current);
     setActiveAiAction(action);
     try {
       const generated = await aiCompose({
@@ -98,7 +115,7 @@ export default function ComposeScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      console.warn("AI assist failed:", err.message);
+      showAiError(err?.message ?? "AI assist failed — try again");
     } finally {
       setActiveAiAction(null);
     }
@@ -110,6 +127,13 @@ export default function ComposeScreen() {
         goBackRef.current = goBack;
         return (
     <View style={[styles.root, { backgroundColor: colors.card }]}>
+      {/* AI error toast */}
+      {aiError && (
+        <View style={[styles.aiErrorToast, { backgroundColor: colors.destructive }]}>
+          <Feather name="alert-circle" size={14} color="#fff" />
+          <Text style={[styles.aiErrorToastText, { fontFamily: "Inter_500Medium" }]}>{aiError}</Text>
+        </View>
+      )}
       {/* Header */}
       <View
         style={[
@@ -405,6 +429,18 @@ const styles = StyleSheet.create({
   },
   aiAssistLabel: {
     fontSize: 13,
+  },
+  aiErrorToast: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  aiErrorToastText: {
+    fontSize: 13,
+    color: "#fff",
+    flex: 1,
   },
   aiMenu: {
     position: "absolute",

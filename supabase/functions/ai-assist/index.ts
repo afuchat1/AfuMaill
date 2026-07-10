@@ -87,6 +87,26 @@ function truncate(text: string, max = 6000): string {
   return text.length > max ? text.slice(0, max) + "\n…(truncated)" : text;
 }
 
+/** Strip HTML tags server-side as a safety net for rich-text email bodies. */
+function stripHtml(input: string): string {
+  if (!input || !input.trimStart().startsWith("<")) return input;
+  let t = input;
+  t = t.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
+  t = t.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
+  t = t.replace(/<img[^>]+alt=["']([^"']*)["'][^>]*\/?>/gi, "$1");
+  t = t.replace(/<img[^>]*\/?>/gi, "");
+  t = t.replace(/<br\s*\/?>/gi, "\n");
+  t = t.replace(/<\/?(p|div|h[1-6]|li|tr|blockquote|section|article)[^>]*>/gi, "\n");
+  t = t.replace(/<\/td>/gi, " ").replace(/<\/th>/gi, " ");
+  t = t.replace(/<[^>]+>/g, "");
+  t = t
+    .replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'").replace(/&nbsp;/gi, " ")
+    .replace(/&#(\d+);/g, (_, c) => { try { return String.fromCodePoint(Number(c)); } catch { return ""; } })
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => { try { return String.fromCodePoint(parseInt(h, 16)); } catch { return ""; } });
+  return t.split("\n").map((l) => l.trim()).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 function parseReplyList(raw: string): string[] {
   // Try JSON array first.
   const trimmed = raw.trim();
@@ -133,7 +153,7 @@ Deno.serve(async (req) => {
     if (mode === "compose") {
       const instruction = typeof body.instruction === "string" ? body.instruction.trim() : "";
       if (!instruction) return jsonResp({ error: "instruction is required." }, 400);
-      const draft = typeof body.draft === "string" ? body.draft : "";
+      const draft = stripHtml(typeof body.draft === "string" ? body.draft : "");
       const subject = typeof body.subject === "string" ? body.subject : "";
       const to = typeof body.to === "string" ? body.to : "";
 
@@ -159,7 +179,9 @@ Deno.serve(async (req) => {
     }
 
     if (mode === "reply") {
-      const emailBody = typeof body.emailBody === "string" ? body.emailBody : "";
+      const rawBody = typeof body.emailBody === "string" ? body.emailBody : "";
+      if (!rawBody) return jsonResp({ error: "emailBody is required." }, 400);
+      const emailBody = stripHtml(rawBody);
       if (!emailBody) return jsonResp({ error: "emailBody is required." }, 400);
       const emailSubject = typeof body.emailSubject === "string" ? body.emailSubject : "";
       const emailFrom = typeof body.emailFrom === "string" ? body.emailFrom : "";

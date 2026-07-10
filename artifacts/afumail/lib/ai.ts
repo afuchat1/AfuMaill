@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { htmlToPlainText } from "@/lib/htmlToPlainText";
 
 async function callAiAssist<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke("ai-assist", {
@@ -35,7 +36,11 @@ export async function aiSmartReplies(params: {
   emailSubject?: string;
   emailFrom?: string;
 }): Promise<string[]> {
-  const { replies } = await callAiAssist<{ replies: string[] }>({ mode: "reply", ...params });
+  const { replies } = await callAiAssist<{ replies: string[] }>({
+    mode: "reply",
+    ...params,
+    emailBody: htmlToPlainText(params.emailBody),
+  });
   return replies;
 }
 
