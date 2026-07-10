@@ -1,42 +1,53 @@
 # AfuMail
 
-A private email platform built for the Afu community. Users get a `username@afuchat.com` identity used across AfuChat, AfuCloud, and other Afu products.
+A private email platform for the Afu community. Every user gets a `username@afuchat.com` address that works across AfuChat, AfuCloud, and other Afu products.
 
-## Monorepo structure
+## How to run
 
-```
-artifacts/
-  afumail/    ← React Native / Expo mobile app (Android, iOS, web)
-  website/    ← Web app (static Expo web export + dev proxy)
-lib/
-  db/         ← Drizzle ORM schema & Supabase Postgres client
-  api-spec/   ← OpenAPI specification (source of truth)
-  api-zod/    ← Auto-generated Zod schemas (from spec)
-supabase/
-  functions/  ← All backend logic lives here as Deno Edge Functions
-  migrations/ ← SQL migrations
-scripts/      ← Monorepo utilities
-```
-
-## Running the project
+Two workflows run in parallel — both must be started for the app to work:
 
 | Workflow | Port | What it does |
 |---|---|---|
-| `artifacts/afumail: expo` | 8099 | Expo Metro bundler — mobile app |
-| `artifacts/website: web` | 3000 | Dev proxy forwarding to port 8099 |
+| `artifacts/afumail: expo` | **8099** | Expo Metro bundler — serves the mobile app and the live web bundle |
+| `artifacts/website: web` | **3000** | `web-proxy.js` — forwards every request from port 3000 → 8099 |
 
-Click **Run** to start both. No backend to start — apps talk directly to Supabase.
+Click **Run** to start both. No secrets are required — the app connects to the live Supabase project by default.
 
-## Architecture
+## Stack
 
-**Supabase only — no custom API server.** Every server-side operation runs as a Supabase Edge Function in `supabase/functions/`. The apps never call a custom Node.js/Express/Fastify backend.
+- **Frontend:** React Native / Expo (shared bundle for mobile + web)
+- **Backend:** Supabase exclusively (no custom API server)
+  - Auth, Postgres DB, and Edge Functions (Deno/TypeScript in `supabase/functions/`)
+- **Package manager:** pnpm with workspaces
+- **Schema:** Drizzle ORM (`lib/db/`)
 
-See `DEVELOPMENT.md` for the full guide: architecture, edge functions, auth flow, port rules, patterns, and what not to do.
+## Structure
+
+```
+artifacts/afumail/   ← Expo mobile app (Android, iOS, web)
+artifacts/website/   ← Web app (dev proxy → port 8099; static build for production)
+lib/                 ← Shared DB schema, OpenAPI spec, Zod models
+supabase/functions/  ← Edge Functions: oauth, send-email, receive-email, reset-password, ai-assist, developer-apps
+```
+
+## Key rules (from DEVELOPMENT.md)
+
+- **No custom API server.** All server-side logic must be a Supabase Edge Function.
+- **Port 8099** is hardwired to the mobile artifact. **Port 3000** proxies to 8099. Never reassign these.
+- Use `web-proxy.js` (not `serve.js`) as the website dev command.
+- Use `pnpm` only — `npm`/`yarn` are rejected by a `preinstall` guard.
+- Do not import from `esm.sh` in Edge Functions (DNS blocked in Replit build env).
+- Store inbound email bodies as raw HTML — never flatten to plain text.
+
+## Optional secrets
+
+To point to a different Supabase project set these in Replit Secrets:
+
+| Secret | Purpose |
+|---|---|
+| `EXPO_PUBLIC_SUPABASE_URL` | Override Supabase project URL |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Override Supabase anon key |
 
 ## User preferences
 
-- Keep `artifacts/afumail` and `artifacts/website` app code fully separated — shared infrastructure goes in `lib/` only.
-- Never add a custom API server. All backend logic must be a Supabase Edge Function.
-- Do not migrate to a different package manager or restructure the monorepo.
-- Do not use `esm.sh` imports in Edge Functions (DNS blocked in Replit build environment).
-- Always use `pnpm` — the preinstall script rejects `npm` and `yarn`.
+<!-- Add remembered preferences here -->
