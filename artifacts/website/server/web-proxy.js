@@ -93,9 +93,16 @@ const server = http.createServer((clientReq, clientRes) => {
   const pathname = url.pathname;
   const platform = clientReq.headers["expo-platform"];
 
-  // Root or /site (canvas preview path) without an Expo client header → marketing landing page
-  if ((pathname === "/" || pathname === "/site") && !platform) {
+  // Root → marketing landing page
+  if (pathname === "/" && !platform) {
     return serveLandingPage(clientReq, clientRes);
+  }
+
+  // /site (canvas artifact preview path) → redirect into the email app
+  if (pathname === "/site" && !platform) {
+    clientRes.writeHead(302, { Location: "/login" });
+    clientRes.end();
+    return;
   }
 
   // /get → redirect to the web sign-in
