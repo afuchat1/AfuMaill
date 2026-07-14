@@ -93,13 +93,13 @@ const server = http.createServer((clientReq, clientRes) => {
   const pathname = url.pathname;
   const platform = clientReq.headers["expo-platform"];
 
-  // Root → marketing landing page
-  if (pathname === "/" && !platform) {
+  // /marketing → serve the landing page
+  if (pathname === "/marketing" && !platform) {
     return serveLandingPage(clientReq, clientRes);
   }
 
-  // /site (canvas artifact preview path) → redirect into the email app
-  if (pathname === "/site" && !platform) {
+  // / and /site both redirect into the email app
+  if ((pathname === "/" || pathname === "/site") && !platform) {
     clientRes.writeHead(302, { Location: "/login" });
     clientRes.end();
     return;
