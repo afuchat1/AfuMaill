@@ -21,7 +21,7 @@ const fs = require("fs");
 const path = require("path");
 
 const LISTEN_PORT = parseInt(process.env.PORT || "3000", 10);
-const TARGET_PORT = 5001; // afumail Metro — desktop frame shows the mobile app
+const TARGET_PORT = 5002; // website Metro proxy
 const TEMPLATE_PATH = path.resolve(__dirname, "templates", "landing-page.html");
 
 // Load landing page template once at startup
