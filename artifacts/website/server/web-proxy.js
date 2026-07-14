@@ -4,11 +4,12 @@
  * Listens on port 3000 (website frame).
  * - GET /         → serves the marketing landing page (templates/landing-page.html)
  * - GET /get      → redirects to /login
- * - Everything else → proxied to port 8099 (expo-proxy / Expo Metro)
+ * - Everything else → proxied to port 5002 (website expo-proxy / Expo Metro)
  *
  * Port layout:
  *   3000 — this proxy   (what Replit's website frame sees)
- *   8099 — expo-proxy   (the mobile artifact / Expo Metro)
+ *   5002 — expo-proxy   (the website artifact / Expo Metro)
+ *   5003 — Expo Metro   (internal, spawned by expo-proxy)
  *
  * Do NOT use serve.js as the dev command — that serves a static build and
  * is only for production. See PORT_ASSIGNMENT.md and DEVELOPMENT.md.
@@ -20,7 +21,7 @@ const fs = require("fs");
 const path = require("path");
 
 const LISTEN_PORT = parseInt(process.env.PORT || "3000", 10);
-const TARGET_PORT = 8099;
+const TARGET_PORT = 5002;
 const TEMPLATE_PATH = path.resolve(__dirname, "templates", "landing-page.html");
 
 // Load landing page template once at startup
