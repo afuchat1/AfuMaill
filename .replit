@@ -64,6 +64,10 @@ waitForPort = 8099
 [workflows.workflow.metadata]
 outputType = "console"
 
+[[ports]]
+localPort = 3000
+externalPort = 80
+
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
