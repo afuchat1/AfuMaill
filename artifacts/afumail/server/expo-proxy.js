@@ -1,64 +1,61 @@
 /**
  * expo-proxy.js  (afumail)
  *
- * Opens port 8099 immediately (so Replit's waitForPort check passes),
- * then spawns the afumail Expo/Metro dev server on internal port 5001
- * and transparently proxies all HTTP and WebSocket traffic 8099 → 5001.
+ * Listens on port 8099 (Replit mobile artifact port).
+ * - Spawns the afumail Metro on port 5001 (so it stays available for the desktop frame).
+ * - Forwards all HTTP/WS traffic on 8099 → port 5003 (website Metro),
+ *   so the mobile artifact frame previews the website app.
  *
  * Port layout:
- *   8099 — this proxy   (Replit mobile artifact port)
- *   5001 — Expo Metro   (afumail, internal only)
- *   3000 — web-proxy.js (website artifact, forwards to website Metro on 5002)
- *   5002 — website expo-proxy (website Metro proxy)
- *   5003 — website Metro (internal)
+ *   8099 — this proxy         (mobile artifact frame → website Metro)
+ *   5001 — afumail Metro      (spawned here; used by web-proxy on port 3000)
+ *   5002 — website expo-proxy (managed by artifacts/website: expo workflow)
+ *   5003 — website Metro      (website app; what 8099 forwards to)
+ *   3000 — web-proxy.js       (desktop artifact frame → afumail Metro on 5001)
  */
 
 const http = require("http");
-const net = require("net");
+const net  = require("net");
 const { spawn } = require("child_process");
 
-const LISTEN_PORT = parseInt(process.env.PORT || "8099", 10);
-const EXPO_PORT = 5001;
-let expoReady = false;
+const LISTEN_PORT  = parseInt(process.env.PORT || "8099", 10);
+const AFUMAIL_PORT = 5001;  // afumail Metro (spawned below)
+const WEBSITE_PORT = 5003;  // website Metro (proxy target for 8099)
 
-// ── 1. Start Expo Metro on EXPO_PORT (with auto-restart on crash) ─────────────
+// ── 1. Spawn the afumail Metro so port 3000's web-proxy can reach it ──────────
 function startExpo() {
-  console.log(`[expo-proxy] Spawning Expo on port ${EXPO_PORT}…`);
+  console.log(`[expo-proxy] Spawning afumail Metro on port ${AFUMAIL_PORT}…`);
 
   const expo = spawn(
     "pnpm",
-    ["exec", "expo", "start", "--localhost", "--port", String(EXPO_PORT)],
+    ["exec", "expo", "start", "--localhost", "--port", String(AFUMAIL_PORT)],
     {
-      env: { ...process.env, PORT: String(EXPO_PORT) },
+      env: { ...process.env, PORT: String(AFUMAIL_PORT) },
       stdio: "inherit",
       cwd: process.cwd(),
     }
   );
 
   expo.on("exit", (code, signal) => {
-    expoReady = false;
     console.log(
-      `[expo-proxy] Expo exited (code=${code} signal=${signal}), restarting in 3s…`
+      `[expo-proxy] afumail Metro exited (code=${code} signal=${signal}), restarting in 3s…`
     );
     setTimeout(startExpo, 3000);
   });
-
-  // Mark Expo as likely ready after a reasonable warm-up period
-  setTimeout(() => { expoReady = true; }, 15000);
 }
 
 startExpo();
 
-// ── 2. HTTP proxy: LISTEN_PORT → EXPO_PORT ───────────────────────────────────
+// ── 2. HTTP proxy: 8099 → website Metro (5003) ────────────────────────────────
 const server = http.createServer((clientReq, clientRes) => {
   const fwdHeaders = { ...clientReq.headers };
   delete fwdHeaders["origin"];
   delete fwdHeaders["referer"];
-  fwdHeaders["host"] = `127.0.0.1:${EXPO_PORT}`;
+  fwdHeaders["host"] = `127.0.0.1:${WEBSITE_PORT}`;
 
   const opts = {
     hostname: "127.0.0.1",
-    port: EXPO_PORT,
+    port: WEBSITE_PORT,
     path: clientReq.url,
     method: clientReq.method,
     headers: fwdHeaders,
@@ -83,9 +80,9 @@ const server = http.createServer((clientReq, clientRes) => {
   clientReq.pipe(proxy, { end: true });
 });
 
-// ── 3. WebSocket proxy: LISTEN_PORT → EXPO_PORT (Metro HMR / hot-reload) ──────
+// ── 3. WebSocket proxy: 8099 → website Metro (Metro HMR) ─────────────────────
 server.on("upgrade", (req, socket, head) => {
-  const upstream = net.createConnection(EXPO_PORT, "127.0.0.1");
+  const upstream = net.createConnection(WEBSITE_PORT, "127.0.0.1");
 
   upstream.on("connect", () => {
     const headers = [
@@ -106,10 +103,12 @@ server.on("upgrade", (req, socket, head) => {
   socket.on("error", () => upstream.destroy());
 });
 
-// ── 4. Listen on LISTEN_PORT with retry on EADDRINUSE ────────────────────────
+// ── 4. Listen ─────────────────────────────────────────────────────────────────
 server.on("listening", () => {
   console.log(
-    `[expo-proxy] Proxy ready on port ${LISTEN_PORT} → forwarding to Expo on port ${EXPO_PORT}`
+    `[expo-proxy] Ready on port ${LISTEN_PORT}` +
+    ` | 8099 → website Metro :${WEBSITE_PORT}` +
+    ` | afumail Metro spawned on :${AFUMAIL_PORT} (for port 3000)`
   );
 });
 
@@ -120,7 +119,7 @@ server.on("error", (err) => {
       server.close(() => server.listen(LISTEN_PORT, "0.0.0.0"));
     }, 2000);
   } else {
-    console.error("[expo-proxy] Fatal server error:", err.message);
+    console.error("[expo-proxy] Fatal:", err.message);
     process.exit(1);
   }
 });
