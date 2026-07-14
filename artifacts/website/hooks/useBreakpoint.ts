@@ -3,16 +3,16 @@ import { useWindowDimensions } from "react-native";
 /**
  * Breakpoint hook for the website artifact.
  *
- * The website is always a desktop/web experience — `isMobile` is permanently
- * false so the two-column desktop layout always renders regardless of the
- * viewport or preview-pane width reported by useWindowDimensions.
+ * Uses the real window width so the phone-sized viewport (mobile artifact
+ * frame, ~390px) gets the mobile layout while the wide website artifact
+ * frame (1920px) gets the full desktop layout.
  */
 export function useBreakpoint() {
   const { width } = useWindowDimensions();
   return {
-    isMobile: false,
+    isMobile: width < 768,
     isTablet: width >= 768 && width < 1024,
-    isDesktop: true,
+    isDesktop: width >= 1024,
     width,
   };
 }
