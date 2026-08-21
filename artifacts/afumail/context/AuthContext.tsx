@@ -37,7 +37,14 @@ async function loadProfile(userId: string): Promise<AuthUser | null> {
     .eq("id", userId)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) {
+    console.warn("Profile load error:", error.message);
+    return null;
+  }
+  if (!data) {
+    console.warn("Profile load returned no row for authenticated user.");
+    return null;
+  }
 
   return {
     id: userId,
@@ -52,6 +59,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
+  function sessionFallback(session: Session): AuthUser {
+    const email = session.user.email ?? "";
+    const username = email.toLowerCase().endsWith("@afuchat.com")
+      ? email.slice(0, -"@afuchat.com".length)
+      : email.split("@")[0] ?? "";
+
+    return {
+      id: session.user.id,
+      name:
+        (session.user.user_metadata?.full_name as string | undefined) ??
+        (session.user.user_metadata?.name as string | undefined) ??
+        username,
+      email,
+      username,
+    };
+  }
+
   async function hydrate(session: Session | null) {
     try {
       if (!session?.user) {
@@ -59,11 +83,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
         return;
       }
+
+      // A Supabase Auth session is the source of truth for authentication.
+      // Do not turn a profile/RLS/network issue into an apparent login failure.
+      // The profile query below only enriches the authenticated identity.
+      setUser(sessionFallback(session));
+      setIsLoading(false);
+
       const profile = await loadProfile(session.user.id);
-      setUser(profile);
+      if (profile) setUser(profile);
     } catch (err) {
       console.warn("AuthContext hydrate error:", err);
-      setUser(null);
+      if (session?.user) setUser(sessionFallback(session));
     } finally {
       setIsLoading(false);
     }
@@ -111,8 +142,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function refreshUser() {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
+      setUser(sessionFallback(session));
       const profile = await loadProfile(session.user.id);
-      setUser(profile);
+      if (profile) setUser(profile);
     }
   }
 

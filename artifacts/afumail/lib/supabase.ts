@@ -182,7 +182,10 @@ export async function signInUser(
   email: string,
   password: string
 ): Promise<{ error?: string }> {
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.trim().toLowerCase(),
+    password,
+  });
   if (error) return { error: error.message };
   return {};
 }

@@ -87,7 +87,7 @@ export default function LoginScreen() {
 
     const { error } = await signInUser(email, loginPassword);
     if (error) {
-      setLoginError("Incorrect username or password.");
+      setLoginError(error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } else {
       await refreshUser();
