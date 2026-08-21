@@ -246,6 +246,118 @@ export interface CalendarEvent {
   created_at: string;
 }
 
+type PendingCalendarOperation =
+  | { type: "create"; event: CalendarEvent }
+  | { type: "delete"; id: string };
+
+const CALENDAR_CACHE_PREFIX = "afumail:calendar:";
+const CALENDAR_QUEUE_PREFIX = "afumail:calendar-queue:";
+
+function calendarCacheKey(userId: string, year: number, month: number): string {
+  return `${CALENDAR_CACHE_PREFIX}${userId}:${year}-${String(month + 1).padStart(2, "0")}`;
+}
+
+function calendarQueueKey(userId: string): string {
+  return `${CALENDAR_QUEUE_PREFIX}${userId}`;
+}
+
+async function readCalendarCache(
+  userId: string,
+  year: number,
+  month: number,
+): Promise<CalendarEvent[]> {
+  try {
+    const raw = await AsyncStorage.getItem(calendarCacheKey(userId, year, month));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed as CalendarEvent[] : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeCalendarCache(
+  userId: string,
+  year: number,
+  month: number,
+  events: CalendarEvent[],
+): Promise<void> {
+  try {
+    await AsyncStorage.setItem(calendarCacheKey(userId, year, month), JSON.stringify(events));
+  } catch (error) {
+    console.warn("calendar cache write error:", error);
+  }
+}
+
+async function readCalendarQueue(userId: string): Promise<PendingCalendarOperation[]> {
+  try {
+    const raw = await AsyncStorage.getItem(calendarQueueKey(userId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed as PendingCalendarOperation[] : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeCalendarQueue(
+  userId: string,
+  operations: PendingCalendarOperation[],
+): Promise<void> {
+  if (operations.length === 0) {
+    await AsyncStorage.removeItem(calendarQueueKey(userId));
+    return;
+  }
+  await AsyncStorage.setItem(calendarQueueKey(userId), JSON.stringify(operations));
+}
+
+async function applyPendingCalendarOperations(userId: string): Promise<void> {
+  const operations = await readCalendarQueue(userId);
+  if (operations.length === 0) return;
+
+  const remaining: PendingCalendarOperation[] = [];
+  for (const operation of operations) {
+    try {
+      if (operation.type === "create") {
+        const { data, error } = await supabase
+          .from("calendar_events")
+          .insert({
+            owner_id: userId,
+            title: operation.event.title,
+            event_date: operation.event.event_date,
+            event_time: operation.event.event_time,
+            duration: operation.event.duration,
+            color: operation.event.color,
+            note: operation.event.note,
+          })
+          .select()
+          .single();
+        if (error || !data) throw error ?? new Error("Calendar event sync returned no row.");
+
+        // Replace the temporary local ID in the month cache with Supabase's ID.
+        const event = data as CalendarEvent;
+        const cached = await readCalendarCache(
+          userId,
+          Number(operation.event.event_date.slice(0, 4)),
+          Number(operation.event.event_date.slice(5, 7)) - 1,
+        );
+        await writeCalendarCache(
+          userId,
+          Number(operation.event.event_date.slice(0, 4)),
+          Number(operation.event.event_date.slice(5, 7)) - 1,
+          cached.map((item) => item.id === operation.event.id ? event : item),
+        );
+      } else {
+        const { error } = await supabase.from("calendar_events").delete().eq("id", operation.id);
+        if (error) throw error;
+      }
+    } catch {
+      remaining.push(operation);
+    }
+  }
+  await writeCalendarQueue(userId, remaining);
+}
+
 export async function getCalendarEvents(
   userId: string,
   year: number,
@@ -256,34 +368,98 @@ export async function getCalendarEvents(
   const endYear = month === 11 ? year + 1 : year;
   const endDate = `${endYear}-${String(endMonth).padStart(2, "0")}-01`;
 
-  const { data, error } = await supabase
-    .from("calendar_events")
-    .select("*")
-    .eq("owner_id", userId)
-    .gte("event_date", startDate)
-    .lt("event_date", endDate)
-    .order("event_date");
+  const cached = await readCalendarCache(userId, year, month);
 
-  if (error || !data) return [];
-  return data as CalendarEvent[];
+  // A successful request is also our connectivity signal. Replaying queued
+  // changes before loading makes offline edits durable after reconnecting.
+  try {
+    await applyPendingCalendarOperations(userId);
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .select("*")
+      .eq("owner_id", userId)
+      .gte("event_date", startDate)
+      .lt("event_date", endDate)
+      .order("event_date");
+
+    if (error || !data) throw error ?? new Error("Calendar query returned no data.");
+    const events = data as CalendarEvent[];
+    await writeCalendarCache(userId, year, month, events);
+    return events;
+  } catch {
+    return cached;
+  }
 }
 
 export async function createCalendarEvent(
   input: Omit<CalendarEvent, "id" | "created_at">
 ): Promise<CalendarEvent> {
-  const { data, error } = await supabase
-    .from("calendar_events")
-    .insert(input)
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as CalendarEvent;
+  try {
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .insert(input)
+      .select()
+      .single();
+    if (error || !data) throw error ?? new Error("Calendar event was not created.");
+    const event = data as CalendarEvent;
+    const year = Number(event.event_date.slice(0, 4));
+    const month = Number(event.event_date.slice(5, 7)) - 1;
+    const cached = await readCalendarCache(input.owner_id, year, month);
+    await writeCalendarCache(input.owner_id, year, month, [
+      ...cached.filter((item) => item.id !== event.id),
+      event,
+    ]);
+    return event;
+  } catch {
+    const event: CalendarEvent = {
+      ...input,
+      id: `offline-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      created_at: new Date().toISOString(),
+    };
+    const year = Number(event.event_date.slice(0, 4));
+    const month = Number(event.event_date.slice(5, 7)) - 1;
+    const cached = await readCalendarCache(input.owner_id, year, month);
+    await writeCalendarCache(input.owner_id, year, month, [...cached, event]);
+    const queue = await readCalendarQueue(input.owner_id);
+    await writeCalendarQueue(input.owner_id, [...queue, { type: "create", event }]);
+    return event;
+  }
 }
 
 export async function deleteCalendarEvent(id: string): Promise<void> {
-  const { error } = await supabase.from("calendar_events").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  try {
+    const { error } = await supabase.from("calendar_events").delete().eq("id", id);
+    if (error) throw error;
+    return;
+  } catch {
+    // The caller only has an ID, so remove it from cached months and queue the
+    // delete. A later calendar read will replay it after connectivity returns.
+    const allKeys = await AsyncStorage.getAllKeys();
+    const cacheKeys = allKeys.filter((key) => key.startsWith(CALENDAR_CACHE_PREFIX));
+    const entries = await AsyncStorage.multiGet(cacheKeys);
+    await Promise.all(entries.map(async ([key, raw]) => {
+      if (!raw) return;
+      try {
+        const events = JSON.parse(raw) as CalendarEvent[];
+        await AsyncStorage.setItem(key, JSON.stringify(events.filter((event) => event.id !== id)));
+      } catch {}
+    }));
+
+    const ownerIds = cacheKeys
+      .map((key) => key.slice(CALENDAR_CACHE_PREFIX.length).split(":")[0])
+      .filter(Boolean);
+    for (const ownerId of ownerIds) {
+      const queue = await readCalendarQueue(ownerId);
+      const withoutLocalCreate = queue.filter(
+        (operation) => !(operation.type === "create" && operation.event.id === id),
+      );
+      if (withoutLocalCreate.length !== queue.length) {
+        await writeCalendarQueue(ownerId, withoutLocalCreate);
+        continue;
+      }
+      await writeCalendarQueue(ownerId, [...withoutLocalCreate, { type: "delete", id }]);
+    }
+  }
 }
 
 export async function getPreferencesRaw(
