@@ -21,7 +21,7 @@ import { BottomSheet } from "@/components/ui/BottomSheet";
 import type { EmailFolder } from "@/context/EmailContext";
 import { useEmails } from "@/context/EmailContext";
 import { useColors } from "@/hooks/useColors";
-import { aiSmartReplies } from "@/lib/ai";
+import { aiSmartReplies, aiSummarize } from "@/lib/ai";
 
 function formatFullDate(timestamp: string): string {
   const date = new Date(timestamp);
@@ -98,12 +98,16 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
 
   const [smartReplies, setSmartReplies] = useState<string[] | null>(null);
   const [isRepliesLoading, setIsRepliesLoading] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
 
   useEffect(() => {
     if (email && !email.read) markAsRead(email.id);
     // Reset smart replies when a different email is opened
     setSmartReplies(null);
     setIsRepliesLoading(false);
+    setSummary(null);
+    setIsSummaryLoading(false);
   }, [email?.id]);
 
   async function handleFetchSmartReplies() {
@@ -122,6 +126,24 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
       showToast(err?.message ?? "Smart Reply unavailable — try again");
     } finally {
       setIsRepliesLoading(false);
+    }
+  }
+
+  async function handleSummarize() {
+    if (!email || isSummaryLoading) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsSummaryLoading(true);
+    try {
+      const content = await aiSummarize({
+        emailBody: email.body,
+        emailSubject: email.subject,
+      });
+      setSummary(content);
+    } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showToast(err?.message ?? "Summary unavailable — try again");
+    } finally {
+      setIsSummaryLoading(false);
     }
   }
 
@@ -432,6 +454,30 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
             })}
           </View>
         )}
+        {(summary || isSummaryLoading) && (
+          <View style={[styles.summaryCard, { backgroundColor: colors.accent + "12", borderColor: colors.accent + "33" }]}>
+            {isSummaryLoading ? (
+              <ActivityIndicator size="small" color={colors.accent} />
+            ) : (
+              <Feather name="zap" size={15} color={colors.accent} />
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.summaryTitle, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>
+                AI summary
+              </Text>
+              {summary && (
+                <Text style={[styles.summaryText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+                  {summary}
+                </Text>
+              )}
+            </View>
+            {!!summary && (
+              <Pressable onPress={() => setSummary(null)} hitSlop={8}>
+                <Feather name="x" size={16} color={colors.mutedForeground} />
+              </Pressable>
+            )}
+          </View>
+        )}
       </ScrollView>
 
         {/* Reply bar */}
@@ -467,6 +513,21 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
             >
               <Feather name="corner-up-right" size={15} color={colors.foreground} />
               <Text style={[styles.replyBtnText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Forward</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleSummarize}
+              disabled={isSummaryLoading}
+              style={({ pressed }) => [
+                styles.replyButton,
+                { backgroundColor: pressed ? colors.accent + "22" : colors.muted, borderColor: colors.border },
+              ]}
+            >
+              {isSummaryLoading ? (
+                <ActivityIndicator size={13} color={colors.accent} />
+              ) : (
+                <Feather name="file-text" size={14} color={colors.accent} />
+              )}
+              <Text style={[styles.replyBtnText, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>Summarize</Text>
             </Pressable>
             <Pressable
               onPress={handleFetchSmartReplies}
@@ -633,4 +694,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, justifyContent: "center"
   },
   smartReplyText: { fontSize: 14 },
+  summaryCard: {
+    flexDirection: "row", alignItems: "flex-start", gap: 10,
+    marginHorizontal: 16, marginBottom: 16, padding: 12,
+    borderRadius: 12, borderWidth: 1,
+  },
+  summaryTitle: { fontSize: 12, marginBottom: 4 },
+  summaryText: { fontSize: 14, lineHeight: 20 },
 });
