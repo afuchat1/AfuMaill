@@ -18,23 +18,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "artifacts/website: web"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "artifacts/afumail: expo"
-
-[[workflows.workflow]]
-name = "artifacts/website: web"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "PORT=3000 pnpm --filter @workspace/website run dev"
-waitForPort = 3000
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [[workflows.workflow]]
 name = "artifacts/afumail: expo"
