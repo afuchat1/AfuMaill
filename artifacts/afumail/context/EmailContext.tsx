@@ -106,23 +106,26 @@ const EmailContext = createContext<EmailContextType>({
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToEmail(row: any): Email {
+  const folder = String(row.folder ?? "inbox").toLowerCase() as EmailFolder;
+  const category = String(row.category ?? "primary").toLowerCase() as EmailCategory;
+
   return {
     id: row.id as string,
-    from: { name: row.from_name as string, email: row.from_email as string },
+    from: { name: (row.from_name ?? row.from_email ?? "") as string, email: row.from_email as string },
     to: (row.to_emails ?? []) as EmailAddress[],
     cc: (row.cc_emails as EmailAddress[] | undefined)?.length
       ? (row.cc_emails as EmailAddress[])
       : undefined,
-    subject: row.subject as string,
-    body: row.body as string,
-    preview: row.preview as string,
-    timestamp: row.timestamp as string,
+    subject: (row.subject ?? "(No Subject)") as string,
+    body: (row.body ?? "") as string,
+    preview: (row.preview ?? row.body ?? "") as string,
+    timestamp: (row.timestamp ?? row.created_at ?? new Date().toISOString()) as string,
     read: Boolean(row.read),
     starred: Boolean(row.starred),
     pinned: Boolean(row.pinned),
     attachments: (row.attachments ?? []) as Attachment[],
-    category: row.category as EmailCategory,
-    folder: row.folder as EmailFolder,
+    category,
+    folder,
   };
 }
 
@@ -169,7 +172,8 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
         .order("timestamp", { ascending: false });
 
       if (error) {
-        console.warn("loadEmails error:", error.message);
+        console.warn("loadEmails error:", error.message, error.details ?? "");
+        setEmails([]);
         setIsLoading(false);
         return;
       }
@@ -179,11 +183,14 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
       // Seed welcome email for brand-new accounts
       if (loaded.length === 0) {
         await seedWelcomeEmail(user.id, user.email);
-        const { data: seeded } = await supabase
+        const { data: seeded, error: seedLoadError } = await supabase
           .from("emails")
           .select("*")
           .eq("owner_id", user.id)
           .order("timestamp", { ascending: false });
+        if (seedLoadError) {
+          console.warn("loadEmails after seed error:", seedLoadError.message);
+        }
         setEmails((seeded ?? []).map(rowToEmail));
       } else {
         setEmails(loaded);

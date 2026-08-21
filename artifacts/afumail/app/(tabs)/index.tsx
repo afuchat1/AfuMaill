@@ -29,7 +29,6 @@ import type { EmailFolder } from "@/context/EmailContext";
 import { useEmails } from "@/context/EmailContext";
 import { useColors } from "@/hooks/useColors";
 
-import AiChatScreen from "./ai-chat";
 import CalendarScreen from "./calendar";
 import SearchScreen from "./search";
 import SettingsScreen from "./settings";
@@ -40,13 +39,12 @@ const NAV = [
   { key: "inbox",    label: "Mail",     icon: "inbox",    page: 1 },
   { key: "search",   label: "Search",   icon: "search",   page: 2 },
   { key: "compose",  label: "Compose",  icon: "edit-2",   page: -1 },
-  { key: "ai",       label: "AI",       icon: "cpu",      page: 5 },
   { key: "calendar", label: "Calendar", icon: "calendar", page: 3 },
   { key: "settings", label: "Settings", icon: "settings", page: 4 },
 ] as const;
 
 const INDICATOR_SPRING = { damping: 22, stiffness: 280, mass: 0.7 };
-const PAGE_TO_NAV_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 4, 4: 5, 5: 3 };
+const PAGE_TO_NAV_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 3, 4: 4 };
 
 // Same spring used for the drawer (pager pages)
 const DRAWER_SPRING = { damping: 28, stiffness: 300, mass: 0.9 };
@@ -251,9 +249,6 @@ export default function MainScreen() {
           </View>
           <View style={{ width, height: pageHeight }}>
             <SettingsScreen />
-          </View>
-          <View style={{ width, height: pageHeight }}>
-            <AiChatScreen />
           </View>
         </ScrollView>
 
