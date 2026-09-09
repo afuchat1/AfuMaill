@@ -1,5 +1,5 @@
-import { supabase } from "@/lib/supabase";
 import { htmlToPlainText } from "@/lib/htmlToPlainText";
+import { supabase } from "@/lib/supabase";
 
 async function callAiAssist<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke("ai-assist", {
@@ -54,13 +54,5 @@ export async function aiSummarize(params: {
     emailSubject: params.emailSubject,
     emailBody: htmlToPlainText(params.emailBody),
   });
-  return content;
-}
-
-/** Send a chat message to the AI assistant and get a reply. */
-export async function aiChat(params: {
-  messages: { role: "user" | "assistant" | "system"; content: string }[];
-}): Promise<string> {
-  const { content } = await callAiAssist<{ content: string }>({ mode: "chat", ...params });
   return content;
 }
