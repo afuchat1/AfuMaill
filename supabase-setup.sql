@@ -9,12 +9,6 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   username        TEXT UNIQUE NOT NULL,
   full_name       TEXT NOT NULL,
   email           TEXT UNIQUE NOT NULL,
-  phone_number    TEXT,
-  recovery_email  TEXT,
-  notification_email TEXT,
-  signature       TEXT NOT NULL DEFAULT '',
-  vacation_reply_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-  vacation_reply_message TEXT NOT NULL DEFAULT '',
   preferences     JSONB NOT NULL DEFAULT '{}'::jsonb,
   recent_searches JSONB NOT NULL DEFAULT '[]'::jsonb,
   created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -23,12 +17,6 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- If the profiles table already existed before this update, run:
 -- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
 -- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS recent_searches JSONB NOT NULL DEFAULT '[]'::jsonb;
--- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone_number TEXT;
--- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS recovery_email TEXT;
--- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS notification_email TEXT;
--- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS signature TEXT NOT NULL DEFAULT '';
--- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS vacation_reply_enabled BOOLEAN NOT NULL DEFAULT FALSE;
--- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS vacation_reply_message TEXT NOT NULL DEFAULT '';
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
@@ -82,11 +70,6 @@ CREATE POLICY "Users can update own emails"
 CREATE POLICY "Users can delete own emails"
   ON public.emails FOR DELETE
   USING (auth.uid() = owner_id);
-
--- PostgREST requires table privileges in addition to RLS policies.
-GRANT SELECT ON public.profiles TO anon, authenticated;
-GRANT INSERT, UPDATE ON public.profiles TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.emails TO authenticated;
 
 -- Index for fast inbox queries
 CREATE INDEX IF NOT EXISTS emails_owner_folder_idx ON public.emails (owner_id, folder);
@@ -164,8 +147,6 @@ ALTER TABLE public.oauth_tokens ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Clients are publicly readable"
   ON public.oauth_clients FOR SELECT
   USING (true);
-
-GRANT SELECT ON public.oauth_clients TO anon, authenticated;
 
 -- Seed a demo client used by the in-app OAuth demo (Settings → Connected
 -- Accounts → "Try the OAuth demo"). Register real Afu apps the same way.

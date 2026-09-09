@@ -443,8 +443,8 @@ async function handleUserinfo(req: Request): Promise<Response> {
   }
 
   const profileRows = await dbSelect<{
-    id: string; username: string; full_name: string; email: string;
-  }>("profiles", `id=eq.${encodeURIComponent(tokenRow.user_id)}&select=id,username,full_name,email&limit=1`);
+    id: string; username: string; full_name: string; email: string; afumail_address: string;
+  }>("profiles", `id=eq.${encodeURIComponent(tokenRow.user_id)}&select=id,username,full_name,email,afumail_address&limit=1`);
 
   const profile = profileRows[0];
   if (!profile) return oauthError(404, "invalid_token", "The user for this token no longer exists.");
@@ -456,7 +456,7 @@ async function handleUserinfo(req: Request): Promise<Response> {
     resp.preferred_username = profile.username;
   }
   if (scopes.includes("email")) {
-    resp.email = profile.email;
+    resp.email = profile.afumail_address ?? profile.email;
     resp.email_verified = true;
   }
   return jsonResp(resp);
