@@ -10,4 +10,4 @@
 - [AfuMail inbound email body should stay HTML](afumail-html-email-bodies.md) — receive-email must store raw HTML, not flattened text, or image-heavy emails look blank.
 - [AfuMail live schema](afumail-live-schema.md) — the live Supabase database uses normalized email tables and relationships; the checked-in bootstrap SQL is stale.
 - [AfuMail Expo preview](afumail-expo-preview.md) — native preview runs through the Expo workflow, not the web screenshot port; Metro can run despite the DevTools shared-library warning.
-- [AfuMail SDK 57 maintenance](afumail-sdk57-maintenance.md) — SDK 57 uses splash-screen plugin config, TypeScript 6, and StyleSheet.absoluteFill; web bundling remains intentionally unsupported.
+- [AfuMail SDK 55 maintenance](afumail-sdk57-maintenance.md) — the native-only artifact is aligned to SDK 55; keep Expo packages consistent and verify through the managed workflow.

@@ -13,10 +13,14 @@
       "infoPlist": {
         "CFBundleURLTypes": [
           {
-            "CFBundleURLSchemes": ["mailto"]
+            "CFBundleURLSchemes": [
+              "mailto"
+            ]
           }
         ],
-        "LSApplicationQueriesSchemes": ["mailto"]
+        "LSApplicationQueriesSchemes": [
+          "mailto"
+        ]
       }
     },
     "android": {
@@ -28,8 +32,14 @@
       "intentFilters": [
         {
           "action": "SENDTO",
-          "category": ["DEFAULT"],
-          "data": [{ "scheme": "mailto" }]
+          "category": [
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "scheme": "mailto"
+            }
+          ]
         }
       ]
     },
@@ -43,7 +53,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#FAF8F5"
         }
-      ]
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,
