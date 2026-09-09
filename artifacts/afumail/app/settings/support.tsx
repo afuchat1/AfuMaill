@@ -19,7 +19,7 @@ const FAQ = [
   },
   {
     q: "How do I reset my password?",
-    a: "On the login screen, tap 'Forgot password?' and enter the existing @afuchat.com recovery address linked to your profile. AfuMail will send a six digit code that expires in 10 minutes.",
+    a: "On the login screen, tap 'Forgot password?' and enter the @afuchat.com email on your AfuMail profile. If a recovery email is linked, check that AfuChat inbox for the six digit code.",
   },
   {
     q: "Can I use AfuMail to send emails to Gmail or Outlook users?",

@@ -12,6 +12,7 @@ const MAX_CODE_ATTEMPTS = 5;
 type ProfileRow = {
   id: string;
   full_name: string | null;
+  recovery_email_address_id: string | null;
 };
 
 type AddressRow = {
@@ -92,41 +93,43 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function maskEmail(email: string): string {
-  const [local, domain] = email.split("@");
-  if (!local || !domain) return email;
-  return `${local.slice(0, 1)}${"*".repeat(Math.max(1, Math.min(local.length - 1, 4)))}@${domain}`;
-}
-
-async function findAccount(recoveryEmail: string): Promise<{
+async function findAccountByProfileEmail(profileEmail: string): Promise<{
   profile: ProfileRow;
   authEmail: string;
+  recoveryEmail: string | null;
 } | null> {
-  const recoveryAddressResult = await restJson(
-    `/rest/v1/email_addresses?full_email=eq.${encodeURIComponent(recoveryEmail)}&domain=eq.afuchat.com&select=id,user_id,full_email&limit=1`,
+  const profileAddressResult = await restJson(
+    `/rest/v1/email_addresses?full_email=eq.${encodeURIComponent(profileEmail)}&domain=eq.afuchat.com&is_primary=eq.true&select=id,user_id,full_email&limit=1`,
   );
-  if (!recoveryAddressResult.response.ok) throw new Error("Could not look up the AfuChat recovery address.");
+  if (!profileAddressResult.response.ok) throw new Error("Could not look up the AfuChat profile.");
 
-  const recoveryAddress = (recoveryAddressResult.data as AddressRow[])[0];
-  if (!recoveryAddress?.id || !recoveryAddress.user_id) return null;
+  const profileAddress = (profileAddressResult.data as AddressRow[])[0];
+  if (!profileAddress?.id || !profileAddress.user_id || !profileAddress.full_email) return null;
 
   const profileResult = await restJson(
-    `/rest/v1/profiles?recovery_email_address_id=eq.${encodeURIComponent(recoveryAddress.id)}&select=id,full_name&limit=1`,
+    `/rest/v1/profiles?id=eq.${encodeURIComponent(profileAddress.user_id)}&select=id,full_name,recovery_email_address_id&limit=1`,
   );
-  if (!profileResult.response.ok) throw new Error("Could not look up the linked AfuChat profile.");
+  if (!profileResult.response.ok) throw new Error("Could not look up the AfuMail profile.");
 
   const profile = (profileResult.data as ProfileRow[])[0];
   if (!profile?.id) return null;
 
-  const addressResult = await restJson(
-    `/rest/v1/email_addresses?user_id=eq.${encodeURIComponent(profile.id)}&is_primary=eq.true&domain=eq.afuchat.com&select=full_email&limit=1`,
+  if (!profile.recovery_email_address_id) {
+    return { profile, authEmail: profileAddress.full_email, recoveryEmail: null };
+  }
+
+  const recoveryAddressResult = await restJson(
+    `/rest/v1/email_addresses?id=eq.${encodeURIComponent(profile.recovery_email_address_id)}&user_id=eq.${encodeURIComponent(profile.id)}&domain=eq.afuchat.com&select=full_email&limit=1`,
   );
-  if (!addressResult.response.ok) throw new Error("Could not look up the AfuMail account.");
+  if (!recoveryAddressResult.response.ok) throw new Error("Could not look up the linked AfuChat recovery inbox.");
 
-  const address = (addressResult.data as AddressRow[])[0];
-  if (!address?.full_email || !isValidRecoveryEmail(address.full_email.toLowerCase())) return null;
+  const recoveryAddress = (recoveryAddressResult.data as AddressRow[])[0];
+  const recoveryEmail = recoveryAddress?.full_email?.toLowerCase() ?? null;
+  if (!recoveryEmail || !isValidRecoveryEmail(recoveryEmail)) {
+    return { profile, authEmail: profileAddress.full_email, recoveryEmail: null };
+  }
 
-  return { profile, authEmail: address.full_email };
+  return { profile, authEmail: profileAddress.full_email, recoveryEmail };
 }
 
 async function sendRecoveryCodeEmail(
@@ -148,7 +151,7 @@ async function sendRecoveryCodeEmail(
     "This code expires in 10 minutes and can only be used once.",
     "If you did not request this, you can safely ignore this email.",
     "",
-    "AfuMail — secure email for AfuChat.",
+    "AfuMail. Secure email for AfuChat.",
   ].join("\n");
 
   const html = `
@@ -195,11 +198,17 @@ async function sendRecoveryCodeEmail(
   }
 }
 
-async function requestReset(recoveryEmail: string): Promise<Response> {
-  const account = await findAccount(recoveryEmail);
+async function requestReset(profileEmail: string): Promise<Response> {
+  const account = await findAccountByProfileEmail(profileEmail);
   if (!account) {
-    return jsonResponse({ error: "No AfuChat recovery address is linked to an AfuMail profile." }, 404);
+    return jsonResponse({ error: "No AfuMail profile exists with that @afuchat.com address." }, 404);
   }
+  if (!account.recoveryEmail) {
+    return jsonResponse({
+      error: "No AfuChat recovery email is linked to this profile. Sign in and add one in Settings before resetting your password.",
+    }, 400);
+  }
+  const recoveryEmail = account.recoveryEmail;
 
   const activeResult = await restJson(
     `/rest/v1/password_reset_codes?user_id=eq.${encodeURIComponent(account.profile.id)}&used_at=is.null&select=created_at&order=created_at.desc&limit=1`,
@@ -256,18 +265,20 @@ async function requestReset(recoveryEmail: string): Promise<Response> {
 
   return jsonResponse({
     ok: true,
-    maskedRecoveryEmail: maskEmail(recoveryEmail),
+    profileEmail: account.authEmail,
+    recoveryEmail,
+    deliveryEmail: recoveryEmail,
     expiresInSeconds: CODE_TTL_MS / 1000,
   });
 }
 
 async function confirmReset(
-  recoveryEmail: string,
+  profileEmail: string,
   code: string,
   newPassword: string,
 ): Promise<Response> {
   if (!/^\d{6}$/.test(code)) {
-    return jsonResponse({ error: "Enter the 6-digit verification code." }, 400);
+    return jsonResponse({ error: "Enter the six digit verification code." }, 400);
   }
   if (newPassword.length < 6) {
     return jsonResponse({ error: "Password must be at least 6 characters." }, 400);
@@ -276,8 +287,14 @@ async function confirmReset(
     return jsonResponse({ error: "Password is too long." }, 400);
   }
 
-  const account = await findAccount(recoveryEmail);
-  if (!account) return jsonResponse({ error: "The recovery code is invalid or expired." }, 400);
+  const account = await findAccountByProfileEmail(profileEmail);
+  if (!account) return jsonResponse({ error: "No AfuMail profile exists with that @afuchat.com address." }, 404);
+  if (!account.recoveryEmail) {
+    return jsonResponse({
+      error: "No AfuChat recovery email is linked to this profile. Sign in and add one in Settings before resetting your password.",
+    }, 400);
+  }
+  const recoveryEmail = account.recoveryEmail;
 
   const codeResult = await restJson(
     `/rest/v1/password_reset_codes?user_id=eq.${encodeURIComponent(account.profile.id)}&recovery_email=eq.${encodeURIComponent(recoveryEmail)}&used_at=is.null&select=id,user_id,code_hash,attempts,expires_at,used_at,created_at&order=created_at.desc&limit=1`,
@@ -344,23 +361,22 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json() as {
       action?: "request" | "confirm";
-      afuchatRecoveryEmail?: unknown;
-      recoveryEmail?: unknown;
+      profileEmail?: unknown;
       code?: unknown;
       newPassword?: unknown;
     };
-    const recoveryEmail = normalizeRecoveryEmail(body.afuchatRecoveryEmail ?? body.recoveryEmail);
-    if (!isValidRecoveryEmail(recoveryEmail)) {
-       return jsonResponse({ error: "Enter the linked AfuChat recovery address (username@afuchat.com)." }, 400);
+    const profileEmail = normalizeRecoveryEmail(body.profileEmail);
+    if (!isValidRecoveryEmail(profileEmail)) {
+       return jsonResponse({ error: "Enter the AfuChat email on your profile (username@afuchat.com)." }, 400);
     }
 
     if ((body.action ?? "request") === "request") {
-      return await requestReset(recoveryEmail);
+      return await requestReset(profileEmail);
     }
 
     if (body.action === "confirm") {
       return await confirmReset(
-        recoveryEmail,
+        profileEmail,
         typeof body.code === "string" ? body.code.trim() : "",
         typeof body.newPassword === "string" ? body.newPassword : "",
       );

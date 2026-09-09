@@ -45,8 +45,8 @@ export default function LoginScreen() {
   const [loginError, setLoginError] = useState("");
 
   // Forgot password fields
-  const [forgotRecovery, setForgotRecovery] = useState("");
-  const [forgotRecoveryLabel, setForgotRecoveryLabel] = useState("");
+  const [forgotProfileEmail, setForgotProfileEmail] = useState("");
+  const [forgotDeliveryEmail, setForgotDeliveryEmail] = useState("");
   const [forgotCode, setForgotCode] = useState("");
   const [forgotNewPassword, setForgotNewPassword] = useState("");
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
@@ -196,25 +196,25 @@ export default function LoginScreen() {
 
   // ─── Forgot password ─────────────────────────────────────────
   async function handleForgotPassword() {
-    const email = forgotRecovery.trim().toLowerCase();
+    const email = forgotProfileEmail.trim().toLowerCase();
     if (!email) {
-      setForgotError("Please enter your recovery email.");
+      setForgotError("Please enter the email on your AfuMail profile.");
       return;
     }
     if (!normalizeAfuChatEmail(email)) {
-      setForgotError("Use the AfuChat recovery address linked to your profile.");
+      setForgotError("Enter the AfuChat email on your profile.");
       return;
     }
     setForgotLoading(true);
     setForgotError("");
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const { error, recoveryEmail, maskedRecoveryEmail } = await sendPasswordReset(email);
+    const { error, profileEmail, deliveryEmail } = await sendPasswordReset(email);
     if (error) {
       setForgotError(error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } else {
-      setForgotRecovery(recoveryEmail ?? email);
-      setForgotRecoveryLabel(maskedRecoveryEmail ?? email);
+      setForgotProfileEmail(profileEmail ?? email);
+      setForgotDeliveryEmail(deliveryEmail ?? "");
       setForgotCodeSent(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
@@ -239,7 +239,7 @@ export default function LoginScreen() {
     setForgotError("");
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const { error } = await confirmPasswordReset(
-      forgotRecovery,
+      forgotProfileEmail,
       forgotCode,
       forgotNewPassword,
     );
@@ -255,8 +255,8 @@ export default function LoginScreen() {
 
   function switchToForgot() {
     setMode("forgot");
-    setForgotRecovery("");
-    setForgotRecoveryLabel("");
+    setForgotProfileEmail("");
+    setForgotDeliveryEmail("");
     setForgotCode("");
     setForgotNewPassword("");
     setForgotConfirmPassword("");
@@ -270,8 +270,8 @@ export default function LoginScreen() {
     setStep(1);
     setRegisterError("");
     setLoginError("");
-    setForgotRecovery("");
-    setForgotRecoveryLabel("");
+    setForgotProfileEmail("");
+    setForgotDeliveryEmail("");
     setForgotCode("");
     setForgotNewPassword("");
     setForgotConfirmPassword("");
@@ -461,11 +461,14 @@ export default function LoginScreen() {
                     Enter your code
                   </Text>
                   <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                     We sent a six digit code to {forgotRecoveryLabel || forgotRecovery}. It expires in 10 minutes.
+                     Check the linked AfuChat email inbox. We sent the code to {forgotDeliveryEmail || "your linked AfuChat address"}. It expires in 10 minutes.
                      {" "}AfuMail will never send a password reset link.
                   </Text>
 
                   <View style={styles.fields}>
+                    <Text style={[styles.fieldLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                      Verification code
+                    </Text>
                     <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
                         style={[styles.input, styles.codeInput, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}
@@ -530,14 +533,14 @@ export default function LoginScreen() {
                       onPress={() => {
                         setForgotCodeSent(false);
                         setForgotCode("");
-                        setForgotRecoveryLabel("");
+                        setForgotDeliveryEmail("");
                         setForgotError("");
                       }}
                       disabled={forgotLoading}
                       style={styles.switchRow}
                     >
                       <Text style={[styles.switchText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                        Use a different AfuChat recovery address
+                        Use a different AfuMail profile email
                       </Text>
                     </Pressable>
                   </View>
@@ -548,17 +551,17 @@ export default function LoginScreen() {
                     Reset password
                   </Text>
                   <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                     Enter the existing AfuChat recovery address linked to your profile. AfuMail will send a secure six digit code. We never send a reset link.
+                     Enter the AfuChat email on your AfuMail profile. If a recovery email is linked, AfuMail will send a secure six digit code to that inbox. We never send a reset link.
                   </Text>
 
                   <View style={styles.fields}>
                     <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
                         style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-                         placeholder="recovery@afuchat.com"
+                         placeholder="yourname@afuchat.com"
                         placeholderTextColor={colors.mutedForeground}
-                        value={forgotRecovery}
-                        onChangeText={(t) => { setForgotRecovery(t); setForgotError(""); }}
+                         value={forgotProfileEmail}
+                         onChangeText={(t) => { setForgotProfileEmail(t); setForgotError(""); }}
                         autoCapitalize="none"
                         autoCorrect={false}
                         keyboardType="email-address"
@@ -986,6 +989,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 26, letterSpacing: -0.5 },
   cardSubtitle: { fontSize: 15, lineHeight: 22, marginTop: -12 },
   fields: { gap: 12 },
+  fieldLabel: { fontSize: 13, marginBottom: -4 },
   inputWrap: {
     borderRadius: 100,
     overflow: "hidden",

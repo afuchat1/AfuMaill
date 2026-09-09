@@ -123,11 +123,11 @@ export async function registerUser(
 }
 
 export async function sendPasswordReset(
-  recoveryEmail: string
-): Promise<{ error?: string; recoveryEmail?: string; maskedRecoveryEmail?: string }> {
-  const normalizedEmail = normalizeAfuChatEmail(recoveryEmail);
+  profileEmail: string
+): Promise<{ error?: string; profileEmail?: string; deliveryEmail?: string }> {
+  const normalizedEmail = normalizeAfuChatEmail(profileEmail);
   if (!normalizedEmail) {
-    return { error: "Please enter the linked AfuChat recovery address (username@afuchat.com)." };
+    return { error: "Enter the AfuChat email on your profile (username@afuchat.com)." };
   }
 
   try {
@@ -138,20 +138,19 @@ export async function sendPasswordReset(
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify({ action: "request", afuchatRecoveryEmail: normalizedEmail }),
+      body: JSON.stringify({ action: "request", profileEmail: normalizedEmail }),
     });
     const data = await res.json() as {
       ok?: boolean;
       error?: string;
+      profileEmail?: string;
       recoveryEmail?: string;
-      maskedRecoveryEmail?: string;
+      deliveryEmail?: string;
     };
     if (!res.ok) return { error: data.error ?? "Failed to send reset email. Please try again." };
-    // Keep the normalized address for the confirm request. The API may return
-    // a masked address for display, but that value cannot be used for lookup.
     return {
-      recoveryEmail: normalizedEmail,
-      maskedRecoveryEmail: data.maskedRecoveryEmail ?? data.recoveryEmail,
+      profileEmail: normalizedEmail,
+      deliveryEmail: data.deliveryEmail ?? data.recoveryEmail,
     };
   } catch {
     return { error: "Network error. Please check your connection and try again." };
@@ -159,13 +158,13 @@ export async function sendPasswordReset(
 }
 
 export async function confirmPasswordReset(
-  recoveryEmail: string,
+  profileEmail: string,
   code: string,
   newPassword: string,
 ): Promise<{ error?: string }> {
-  const normalizedEmail = normalizeAfuChatEmail(recoveryEmail);
+  const normalizedEmail = normalizeAfuChatEmail(profileEmail);
   if (!normalizedEmail) {
-    return { error: "Please enter the linked AfuChat recovery address (username@afuchat.com)." };
+    return { error: "Enter the AfuChat email on your profile (username@afuchat.com)." };
   }
 
   try {
@@ -178,7 +177,7 @@ export async function confirmPasswordReset(
       },
       body: JSON.stringify({
         action: "confirm",
-        afuchatRecoveryEmail: normalizedEmail,
+        profileEmail: normalizedEmail,
         code: code.trim(),
         newPassword,
       }),
