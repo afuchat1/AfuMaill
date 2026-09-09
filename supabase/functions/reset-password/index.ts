@@ -272,23 +272,30 @@ async function requestReset(profileEmail: string): Promise<Response> {
   });
 }
 
-async function confirmReset(
+type ResetAccount = NonNullable<Awaited<ReturnType<typeof findAccountByProfileEmail>>>;
+type VerifiedResetCode = {
+  account: ResetAccount;
+  recoveryEmail: string;
+  stored: ResetCodeRow;
+};
+
+/**
+ * Validate a reset code without consuming it. The code is consumed only after
+ * the new password has been successfully written, so the user can move from
+ * the code screen to the password screen without losing their reset attempt.
+ */
+async function getVerifiedResetCode(
   profileEmail: string,
   code: string,
-  newPassword: string,
-): Promise<Response> {
+): Promise<VerifiedResetCode | Response> {
   if (!/^\d{6}$/.test(code)) {
     return jsonResponse({ error: "Enter the six digit verification code." }, 400);
   }
-  if (newPassword.length < 6) {
-    return jsonResponse({ error: "Password must be at least 6 characters." }, 400);
-  }
-  if (newPassword.length > 128) {
-    return jsonResponse({ error: "Password is too long." }, 400);
-  }
 
   const account = await findAccountByProfileEmail(profileEmail);
-  if (!account) return jsonResponse({ error: "No AfuMail profile exists with that @afuchat.com address." }, 404);
+  if (!account) {
+    return jsonResponse({ error: "No AfuMail profile exists with that @afuchat.com address." }, 404);
+  }
   if (!account.recoveryEmail) {
     return jsonResponse({
       error: "No AfuChat recovery email is linked to this profile. Sign in and add one in Settings before resetting your password.",
@@ -324,6 +331,34 @@ async function confirmReset(
         : "That verification code is not correct.",
     }, 400);
   }
+
+  return { account, recoveryEmail, stored };
+}
+
+async function verifyResetCode(
+  profileEmail: string,
+  code: string,
+): Promise<Response> {
+  const result = await getVerifiedResetCode(profileEmail, code);
+  if (result instanceof Response) return result;
+  return jsonResponse({ ok: true });
+}
+
+async function confirmReset(
+  profileEmail: string,
+  code: string,
+  newPassword: string,
+): Promise<Response> {
+  if (newPassword.length < 6) {
+    return jsonResponse({ error: "Password must be at least 6 characters." }, 400);
+  }
+  if (newPassword.length > 128) {
+    return jsonResponse({ error: "Password is too long." }, 400);
+  }
+
+  const result = await getVerifiedResetCode(profileEmail, code);
+  if (result instanceof Response) return result;
+  const { account, stored } = result;
 
   const updateResult = await restJson(`/auth/v1/admin/users/${encodeURIComponent(account.profile.id)}`, {
     method: "PUT",
@@ -372,6 +407,13 @@ Deno.serve(async (req) => {
 
     if ((body.action ?? "request") === "request") {
       return await requestReset(profileEmail);
+    }
+
+    if (body.action === "verify") {
+      return await verifyResetCode(
+        profileEmail,
+        typeof body.code === "string" ? body.code.trim() : "",
+      );
     }
 
     if (body.action === "confirm") {

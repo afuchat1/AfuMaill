@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,

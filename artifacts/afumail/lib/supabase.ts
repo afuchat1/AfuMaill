@@ -190,6 +190,37 @@ export async function confirmPasswordReset(
   }
 }
 
+export async function verifyPasswordResetCode(
+  profileEmail: string,
+  code: string,
+): Promise<{ error?: string }> {
+  const normalizedEmail = normalizeAfuChatEmail(profileEmail);
+  if (!normalizedEmail) {
+    return { error: "Enter the AfuChat email on your profile (username@afuchat.com)." };
+  }
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/reset-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        action: "verify",
+        profileEmail: normalizedEmail,
+        code: code.trim(),
+      }),
+    });
+    const data = await res.json() as { ok?: boolean; error?: string };
+    if (!res.ok) return { error: data.error ?? "Could not verify the code. Please try again." };
+    return {};
+  } catch {
+    return { error: "Network error. Please check your connection and try again." };
+  }
+}
+
 export async function savePhoneNumber(
   userId: string,
   phone: string

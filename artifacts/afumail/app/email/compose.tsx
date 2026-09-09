@@ -274,7 +274,7 @@ export default function ComposeScreen() {
         <>
           {/* Backdrop */}
           <Pressable
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             onPress={() => setShowAiMenu(false)}
           />
           <View style={[styles.aiMenu, { backgroundColor: colors.card, borderColor: colors.border, shadowColor: colors.foreground }]}>

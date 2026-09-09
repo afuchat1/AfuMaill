@@ -16,11 +16,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
-import { confirmPasswordReset, isExistingAfuChatAddress, isUsernameAvailable, normalizeAfuChatEmail, registerUser, savePhoneNumber, sendPasswordReset, signInUser } from "@/lib/supabase";
+import { confirmPasswordReset, isExistingAfuChatAddress, isUsernameAvailable, normalizeAfuChatEmail, registerUser, savePhoneNumber, sendPasswordReset, signInUser, verifyPasswordResetCode } from "@/lib/supabase";
 import { useColors } from "@/hooks/useColors";
 
 type Mode = "login" | "register" | "forgot";
 type RegisterStep = 1 | 2 | 3 | 4 | 5;
+type ForgotStep = "email" | "code" | "password";
 
 function slugify(text: string) {
   return text
@@ -53,6 +54,7 @@ export default function LoginScreen() {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState("");
   const [forgotCodeSent, setForgotCodeSent] = useState(false);
+  const [forgotStep, setForgotStep] = useState<ForgotStep>("email");
   const [forgotSuccess, setForgotSuccess] = useState(false);
 
   // Register fields
@@ -216,16 +218,33 @@ export default function LoginScreen() {
       setForgotProfileEmail(profileEmail ?? email);
       setForgotDeliveryEmail(deliveryEmail ?? "");
       setForgotCodeSent(true);
+      setForgotStep("code");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    setForgotLoading(false);
+  }
+
+  async function handleVerifyResetCode() {
+    if (!/^\d{6}$/.test(forgotCode.trim())) {
+      setForgotError("Enter the six digit verification code from your email.");
+      return;
+    }
+
+    setForgotLoading(true);
+    setForgotError("");
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const { error } = await verifyPasswordResetCode(forgotProfileEmail, forgotCode);
+    if (error) {
+      setForgotError(error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } else {
+      setForgotStep("password");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     setForgotLoading(false);
   }
 
   async function handleConfirmPasswordReset() {
-    if (!/^\d{6}$/.test(forgotCode.trim())) {
-      setForgotError("Enter the six digit verification code from your email.");
-      return;
-    }
     if (forgotNewPassword.length < 6) {
       setForgotError("Password must be at least 6 characters.");
       return;
@@ -262,6 +281,7 @@ export default function LoginScreen() {
     setForgotConfirmPassword("");
     setForgotError("");
     setForgotCodeSent(false);
+    setForgotStep("email");
     setForgotSuccess(false);
   }
 
@@ -277,6 +297,7 @@ export default function LoginScreen() {
     setForgotConfirmPassword("");
     setForgotError("");
     setForgotCodeSent(false);
+    setForgotStep("email");
     setForgotSuccess(false);
   }
 
@@ -455,7 +476,7 @@ export default function LoginScreen() {
                     </Text>
                   </Pressable>
                 </>
-              ) : forgotCodeSent ? (
+              ) : forgotCodeSent && forgotStep === "code" ? (
                 <>
                   <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
                     Enter your code
@@ -481,8 +502,69 @@ export default function LoginScreen() {
                         autoCorrect={false}
                         maxLength={6}
                         textContentType="oneTimeCode"
-                        returnKeyType="next"
+                         returnKeyType="done"
+                         onSubmitEditing={handleVerifyResetCode}
                       />
+                    </View>
+
+                    {!!forgotError && (
+                      <Text style={[styles.errorText, { color: colors.destructive, fontFamily: "Inter_400Regular" }]}>
+                        {forgotError}
+                      </Text>
+                    )}
+
+                    <Pressable
+                       onPress={handleVerifyResetCode}
+                      disabled={forgotLoading}
+                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? "#333" : colors.primary, opacity: forgotLoading ? 0.7 : 1 }]}
+                    >
+                      {forgotLoading
+                        ? <ActivityIndicator color={colors.primaryForeground} size="small" />
+                        : <Text style={[styles.primaryBtnText, { color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }]}>
+                             Verify Code
+                          </Text>
+                      }
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => {
+                        setForgotCodeSent(false);
+                         setForgotStep("email");
+                        setForgotCode("");
+                        setForgotDeliveryEmail("");
+                        setForgotError("");
+                      }}
+                      disabled={forgotLoading}
+                      style={styles.switchRow}
+                    >
+                      <Text style={[styles.switchText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                        Use a different AfuMail profile email
+                      </Text>
+                    </Pressable>
+                  </View>
+                </>
+              ) : forgotCodeSent && forgotStep === "password" ? (
+                <>
+                  <Pressable
+                    onPress={() => { setForgotStep("code"); setForgotError(""); }}
+                    hitSlop={8}
+                    style={styles.backBtn}
+                  >
+                    <Feather name="arrow-left" size={18} color={colors.foreground} />
+                  </Pressable>
+                  <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                    Create a new password
+                  </Text>
+                  <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                    Code verified. Choose a new password for your AfuMail account, then enter it again to confirm.
+                  </Text>
+
+                  <View style={styles.fields}>
+                    <View style={[styles.verifiedCode, { backgroundColor: colors.success + "14" }]}>
+                      <Feather name="check-circle" size={16} color={colors.success} />
+                      <Text style={[styles.verifiedCodeText, { color: colors.success, fontFamily: "Inter_600SemiBold" }]}>
+                        Verification code confirmed
+                      </Text>
                     </View>
 
                     <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
@@ -527,21 +609,6 @@ export default function LoginScreen() {
                             Reset Password
                           </Text>
                       }
-                    </Pressable>
-
-                    <Pressable
-                      onPress={() => {
-                        setForgotCodeSent(false);
-                        setForgotCode("");
-                        setForgotDeliveryEmail("");
-                        setForgotError("");
-                      }}
-                      disabled={forgotLoading}
-                      style={styles.switchRow}
-                    >
-                      <Text style={[styles.switchText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                        Use a different AfuMail profile email
-                      </Text>
                     </Pressable>
                   </View>
                 </>
@@ -1004,6 +1071,15 @@ const styles = StyleSheet.create({
     letterSpacing: 8,
     textAlign: "center",
   },
+  verifiedCode: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  verifiedCodeText: { fontSize: 13 },
   usernameRow: {
     flexDirection: "row",
     alignItems: "center",
