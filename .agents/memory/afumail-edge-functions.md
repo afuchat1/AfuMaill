@@ -13,12 +13,14 @@ description: Deployment quirks and design decisions for AfuMail's Supabase edge 
 **How to apply:** Any time a function change needs to be live, run DELETE first, wait 2s, then POST to create.
 
 ## Critical constraint: no esm.sh imports
-Replit's build sandbox has no outbound DNS during the Edge Function bundle step. Any `import ... from "https://esm.sh/..."` causes a fatal DNS resolution error at deploy time. **Always use native Deno `fetch` + raw REST API calls**.
+Replit's build sandbox has no outbound DNS during the Edge Function bundle step. Any `import ... from "https://esm.sh/..."` causes a fatal DNS resolution error at deploy time. Use native Deno `fetch` + raw REST API calls for Supabase/third-party services, or a package that Supabase can bundle through a `npm:` specifier.
 
 **How to apply:** For Supabase admin operations in Edge Functions, use:
 - PostgREST: `GET/POST {PROJECT_URL}/rest/v1/{table}?...` with `apikey` + `Authorization: Bearer {SVC_ROLE_KEY}` headers
 - Auth admin: `POST {PROJECT_URL}/auth/v1/admin/generate_link` with same headers
 - Resend: `POST https://api.resend.com/emails` with `Authorization: Bearer {RESEND_API_KEY}`
+
+For Engagera AI, use the pinned official `npm:@afuchat1/engagera@0.2.0` SDK in the Edge Function. Its HTTP client sends the API key as `x-engagera-api-key`; do not replace that with an `Authorization: Bearer` header.
 
 ## send-email: internal delivery design
 

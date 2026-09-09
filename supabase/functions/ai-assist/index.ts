@@ -17,6 +17,12 @@
  *                     -> { content: string }     (a few sentences)
  */
 
+import Engagera, {
+  EngageraAuthError,
+  EngageraError,
+  EngageraRateLimitError,
+} from "npm:@afuchat1/engagera@0.2.0";
+
 const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -24,7 +30,6 @@ const CORS_HEADERS: Record<string, string> = {
 };
 
 const PROJECT_URL = "https://lqowocmjmhbkoxlwyxku.supabase.co";
-const ENGAGERA_BASE = "https://rhnsjqqtdzlkvqazfcbg.supabase.co/functions/v1";
 const REQUEST_TIMEOUT_MS = 25_000;
 const MAX_INSTRUCTION_LENGTH = 500;
 const MAX_SUBJECT_LENGTH = 240;
@@ -59,45 +64,46 @@ async function getUserFromBearerToken(
   return user?.id ? (user as { id: string; email: string }) : null;
 }
 
-interface EngageraMessage {
+type EngageraMessage = {
   role: "system" | "user" | "assistant";
   content: string;
-}
+};
 
 async function callEngagera(messages: EngageraMessage[], model: "engagera-pro" | "engagera-lite"): Promise<string> {
   const apiKey = Deno.env.get("ENGAGERA_API_KEY");
   if (!apiKey) throw new Error("ENGAGERA_API_KEY is not configured.");
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-  let res: Response;
   try {
-    res = await fetch(`${ENGAGERA_BASE}/chat`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ model, messages }),
-      signal: controller.signal,
+    const client = new Engagera({
+      apiKey,
+      defaultModel: model,
+      timeout: REQUEST_TIMEOUT_MS,
     });
+
+    const response = await client.chat.create({
+      messages,
+      model,
+      useAfuBot: false,
+    });
+
+    const content = response.content?.trim();
+    if (!content) throw new Error("Engagera returned an empty response.");
+    return content;
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new Error("AI request timed out. Please try again.");
     }
+    if (error instanceof EngageraAuthError) {
+      throw new Error("AI provider authentication failed.");
+    }
+    if (error instanceof EngageraRateLimitError) {
+      throw new Error("AI service is temporarily rate-limited. Please try again shortly.");
+    }
+    if (error instanceof EngageraError) {
+      throw new Error(`AI provider error${error.status ? ` (${error.status})` : ""}. Please try again.`);
+    }
     throw error;
-  } finally {
-    clearTimeout(timeout);
   }
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error((data as { error?: string }).error ?? `Engagera request failed (${res.status}).`);
-  }
-  const content = (data as { message?: { content?: string } }).message?.content;
-  if (typeof content !== "string") throw new Error("Engagera returned an unexpected response.");
-  return content;
 }
 
 function truncate(text: string, max = 6000): string {
