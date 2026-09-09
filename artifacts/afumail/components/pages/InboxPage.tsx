@@ -3,7 +3,6 @@ import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
-  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -64,9 +63,6 @@ export default function InboxPage({
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { getEmailsByFolder, getEmailsByCategory, unreadCount, refreshEmails } = useEmails();
-  const isWeb = Platform.OS === "web";
-  const topPad = isWeb ? 67 : insets.top;
-
   const [activeTab, setActiveTab] = useState<EmailCategory | "all">("primary");
   const [refreshing, setRefreshing] = useState(false);
   const tabScrollEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -124,7 +120,7 @@ export default function InboxPage({
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <View style={[styles.main, { paddingTop: topPad }]}>
+        <View style={[styles.main, { paddingTop: insets.top }]}>
 
         {/* ── Header ── */}
         <View style={[styles.topHeader, { borderBottomColor: colors.border }]}>

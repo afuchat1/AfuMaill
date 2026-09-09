@@ -272,11 +272,8 @@ export default function LoginScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }
 
-  const isWeb = Platform.OS === "web";
-  const topPad = isWeb ? 67 : insets.top;
-
   return (
-    <View style={[styles.root, { backgroundColor: colors.background, paddingTop: topPad, paddingBottom: insets.bottom + 24 }]}>
+    <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top, paddingBottom: insets.bottom + 24 }]}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.flex}>
         <ScrollView
           contentContainerStyle={styles.scroll}

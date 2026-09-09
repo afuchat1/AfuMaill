@@ -15,7 +15,7 @@ const TERMS = `Last updated: June 30, 2026
 Welcome to AfuMail, a product of AfuChat Technologies Limited (Entebbe, Kittoro, Uganda). By using this application, you agree to the following terms.
 
 1. ACCEPTANCE OF TERMS
-By accessing or using AfuMail (mail.afuchat.com), you agree to be bound by these Terms of Service and all applicable laws and regulations of Uganda and any jurisdiction in which you operate.
+By using the AfuMail mobile application, you agree to be bound by these Terms of Service and all applicable laws and regulations of Uganda and any jurisdiction in which you operate.
 
 2. USE OF SERVICE
 AfuMail is a closed email network for @afuchat.com accounts. You may only send and receive messages with other AfuMail users. You agree not to use the service for spam, harassment, or any unlawful purpose.
@@ -41,12 +41,11 @@ We may update these terms from time to time. Continued use of AfuMail after chan
 9. CONTACT
 AfuChat Technologies Limited
 Entebbe, Kittoro, Uganda
-Website: mail.afuchat.com
 For legal enquiries: legal@afuchat.com`;
 
 const PRIVACY = `Last updated: June 30, 2026
 
-AfuChat Technologies Limited ("we", "us") operates AfuMail (mail.afuchat.com). This policy explains how we collect, use, and protect your information.
+AfuChat Technologies Limited ("we", "us") operates the AfuMail mobile application. This policy explains how we collect, use, and protect your information.
 
 1. INFORMATION WE COLLECT
 - Account information: name, username, email address
@@ -89,7 +88,6 @@ AfuMail is not intended for users under 13 years of age. We do not knowingly col
 10. CONTACT
 AfuChat Technologies Limited
 Entebbe, Kittoro, Uganda
-Website: mail.afuchat.com
 Privacy enquiries: privacy@afuchat.com`;
 
 export default function LegalScreen() {

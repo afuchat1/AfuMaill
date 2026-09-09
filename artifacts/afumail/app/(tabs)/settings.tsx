@@ -5,7 +5,6 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -27,9 +26,6 @@ export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
-  const isWeb = Platform.OS === "web";
-  const topPad = isWeb ? 67 : insets.top;
-
   const [prefs, setPrefs] = useState<Preferences>({
     fontSize: "Medium",
     emailDensity: "Comfortable",
@@ -250,7 +246,7 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background, paddingTop: topPad }]}>
+    <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>

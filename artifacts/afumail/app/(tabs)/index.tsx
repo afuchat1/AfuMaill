@@ -157,8 +157,7 @@ export default function MainScreen() {
     });
 
   const isIOS = Platform.OS === "ios";
-  const isWeb = Platform.OS === "web";
-  const NAV_HEIGHT = isWeb ? 84 : 60 + insets.bottom;
+  const NAV_HEIGHT = 60 + insets.bottom;
   const pageHeight = height - NAV_HEIGHT;
 
   const itemWidth = width / NAV.length;

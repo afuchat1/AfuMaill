@@ -3,7 +3,6 @@ import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -61,9 +60,6 @@ export default function CalendarScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const isWeb = Platform.OS === "web";
-  const topPad = isWeb ? 67 : insets.top;
-
   const today = new Date();
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDay, setSelectedDay] = useState(today.getDate());
@@ -161,7 +157,7 @@ export default function CalendarScreen() {
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background, paddingTop: topPad }]}>
+    <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Pressable onPress={prevMonth} hitSlop={8}>

@@ -97,14 +97,7 @@ export async function sendPasswordReset(username: string): Promise<{ error?: str
   const slug = username.trim().toLowerCase().replace(/@afuchat\.com$/, "");
   if (!slug) return { error: "Please enter your AfuMail username." };
 
-  const redirectTo =
-    typeof window !== "undefined" && window.location?.origin
-      ? window.location.origin
-      : process.env.EXPO_PUBLIC_SITE_URL
-        ? process.env.EXPO_PUBLIC_SITE_URL
-        : process.env.EXPO_PUBLIC_DOMAIN
-          ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
-          : "https://mail.afuchat.com";
+  const redirectTo = "afumail:///set-new-password";
 
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/reset-password`, {

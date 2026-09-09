@@ -5,7 +5,6 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
-  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -234,8 +233,6 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
   }
 
   if (!email) return null;
-
-  const isWeb = Platform.OS === "web";
 
   // Detect HTML emails robustly — check for any common HTML tag anywhere in the body
   const isHtml = /<\s*(html|head|body|div|p|table|tr|td|span|br|img|a\s|h[1-6]|ul|ol|li|blockquote|style|font)\b/i.test(email.body ?? "");

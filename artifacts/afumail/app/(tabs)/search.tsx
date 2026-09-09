@@ -3,7 +3,6 @@ import * as Haptics from "expo-haptics";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -30,9 +29,6 @@ export default function SearchScreen() {
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
-
-  const isWeb = Platform.OS === "web";
-  const topPad = isWeb ? 67 : insets.top;
 
   // Load recent searches from Supabase on mount
   useEffect(() => {
@@ -86,7 +82,7 @@ export default function SearchScreen() {
   }, [query, emails, activeFilter]);
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background, paddingTop: topPad }]}>
+    <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={[styles.searchBar, { backgroundColor: colors.secondary, borderColor: colors.border }]}>

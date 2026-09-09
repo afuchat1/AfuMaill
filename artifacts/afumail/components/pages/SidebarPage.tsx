@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { EmailFolder } from "@/context/EmailContext";
@@ -28,11 +28,8 @@ export default function SidebarPage({ currentFolder, onSelectFolder, onClose }: 
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { unreadCount } = useEmails();
-  const isWeb = Platform.OS === "web";
-  const topPad = isWeb ? 67 : insets.top;
-
   return (
-    <View style={[styles.root, { backgroundColor: colors.background, paddingTop: topPad + 8 }]}>
+    <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top + 8 }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text style={[styles.brand, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
           AfuMail

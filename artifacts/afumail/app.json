@@ -39,18 +39,9 @@
         }
       ]
     },
-    "web": {
-      "favicon": "./assets/images/icon.png"
-    },
     "plugins": [
-      [
-        "expo-router",
-        {
-          "origin": "https://mail.afuchat.com/"
-        }
-      ],
-      "expo-font",
-      "expo-web-browser"
+      "expo-router",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -149,13 +149,7 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
         )}
       </Animated.View>
 
-      {Platform.OS === "web" ? (
-        sheetContent
-      ) : (
-        <GestureDetector gesture={pan}>
-          {sheetContent}
-        </GestureDetector>
-      )}
+      <GestureDetector gesture={pan}>{sheetContent}</GestureDetector>
     </Modal>
   );
 }
