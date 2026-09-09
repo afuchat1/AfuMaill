@@ -6,7 +6,7 @@
  *   https://<project>.supabase.co/functions/v1/oauth/*
  *   https://<project>.supabase.co/functions/v1/developer-apps/*
  *
- * The Express api-server artifact is no longer required.
+ * The legacy Express API server is no longer required.
  */
 
 import { SUPABASE_URL } from "@/lib/supabase-config";

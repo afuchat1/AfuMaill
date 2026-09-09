@@ -4,14 +4,9 @@ A private email platform for the Afu community. Every user gets a `username@afuc
 
 ## How to run
 
-Two workflows run in parallel — both must be started for the app to work:
-
-| Workflow | Port | What it does |
-|---|---|---|
-| `artifacts/afumail: expo` | **8099** | Expo Metro bundler — serves the mobile app and the live web bundle |
-| `artifacts/website: web` | **3000** | `web-proxy.js` — forwards every request from port 3000 → 8099 |
-
-Click **Run** to start both. No secrets are required — the app connects to the live Supabase project by default.
+The `artifacts/afumail: expo` workflow starts the Expo mobile app on port **8099**.
+Click **Run** to start it. No secrets are required — the app connects to the live
+Supabase project by default.
 
 ## Stack
 
@@ -24,8 +19,7 @@ Click **Run** to start both. No secrets are required — the app connects to the
 ## Structure
 
 ```
-artifacts/afumail/   ← Expo mobile app (Android, iOS, web)
-artifacts/website/   ← Web app (dev proxy → port 8099; static build for production)
+artifacts/afumail/   ← Expo mobile app (Android and iOS)
 lib/                 ← Shared DB schema, OpenAPI spec, Zod models
 supabase/functions/  ← Edge Functions: oauth, send-email, receive-email, reset-password, ai-assist, developer-apps
 ```
@@ -33,8 +27,7 @@ supabase/functions/  ← Edge Functions: oauth, send-email, receive-email, reset
 ## Key rules (from DEVELOPMENT.md)
 
 - **No custom API server.** All server-side logic must be a Supabase Edge Function.
-- **Port 8099** is hardwired to the mobile artifact. **Port 3000** proxies to 8099. Never reassign these.
-- Use `web-proxy.js` (not `serve.js`) as the website dev command.
+- **Port 8099** is hardwired to the mobile artifact. Never reassign it.
 - Use `pnpm` only — `npm`/`yarn` are rejected by a `preinstall` guard.
 - Do not import from `esm.sh` in Edge Functions (DNS blocked in Replit build env).
 - Store inbound email bodies as raw HTML — never flatten to plain text.

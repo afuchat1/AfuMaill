@@ -8,9 +8,6 @@
  * Port layout:
  *   8099 — this proxy   (Replit mobile artifact port)
  *   5001 — Expo Metro   (afumail, internal only)
- *   3000 — web-proxy.js (website artifact, forwards to website Metro on 5002)
- *   5002 — website expo-proxy
- *   5003 — website Metro
  */
 
 const http = require("http");

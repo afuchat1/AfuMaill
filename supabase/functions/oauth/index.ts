@@ -1,7 +1,7 @@
 /**
  * AfuMail OAuth 2.1 / OIDC Identity Provider — Supabase Edge Function
  *
- * Handles all OAuth endpoints previously served by the Express api-server.
+ * Handles all OAuth endpoints for the mobile app.
  * Uses the Web Crypto API (Deno-native) in place of Node.js `crypto`.
  *
  * Endpoints:

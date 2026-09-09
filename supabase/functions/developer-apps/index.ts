@@ -1,7 +1,7 @@
 /**
  * AfuMail Developer App Management — Supabase Edge Function
  *
- * CRUD for OAuth client applications previously served by the Express api-server.
+ * CRUD for OAuth client applications used by the mobile developer flow.
  *
  * Endpoints:
  *   POST   /            Register a new app

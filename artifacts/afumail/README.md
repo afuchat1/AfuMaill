@@ -7,8 +7,8 @@ This is the **native mobile app** for AfuMail. It is a React Native app built wi
 - **Framework**: [Expo](https://expo.dev) + [Expo Router](https://expo.github.io/router/) (native)
 - **UI**: React Native (native components — `View`, `Text`, `Pressable`, etc.)
 - **Auth**: Supabase (AsyncStorage session storage for native)
-- **Database**: Supabase (via Drizzle ORM in the shared `lib/db` package)
-- **API**: REST + Supabase Realtime
+- **Database**: Supabase
+- **API**: Supabase Edge Functions + Supabase Realtime
 
 ## Project structure
 
@@ -43,7 +43,7 @@ context/
 lib/
   supabase.ts               ← Supabase client (AsyncStorage for native)
   supabase-config.ts        ← URL and anon key (from env vars)
-  api-base.ts               ← base URL for the AfuMail API server
+  api-base.ts               ← Supabase Edge Function URL mapping
   preferences.ts            ← user preferences helpers
   pkce.ts                   ← OAuth PKCE helpers (expo-crypto)
 server/
@@ -62,5 +62,4 @@ To preview the app on your phone, install the **Expo Go** app and scan the QR co
 |---|---|
 | `EXPO_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon (public) key |
-| `EXPO_PUBLIC_SITE_URL` | Public URL of the web app |
-| `EXPO_PUBLIC_DOMAIN` | Replit dev domain (set automatically in the workflow) |
+| `EXPO_PUBLIC_DOMAIN` | Replit development domain (set automatically in the workflow) |

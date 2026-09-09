@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS public.oauth_tokens (
 CREATE INDEX IF NOT EXISTS oauth_tokens_user_client_idx ON public.oauth_tokens (user_id, client_id) WHERE revoked = false;
 CREATE INDEX IF NOT EXISTS oauth_codes_expires_idx ON public.oauth_authorization_codes (expires_at);
 
--- All writes to these three tables go through the api-server using the
+-- All writes to these three tables go through Supabase Edge Functions using the
 -- Supabase service-role key, never directly from the client — including
 -- developer app registration (POST/PATCH/DELETE /api/developer/apps/*),
 -- which validates ownership server-side before touching the database. RLS
