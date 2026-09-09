@@ -84,7 +84,8 @@ Deno.serve(async (req) => {
 
   try {
     const projectUrl = "https://lqowocmjmhbkoxlwyxku.supabase.co";
-    const serviceRoleKey = Deno.env.get("SVC_ROLE_KEY") ?? "";
+    const serviceRoleKey =
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SVC_ROLE_KEY") ?? "";
 
     const rawText = await req.text();
     console.log(`[receive-email] raw payload received (${rawText.length} bytes)`);

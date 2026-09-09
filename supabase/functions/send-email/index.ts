@@ -32,7 +32,8 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = Deno.env.get("RESEND_API_KEY");
-    const serviceRoleKey = Deno.env.get("SVC_ROLE_KEY") ?? "";
+    const serviceRoleKey =
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SVC_ROLE_KEY") ?? "";
 
     // Split recipients: internal @afuchat.com vs external
     const allRecipients: string[] = [...(to ?? []), ...(cc ?? [])];

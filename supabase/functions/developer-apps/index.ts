@@ -1,7 +1,7 @@
 /**
  * AfuMail Developer App Management — Supabase Edge Function
  *
- * CRUD for OAuth client applications used by the mobile developer flow.
+ * CRUD for OAuth applications used by the mobile developer flow.
  *
  * Endpoints:
  *   POST   /            Register a new app
@@ -27,7 +27,7 @@ const MAX_URIS        = 10;
 // ── Utilities ────────────────────────────────────────────────────────────────
 
 function svcKey(): string {
-  return Deno.env.get("SVC_ROLE_KEY") ?? "";
+  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SVC_ROLE_KEY") ?? "";
 }
 
 function jsonResp(data: unknown, status = 200): Response {
@@ -233,7 +233,7 @@ type ClientRow = {
   redirect_uris: string[];
   scopes: string[];
   is_first_party: boolean;
-  owner_id: string | null;
+  user_id: string | null;
   client_type: "public" | "confidential";
   client_secret_hash: string | null;
   status: "active" | "suspended";
@@ -242,7 +242,7 @@ type ClientRow = {
 };
 
 const CLIENT_SELECT =
-  "client_id,name,logo_url,redirect_uris,scopes,is_first_party,owner_id,client_type,status,client_secret_hash,created_at,updated_at";
+  "client_id,name,logo_url,redirect_uris,scopes,is_first_party,user_id,client_type,status,client_secret_hash,created_at,updated_at";
 
 function toPublic(row: ClientRow) {
   return {
@@ -264,12 +264,12 @@ async function requireOwnedApp(
   clientId: string,
 ): Promise<{ error: "not_found" | "forbidden" } | { error: null; client: ClientRow }> {
   const rows = await dbSelect<ClientRow>(
-    "oauth_clients",
+    "oauth_applications",
     `client_id=eq.${encodeURIComponent(clientId)}&select=${CLIENT_SELECT}&limit=1`,
   );
   const data = rows[0];
   if (!data) return { error: "not_found" };
-  if (!data.owner_id || data.owner_id !== userId) return { error: "forbidden" };
+  if (!data.user_id || data.user_id !== userId) return { error: "forbidden" };
   return { error: null, client: data };
 }
 
@@ -311,7 +311,7 @@ async function handleCreate(req: Request): Promise<Response> {
     return devError(400, "invalid_request", "logo_url must be an https:// URL.");
   }
 
-  const count = await dbCount("oauth_clients", `owner_id=eq.${encodeURIComponent(user.id)}`);
+  const count = await dbCount("oauth_applications", `user_id=eq.${encodeURIComponent(user.id)}`);
   if (count >= MAX_APPS) {
     return devError(400, "invalid_request", `You have reached the maximum of ${MAX_APPS} registered applications.`);
   }
@@ -319,14 +319,14 @@ async function handleCreate(req: Request): Promise<Response> {
   const clientId       = genClientId();
   const plaintextSecret = cleanType === "confidential" ? genClientSecret() : null;
 
-  const inserted = await dbInsert<ClientRow>("oauth_clients", {
+  const inserted = await dbInsert<ClientRow>("oauth_applications", {
     client_id:          clientId,
     name:               cleanName,
     logo_url:           (logo_url as string) || null,
     redirect_uris:      redirectResult.value,
     scopes:             scopesResult.value,
     is_first_party:     false,
-    owner_id:           user.id,
+    user_id:            user.id,
     client_type:        cleanType,
     client_secret_hash: plaintextSecret ? await sha256Hex(plaintextSecret) : null,
     status:             "active",
@@ -342,8 +342,8 @@ async function handleList(req: Request): Promise<Response> {
   if (!user) return devError(401, "unauthorized", "You must be signed in to AfuMail.");
 
   const rows = await dbSelect<ClientRow>(
-    "oauth_clients",
-    `owner_id=eq.${encodeURIComponent(user.id)}&select=${CLIENT_SELECT}&order=created_at.desc`,
+    "oauth_applications",
+    `user_id=eq.${encodeURIComponent(user.id)}&select=${CLIENT_SELECT}&order=created_at.desc`,
   );
   return jsonResp({ apps: rows.map(toPublic) });
 }
@@ -395,7 +395,7 @@ async function handleUpdate(req: Request, clientId: string): Promise<Response> {
   }
 
   const updated = await dbUpdate<ClientRow>(
-    "oauth_clients",
+    "oauth_applications",
     `client_id=eq.${encodeURIComponent(clientId)}&select=${CLIENT_SELECT}`,
     updates,
   );
@@ -417,7 +417,7 @@ async function handleRotateSecret(req: Request, clientId: string): Promise<Respo
 
   const plaintextSecret = genClientSecret();
   const ok = await dbUpdateVoid(
-    "oauth_clients",
+    "oauth_applications",
     `client_id=eq.${encodeURIComponent(clientId)}`,
     { client_secret_hash: await sha256Hex(plaintextSecret), updated_at: new Date().toISOString() },
   );
@@ -434,7 +434,7 @@ async function handleDelete(req: Request, clientId: string): Promise<Response> {
   if (r.error === "not_found") return devError(404, "invalid_client", "Application not found.");
   if (r.error === "forbidden") return devError(403, "forbidden", "You do not own this application.");
 
-  const ok = await dbDelete("oauth_clients", `client_id=eq.${encodeURIComponent(clientId)}`);
+  const ok = await dbDelete("oauth_applications", `client_id=eq.${encodeURIComponent(clientId)}`);
   if (!ok) return devError(500, "server_error", "Failed to delete the application.");
 
   return jsonResp({ ok: true });

@@ -31,7 +31,7 @@ const REFRESH_TOKEN_TTL_MS = 30 * 86_400_000;  // 30 d
 // ── Utilities ────────────────────────────────────────────────────────────────
 
 function svcKey(): string {
-  return Deno.env.get("SVC_ROLE_KEY") ?? "";
+  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SVC_ROLE_KEY") ?? "";
 }
 
 function jsonResp(data: unknown, status = 200, extra: Record<string, string> = {}): Response {
@@ -521,7 +521,7 @@ async function handleRevoke(req: Request): Promise<Response> {
 
 async function handleIntrospect(req: Request): Promise<Response> {
   const serviceKey = req.headers.get("x-service-key");
-  const expectedKey = Deno.env.get("SVC_ROLE_KEY");
+  const expectedKey = svcKey();
   if (!serviceKey || !expectedKey || !safeEqual(serviceKey, expectedKey)) {
     return oauthError(401, "unauthorized", "Missing or invalid X-Service-Key header.");
   }
@@ -591,8 +591,15 @@ async function handleDeleteGrant(req: Request, clientId: string): Promise<Respon
   if (!user) return oauthError(401, "unauthorized", "You must be signed in to AfuMail.");
 
   const key = svcKey();
+  const clientRows = await dbSelect<{ id: string }>(
+    "oauth_applications",
+    `client_id=eq.${encodeURIComponent(clientId)}&select=id&limit=1`,
+  );
+  const applicationId = clientRows[0]?.id;
+  if (!applicationId) return oauthError(404, "invalid_client", "Unknown client_id.");
+
   const r = await fetch(
-    `${PROJECT_URL}/rest/v1/oauth_tokens?user_id=eq.${encodeURIComponent(user.id)}&client_id=eq.${encodeURIComponent(clientId)}`,
+    `${PROJECT_URL}/rest/v1/oauth_tokens?user_id=eq.${encodeURIComponent(user.id)}&application_id=eq.${encodeURIComponent(applicationId)}`,
     {
       method: "PATCH",
       headers: {

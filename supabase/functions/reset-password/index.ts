@@ -19,7 +19,8 @@ Deno.serve(async (req) => {
     }
 
     const projectUrl = Deno.env.get("PROJECT_URL") ?? "https://lqowocmjmhbkoxlwyxku.supabase.co";
-    const serviceRoleKey = Deno.env.get("SVC_ROLE_KEY") ?? "";
+    const serviceRoleKey =
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SVC_ROLE_KEY") ?? "";
 
     const slug = (username as string)
       .toLowerCase()
@@ -168,7 +169,7 @@ Deno.serve(async (req) => {
 <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;">
   <h2 style="font-size:20px;font-weight:700;color:#1a1a1a;margin:0 0 8px;">Password Reset Request</h2>
   <p style="color:#555;line-height:1.6;margin:0 0 24px;">
-    Hi ${recoveryUser.full_name ?? recoveryUser.username},<br><br>
+     Hi ${recoveryUser.full_name ?? recoveryAddress.full_email},<br><br>
     <strong>${displayName}</strong> (<a href="mailto:${slug}@afuchat.com" style="color:#1B6EF3;">${slug}@afuchat.com</a>)
     has requested a password reset on AfuMail. Click the button below to help them reset their password.
   </p>
