@@ -53,8 +53,6 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
-    "expo-auth-session": "~55.0.17",
-    "expo-crypto": "~55.0.16",
     "react-native-webview": "13.16.0"
   }
 }

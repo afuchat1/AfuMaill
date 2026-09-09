@@ -94,7 +94,6 @@ export default function SettingsScreen() {
     switch (label) {
       case "Signature":           router.push("/settings/signature"); break;
       case "Vacation Reply":      router.push("/settings/vacation"); break;
-      case "Connected Accounts":  router.push("/settings/connected-accounts"); break;
       case "Font Size":           setFontSizeModal(true); break;
       case "Email Density":       setDensityModal(true); break;
       case "Quiet Hours":
@@ -197,7 +196,6 @@ export default function SettingsScreen() {
       rows: [
         { label: "Signature", icon: "edit-3", type: "nav" as const },
         { label: "Vacation Reply", icon: "umbrella", type: "nav" as const },
-        { label: "Connected Accounts", icon: "link", type: "nav" as const },
       ],
     },
     {

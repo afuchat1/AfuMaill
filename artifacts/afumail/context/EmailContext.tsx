@@ -143,7 +143,14 @@ function rowToEmail(row: any): Email {
 
 async function seedWelcomeEmail(ownerId: string, userEmail: string) {
   const [{ data: address }, { data: folder }] = await Promise.all([
-    supabase.from("email_addresses").select("id").eq("user_id", ownerId).eq("is_primary", true).maybeSingle(),
+    supabase
+      .from("email_addresses")
+      .select("id")
+      .eq("user_id", ownerId)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
     supabase.from("folders").select("id").eq("user_id", ownerId).eq("type", "inbox").maybeSingle(),
   ]);
   if (!address || !folder) {

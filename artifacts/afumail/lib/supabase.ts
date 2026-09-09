@@ -28,6 +28,31 @@ export interface Profile {
   created_at: string;
 }
 
+interface EmailAddressRecord {
+  id: string;
+  local_part: string;
+  domain: string;
+  full_email: string | null;
+  is_primary: boolean;
+}
+
+async function getPreferredEmailAddress(userId: string): Promise<EmailAddressRecord | null> {
+  const { data, error } = await supabase
+    .from("email_addresses")
+    .select("id,local_part,domain,full_email,is_primary")
+    .eq("user_id", userId)
+    .order("is_primary", { ascending: false })
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("Preferred email address load error:", error.message);
+    return null;
+  }
+  return data as EmailAddressRecord | null;
+}
+
 export async function isUsernameAvailable(username: string): Promise<boolean> {
   const { data, error } = await supabase.rpc("username_available", {
     _username: username.toLowerCase().trim(),
@@ -151,21 +176,16 @@ export async function saveRecoveryEmail(
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
-  const [{ data, error }, { data: address }, { data: settings }] = await Promise.all([
+  const [{ data, error }, address, { data: settings }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
-    supabase
-      .from("email_addresses")
-      .select("id,local_part,domain,full_email,is_primary")
-      .eq("user_id", userId)
-      .eq("is_primary", true)
-      .maybeSingle(),
+    getPreferredEmailAddress(userId),
     supabase
       .from("user_settings")
       .select("*")
       .eq("user_id", userId)
       .maybeSingle(),
   ]);
-  if (error || !data || !address) return null;
+  if (error || !data) return null;
 
   let recoveryEmail: string | null = null;
   if (data.recovery_email_address_id) {
@@ -179,9 +199,9 @@ export async function getProfile(userId: string): Promise<Profile | null> {
 
   return {
     id: userId,
-    username: address.local_part,
+    username: address?.local_part ?? "",
     full_name: data.full_name ?? "",
-    email: address.full_email ?? `${address.local_part}@${address.domain}`,
+    email: address?.full_email ?? (address ? `${address.local_part}@${address.domain}` : ""),
     phone_number: data.phone_number ?? null,
     recovery_email: recoveryEmail,
     notification_email: data.notification_email ?? null,
@@ -210,12 +230,7 @@ export async function saveSignature(
   userId: string,
   signature: string
 ): Promise<{ error?: string }> {
-  const { data: address } = await supabase
-    .from("email_addresses")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("is_primary", true)
-    .maybeSingle();
+  const address = await getPreferredEmailAddress(userId);
   if (!address) return { error: "Primary AfuMail address not found." };
   const { error } = await supabase
     .from("user_settings")
@@ -231,12 +246,7 @@ export async function saveVacationReply(
   enabled: boolean,
   message: string
 ): Promise<{ error?: string }> {
-  const { data: address } = await supabase
-    .from("email_addresses")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("is_primary", true)
-    .maybeSingle();
+  const address = await getPreferredEmailAddress(userId);
   if (!address) return { error: "Primary AfuMail address not found." };
   const { error } = await supabase
     .from("user_settings")

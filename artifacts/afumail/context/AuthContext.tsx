@@ -37,7 +37,9 @@ async function loadProfile(userId: string): Promise<AuthUser | null> {
       .from("email_addresses")
       .select("local_part,domain,full_email")
       .eq("user_id", userId)
-      .eq("is_primary", true)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle(),
   ]);
 
@@ -45,17 +47,17 @@ async function loadProfile(userId: string): Promise<AuthUser | null> {
     console.warn("Profile load error:", error?.message ?? addressError?.message);
     return null;
   }
-  if (!data || !address) {
-    console.warn("Profile load returned no profile or primary address for authenticated user.");
+  if (!data) {
+    console.warn("Profile load returned no profile for authenticated user.");
     return null;
   }
 
-  const email = address.full_email ?? `${address.local_part}@${address.domain}`;
+  const email = address?.full_email ?? (address ? `${address.local_part}@${address.domain}` : "");
   return {
     id: userId,
-    name: data.full_name ?? address.local_part,
+    name: data.full_name ?? address?.local_part ?? "AfuMail user",
     email,
-    username: address.local_part,
+    username: address?.local_part ?? "",
   };
 }
 

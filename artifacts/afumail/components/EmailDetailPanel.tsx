@@ -23,6 +23,11 @@ import { useEmails } from "@/context/EmailContext";
 import { useColors } from "@/hooks/useColors";
 import { aiSmartReplies, aiSummarize } from "@/lib/ai";
 
+// react-native-webview's React 19 declarations lag behind the Expo SDK's
+// JSX types. Keep the native runtime component while normalizing its public
+// type at this boundary.
+const NativeWebView = WebView as unknown as React.ComponentType<any>;
+
 function formatFullDate(timestamp: string): string {
   const date = new Date(timestamp);
   return date.toLocaleDateString("en-US", {
@@ -375,12 +380,12 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
         {/* Body */}
         <View style={[styles.bodySection, isHtml && { paddingHorizontal: 12, paddingTop: 12 }]}>
           {isHtml ? (
-            <WebView
+            <NativeWebView
               source={{ html: htmlDoc }}
               scrollEnabled={false}
               style={{ height: webHeight, width: "100%" }}
               injectedJavaScript={webViewScript}
-              onMessage={(e) => {
+              onMessage={(e: any) => {
                 try {
                   const msg = JSON.parse(e.nativeEvent.data);
                   if (msg.type === "height") {
@@ -398,7 +403,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
                 }
               }}
               // Belt-and-suspenders: block any navigation not caught by the JS interceptor
-              onShouldStartLoadWithRequest={(req) => {
+              onShouldStartLoadWithRequest={(req: any) => {
                 if (req.url === "about:blank" || req.url.startsWith("data:")) return true;
                 Linking.openURL(req.url).catch(() => {});
                 return false;
