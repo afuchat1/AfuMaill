@@ -1,251 +1,360 @@
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+const PROJECT_URL = "https://lqowocmjmhbkoxlwyxku.supabase.co";
+const CODE_TTL_MS = 10 * 60 * 1000;
+const RESEND_COOLDOWN_MS = 60 * 1000;
+const MAX_CODE_ATTEMPTS = 5;
+
+type ProfileRow = {
+  id: string;
+  full_name: string | null;
+  notification_email: string | null;
+};
+
+type AddressRow = {
+  full_email: string | null;
+};
+
+type ResetCodeRow = {
+  id: string;
+  user_id: string;
+  code_hash: string;
+  attempts: number;
+  expires_at: string;
+  used_at: string | null;
+  created_at: string;
+};
+
+function jsonResponse(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function serviceRoleKey(): string {
+  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SVC_ROLE_KEY") ?? "";
+}
+
+function serviceHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const key = serviceRoleKey();
+  return {
+    Authorization: `Bearer ${key}`,
+    apikey: key,
+    ...extra,
+  };
+}
+
+async function restJson(path: string, init: RequestInit = {}): Promise<{ response: Response; data: unknown }> {
+  const response = await fetch(`${PROJECT_URL}${path}`, {
+    ...init,
+    headers: serviceHeaders({
+      ...(init.headers as Record<string, string> | undefined),
+      ...(init.body ? { "Content-Type": "application/json" } : {}),
+    }),
+  });
+  const data = await response.json().catch(() => null);
+  return { response, data };
+}
+
+function normalizeRecoveryEmail(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function isValidRecoveryEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !email.endsWith("@afuchat.com");
+}
+
+function createCode(): string {
+  const random = new Uint32Array(1);
+  crypto.getRandomValues(random);
+  return String(100000 + (random[0] % 900000));
+}
+
+async function hashCode(userId: string, email: string, code: string): Promise<string> {
+  const pepper = Deno.env.get("RESET_CODE_PEPPER") ?? "";
+  const input = new TextEncoder().encode(`${pepper}:${userId}:${email}:${code}`);
+  const digest = await crypto.subtle.digest("SHA-256", input);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return email;
+  return `${local.slice(0, 1)}${"*".repeat(Math.max(1, Math.min(local.length - 1, 4)))}@${domain}`;
+}
+
+async function findAccount(recoveryEmail: string): Promise<{
+  profile: ProfileRow;
+  authEmail: string;
+} | null> {
+  const profileResult = await restJson(
+    `/rest/v1/profiles?notification_email=eq.${encodeURIComponent(recoveryEmail)}&select=id,full_name,notification_email&limit=1`,
+  );
+  if (!profileResult.response.ok) throw new Error("Could not look up the recovery email.");
+
+  const profile = (profileResult.data as ProfileRow[])[0];
+  if (!profile?.id) return null;
+
+  const addressResult = await restJson(
+    `/rest/v1/email_addresses?user_id=eq.${encodeURIComponent(profile.id)}&is_primary=eq.true&select=full_email&limit=1`,
+  );
+  if (!addressResult.response.ok) throw new Error("Could not look up the AfuMail account.");
+
+  const address = (addressResult.data as AddressRow[])[0];
+  if (!address?.full_email) return null;
+
+  return { profile, authEmail: address.full_email };
+}
+
+async function sendRecoveryCodeEmail(
+  recoveryEmail: string,
+  displayName: string,
+  code: string,
+): Promise<void> {
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendKey) throw new Error("RESEND_API_KEY is not configured.");
+
+  const safeName = escapeHtml(displayName);
+  const text = [
+    `Hi ${displayName},`,
+    "",
+    "Use this AfuMail verification code to reset your password:",
+    "",
+    code,
+    "",
+    "This code expires in 10 minutes and can only be used once.",
+    "If you did not request this, you can safely ignore this email.",
+    "",
+    "AfuMail — secure email for AfuChat.",
+  ].join("\n");
+
+  const html = `
+<!doctype html>
+<html>
+  <body style="margin:0;background:#f7f5f2;color:#1a1a1a;font-family:Inter,Arial,sans-serif;">
+    <div style="max-width:560px;margin:0 auto;padding:36px 20px;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="display:inline-block;background:#1b6ef3;color:#fff;font-size:20px;font-weight:800;letter-spacing:-.5px;padding:12px 18px;border-radius:14px;">AfuMail</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e5e1dc;border-radius:18px;padding:32px 28px;box-shadow:0 8px 30px rgba(26,26,26,.06);">
+        <p style="margin:0 0 8px;color:#6e6a66;font-size:14px;">Password reset</p>
+        <h1 style="margin:0 0 18px;font-size:26px;line-height:1.2;color:#1a1a1a;">Your AfuMail verification code</h1>
+        <p style="margin:0 0 22px;color:#55504b;font-size:15px;line-height:1.6;">Hi ${safeName}, use the code below in the AfuMail app to choose a new password.</p>
+        <div style="background:#eef4ff;border:1px solid #cfe0ff;border-radius:14px;padding:20px;text-align:center;margin:0 0 22px;">
+          <div style="color:#1b6ef3;font-size:34px;font-weight:800;letter-spacing:8px;">${code}</div>
+        </div>
+        <p style="margin:0;color:#77716b;font-size:13px;line-height:1.6;">This code expires in 10 minutes and can only be used once. AfuMail will never ask you to share it with anyone.</p>
+      </div>
+      <p style="margin:22px 0 0;text-align:center;color:#9a948e;font-size:12px;line-height:1.5;">AfuMail by AfuChat Technologies Limited<br>Secure email for your everyday conversations.</p>
+    </div>
+  </body>
+</html>`;
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "AfuMail <noreply@afuchat.com>",
+      to: [recoveryEmail],
+      subject: "Your AfuMail password reset code",
+      text,
+      html,
+    }),
+  });
+
+  if (!response.ok) {
+    const details = await response.text().catch(() => "");
+    console.error("Recovery email delivery failed:", response.status, details);
+    throw new Error("Failed to send the recovery email.");
+  }
+}
+
+async function requestReset(recoveryEmail: string): Promise<Response> {
+  const account = await findAccount(recoveryEmail);
+  if (!account) {
+    return jsonResponse({ error: "No AfuMail account is registered with that recovery email." }, 404);
+  }
+
+  const activeResult = await restJson(
+    `/rest/v1/password_reset_codes?user_id=eq.${encodeURIComponent(account.profile.id)}&used_at=is.null&select=created_at&order=created_at.desc&limit=1`,
+  );
+  if (!activeResult.response.ok) throw new Error("Could not check recent reset attempts.");
+
+  const latest = (activeResult.data as Array<{ created_at: string }>)[0];
+  if (latest && Date.now() - new Date(latest.created_at).getTime() < RESEND_COOLDOWN_MS) {
+    return jsonResponse({ error: "A code was sent recently. Please wait a minute before requesting another." }, 429);
+  }
+
+  const code = createCode();
+  const codeHash = await hashCode(account.profile.id, recoveryEmail, code);
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + CODE_TTL_MS).toISOString();
+
+  const invalidateResult = await restJson(
+    `/rest/v1/password_reset_codes?user_id=eq.${encodeURIComponent(account.profile.id)}&used_at=is.null`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ used_at: now.toISOString() }),
+    },
+  );
+  if (!invalidateResult.response.ok) throw new Error("Could not prepare the reset request.");
+
+  const insertResult = await restJson("/rest/v1/password_reset_codes", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      user_id: account.profile.id,
+      recovery_email: recoveryEmail,
+      code_hash: codeHash,
+      expires_at: expiresAt,
+    }),
+  });
+  if (!insertResult.response.ok) throw new Error("Could not create the reset code.");
+
+  try {
+    await sendRecoveryCodeEmail(
+      recoveryEmail,
+      account.profile.full_name?.trim() || account.authEmail.split("@")[0],
+      code,
+    );
+  } catch (error) {
+    await restJson(
+      `/rest/v1/password_reset_codes?user_id=eq.${encodeURIComponent(account.profile.id)}&code_hash=eq.${encodeURIComponent(codeHash)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ used_at: new Date().toISOString() }),
+      },
+    );
+    throw error;
+  }
+
+  return jsonResponse({ ok: true, recoveryEmail: maskEmail(recoveryEmail), expiresInSeconds: CODE_TTL_MS / 1000 });
+}
+
+async function confirmReset(
+  recoveryEmail: string,
+  code: string,
+  newPassword: string,
+): Promise<Response> {
+  if (!/^\d{6}$/.test(code)) {
+    return jsonResponse({ error: "Enter the 6-digit verification code." }, 400);
+  }
+  if (newPassword.length < 6) {
+    return jsonResponse({ error: "Password must be at least 6 characters." }, 400);
+  }
+  if (newPassword.length > 128) {
+    return jsonResponse({ error: "Password is too long." }, 400);
+  }
+
+  const account = await findAccount(recoveryEmail);
+  if (!account) return jsonResponse({ error: "The recovery code is invalid or expired." }, 400);
+
+  const codeResult = await restJson(
+    `/rest/v1/password_reset_codes?user_id=eq.${encodeURIComponent(account.profile.id)}&recovery_email=eq.${encodeURIComponent(recoveryEmail)}&used_at=is.null&select=id,user_id,code_hash,attempts,expires_at,used_at,created_at&order=created_at.desc&limit=1`,
+  );
+  if (!codeResult.response.ok) throw new Error("Could not verify the reset code.");
+
+  const stored = (codeResult.data as ResetCodeRow[])[0];
+  if (
+    !stored ||
+    stored.attempts >= MAX_CODE_ATTEMPTS ||
+    stored.used_at ||
+    new Date(stored.expires_at).getTime() <= Date.now()
+  ) {
+    return jsonResponse({ error: "The recovery code is invalid or expired." }, 400);
+  }
+
+  const codeHash = await hashCode(account.profile.id, recoveryEmail, code);
+  if (codeHash !== stored.code_hash) {
+    const attempts = stored.attempts + 1;
+    await restJson(`/rest/v1/password_reset_codes?id=eq.${encodeURIComponent(stored.id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ attempts }),
+    });
+    return jsonResponse({
+      error: attempts >= MAX_CODE_ATTEMPTS
+        ? "Too many incorrect attempts. Request a new code."
+        : "That verification code is not correct.",
+    }, 400);
+  }
+
+  const updateResult = await restJson(`/auth/v1/admin/users/${encodeURIComponent(account.profile.id)}`, {
+    method: "PUT",
+    body: JSON.stringify({ password: newPassword }),
+  });
+  if (!updateResult.response.ok) {
+    const details = await updateResult.response.text().catch(() => "");
+    console.error("Password update failed:", updateResult.response.status, details);
+    return jsonResponse({ error: "Could not update the password. Please request a new code." }, 500);
+  }
+
+  const markUsedResult = await restJson(`/rest/v1/password_reset_codes?id=eq.${encodeURIComponent(stored.id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ used_at: new Date().toISOString() }),
+  });
+  if (!markUsedResult.response.ok) {
+    console.error("Could not mark reset code as used:", await markUsedResult.response.text().catch(() => ""));
+  }
+
+  return jsonResponse({ ok: true });
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+  if (req.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+
+  if (!serviceRoleKey()) {
+    return jsonResponse({ error: "Password reset is not configured." }, 500);
+  }
 
   try {
-    const { username, redirectTo } = await req.json();
-
-    if (!username) {
-      return new Response(JSON.stringify({ error: "Username is required." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const projectUrl = Deno.env.get("PROJECT_URL") ?? "https://lqowocmjmhbkoxlwyxku.supabase.co";
-    const serviceRoleKey =
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SVC_ROLE_KEY") ?? "";
-
-    const slug = (username as string)
-      .toLowerCase()
-      .trim()
-      .replace(/^@/, "")
-      .replace(/@afuchat\.com$/, "");
-
-    // 1. Look up the requesting user's primary mailbox address.
-    const profileRes = await fetch(
-      `${projectUrl}/rest/v1/email_addresses?local_part=eq.${encodeURIComponent(slug)}&domain=eq.afuchat.com&is_primary=eq.true&select=id,user_id,full_email&limit=1`,
-      {
-        headers: {
-          Authorization: `Bearer ${serviceRoleKey}`,
-          apikey: serviceRoleKey,
-        },
-      }
-    );
-
-    if (!profileRes.ok) {
-      return new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const addresses = await profileRes.json() as Array<{
-      id: string;
-      user_id: string;
-      full_email: string;
-    }>;
-
-    const address = addresses[0];
-
-    if (!address) {
-      return new Response(JSON.stringify({ error: "No account found with that username." }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const profileLookup = await fetch(
-      `${projectUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(address.user_id)}&select=id,full_name,recovery_email_address_id&limit=1`,
-      { headers: { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey } },
-    );
-    const profiles = await profileLookup.json() as Array<{
-      id: string;
-      full_name: string | null;
-      recovery_email_address_id: string | null;
-    }>;
-    const profile = profiles[0];
-    if (!profile?.recovery_email_address_id) {
-      return new Response(JSON.stringify({ error: "No recovery email is set for this account. Please sign in and add one under Settings → Account." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // 2. Validate that the recovery address belongs to a different AfuMail user.
-    const recoveryRes = await fetch(
-      `${projectUrl}/rest/v1/email_addresses?id=eq.${encodeURIComponent(profile.recovery_email_address_id)}&select=id,user_id,full_email&limit=1`,
-      {
-        headers: {
-          Authorization: `Bearer ${serviceRoleKey}`,
-          apikey: serviceRoleKey,
-        },
-      }
-    );
-
-    if (!recoveryRes.ok) {
-      return new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const recoveryAddresses = await recoveryRes.json() as Array<{
-      id: string;
-      user_id: string;
-      full_email: string;
-    }>;
-
-    const recoveryAddress = recoveryAddresses[0];
-    if (!recoveryAddress || recoveryAddress.user_id === address.user_id) {
-      return new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const recoveryProfileRes = await fetch(
-      `${projectUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(recoveryAddress.user_id)}&select=id,full_name&limit=1`,
-      { headers: { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey } },
-    );
-    const recoveryProfiles = await recoveryProfileRes.json() as Array<{
-      id: string;
-      full_name: string | null;
-    }>;
-    const recoveryUser = recoveryProfiles[0];
-    if (!recoveryUser) {
-      return new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // 3. Generate the Supabase password-reset action link for the requesting user
-    const generateRes = await fetch(`${projectUrl}/auth/v1/admin/generate_link`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${serviceRoleKey}`,
-        apikey: serviceRoleKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        type: "recovery",
-        email: address.full_email,
-        options: {
-          redirect_to: redirectTo ?? projectUrl,
-        },
-      }),
-    });
-
-    const generateData = await generateRes.json() as {
-      action_link?: string;
-      error_code?: string;
-      message?: string;
+    const body = await req.json() as {
+      action?: "request" | "confirm";
+      recoveryEmail?: unknown;
+      code?: unknown;
+      newPassword?: unknown;
     };
-
-    if (!generateRes.ok || !generateData.action_link) {
-      console.error("generate_link error:", generateData);
-      return new Response(JSON.stringify({ error: "Failed to generate reset link." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const recoveryEmail = normalizeRecoveryEmail(body.recoveryEmail);
+    if (!isValidRecoveryEmail(recoveryEmail)) {
+      return jsonResponse({ error: "Enter the external recovery email linked to your AfuMail account." }, 400);
     }
 
-    const resetLink = generateData.action_link;
-    const displayName = profile.full_name ?? slug;
-    const now = new Date().toISOString();
-
-    const body = `Hi ${recoveryUser.full_name ?? recoveryAddress.full_email},\n\n${displayName} (${address.full_email}) has requested a password reset on AfuMail.\n\nClick the link below to reset their password:\n\n${resetLink}\n\nThis link expires in 1 hour. If you didn't expect this request, you can ignore it.`;
-
-    const preview = `Password reset request for ${slug}@afuchat.com — click to reset.`;
-
-    const htmlBody = `
-<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;">
-  <h2 style="font-size:20px;font-weight:700;color:#1a1a1a;margin:0 0 8px;">Password Reset Request</h2>
-  <p style="color:#555;line-height:1.6;margin:0 0 24px;">
-     Hi ${recoveryUser.full_name ?? recoveryAddress.full_email},<br><br>
-    <strong>${displayName}</strong> (<a href="mailto:${slug}@afuchat.com" style="color:#1B6EF3;">${slug}@afuchat.com</a>)
-    has requested a password reset on AfuMail. Click the button below to help them reset their password.
-  </p>
-  <a href="${resetLink}"
-     style="display:inline-block;background:#1B6EF3;color:#fff;text-decoration:none;padding:13px 28px;border-radius:8px;font-weight:600;font-size:15px;">
-    Reset Password
-  </a>
-  <p style="color:#999;font-size:13px;margin-top:28px;line-height:1.4;">
-    This link expires in 1 hour. If you didn't expect this, simply ignore this message.
-  </p>
-  <hr style="border:none;border-top:1px solid #eee;margin:24px 0;" />
-  <p style="color:#aaa;font-size:12px;margin:0 0 2px;">AfuMail &mdash; <a href="https://mail.afuchat.com" style="color:#1B6EF3;text-decoration:none;">mail.afuchat.com</a></p>
-  <p style="color:#ccc;font-size:11px;margin:0;">AfuChat Technologies Limited &bull; Entebbe, Kittoro, Uganda</p>
-</div>`;
-
-    // 4. Deliver the reset email directly into the recovery user's AfuMail inbox
-    const folderRes = await fetch(
-      `${projectUrl}/rest/v1/folders?user_id=eq.${encodeURIComponent(recoveryUser.id)}&type=eq.inbox&select=id&limit=1`,
-      { headers: { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey } },
-    );
-    const folders = await folderRes.json() as Array<{ id: string }>;
-    const folder = folders[0];
-    if (!folder) {
-      return new Response(JSON.stringify({ error: "Failed to locate the recovery inbox." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if ((body.action ?? "request") === "request") {
+      return await requestReset(recoveryEmail);
     }
 
-    const insertRes = await fetch(`${projectUrl}/rest/v1/emails`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${serviceRoleKey}`,
-        apikey: serviceRoleKey,
-        "Content-Type": "application/json",
-        Prefer: "return=minimal",
-      },
-      body: JSON.stringify({
-          user_id: recoveryUser.id,
-          email_address_id: recoveryAddress.id,
-          folder_id: folder.id,
-          from_address: "AfuMail <noreply@afuchat.com>",
-          to_addresses: [recoveryAddress.full_email],
-          cc_addresses: [],
-          bcc_addresses: [],
-        subject: `Password reset for ${slug}@afuchat.com`,
-          body_text: body,
-          body_html: htmlBody,
-        preview,
-          received_at: now,
-          is_read: false,
-          is_starred: false,
-          is_important: false,
-          is_draft: false,
-        attachments: [],
-        category: "primary",
-      }),
-    });
-
-    if (!insertRes.ok && insertRes.status !== 201) {
-      const err = await insertRes.text();
-      console.error("inbox insert error:", err);
-      return new Response(JSON.stringify({ error: "Failed to deliver reset email." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (body.action === "confirm") {
+      return await confirmReset(
+        recoveryEmail,
+        typeof body.code === "string" ? body.code.trim() : "",
+        typeof body.newPassword === "string" ? body.newPassword : "",
+      );
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Unknown password reset action." }, 400);
+  } catch (error) {
+    console.error("Password reset error:", error);
+    return jsonResponse({ error: error instanceof Error ? error.message : "Password reset failed." }, 500);
   }
 });

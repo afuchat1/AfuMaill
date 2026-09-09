@@ -16,7 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
-import { isUsernameAvailable, registerUser, savePhoneNumber, sendPasswordReset, signInUser } from "@/lib/supabase";
+import { confirmPasswordReset, isUsernameAvailable, registerUser, savePhoneNumber, sendPasswordReset, signInUser } from "@/lib/supabase";
 import { useColors } from "@/hooks/useColors";
 
 type Mode = "login" | "register" | "forgot";
@@ -46,8 +46,12 @@ export default function LoginScreen() {
 
   // Forgot password fields
   const [forgotRecovery, setForgotRecovery] = useState("");
+  const [forgotCode, setForgotCode] = useState("");
+  const [forgotNewPassword, setForgotNewPassword] = useState("");
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState("");
+  const [forgotCodeSent, setForgotCodeSent] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState(false);
 
   // Register fields
@@ -191,14 +195,52 @@ export default function LoginScreen() {
 
   // ─── Forgot password ─────────────────────────────────────────
   async function handleForgotPassword() {
-    if (!forgotRecovery.trim()) {
-      setForgotError("Please enter your AfuMail username.");
+    const email = forgotRecovery.trim().toLowerCase();
+    if (!email) {
+      setForgotError("Please enter your recovery email.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.endsWith("@afuchat.com")) {
+      setForgotError("Use the external recovery email linked to your AfuMail account.");
       return;
     }
     setForgotLoading(true);
     setForgotError("");
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const { error } = await sendPasswordReset(forgotRecovery.trim());
+    const { error, recoveryEmail } = await sendPasswordReset(email);
+    if (error) {
+      setForgotError(error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } else {
+      setForgotRecovery(recoveryEmail ?? email);
+      setForgotCodeSent(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    setForgotLoading(false);
+  }
+
+  async function handleConfirmPasswordReset() {
+    if (!/^\d{6}$/.test(forgotCode.trim())) {
+      setForgotError("Enter the 6-digit verification code from your email.");
+      return;
+    }
+    if (forgotNewPassword.length < 6) {
+      setForgotError("Password must be at least 6 characters.");
+      return;
+    }
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      setForgotError("Passwords don't match.");
+      return;
+    }
+
+    setForgotLoading(true);
+    setForgotError("");
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const { error } = await confirmPasswordReset(
+      forgotRecovery,
+      forgotCode,
+      forgotNewPassword,
+    );
     if (error) {
       setForgotError(error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -212,7 +254,11 @@ export default function LoginScreen() {
   function switchToForgot() {
     setMode("forgot");
     setForgotRecovery("");
+    setForgotCode("");
+    setForgotNewPassword("");
+    setForgotConfirmPassword("");
     setForgotError("");
+    setForgotCodeSent(false);
     setForgotSuccess(false);
   }
 
@@ -222,7 +268,11 @@ export default function LoginScreen() {
     setRegisterError("");
     setLoginError("");
     setForgotRecovery("");
+    setForgotCode("");
+    setForgotNewPassword("");
+    setForgotConfirmPassword("");
     setForgotError("");
+    setForgotCodeSent(false);
     setForgotSuccess(false);
   }
 
@@ -380,10 +430,10 @@ export default function LoginScreen() {
                     <Feather name="check-circle" size={32} color={colors.success} />
                   </View>
                   <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                    Reset email sent
+                    Password reset complete
                   </Text>
                   <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    A password reset link has been sent to your recovery email. Check your inbox and click the link.
+                    Your password has been updated. You can now sign in to AfuMail with your new password.
                   </Text>
                   <Pressable
                     onPress={switchToLogin}
@@ -394,20 +444,101 @@ export default function LoginScreen() {
                     </Text>
                   </Pressable>
                 </>
+              ) : forgotCodeSent ? (
+                <>
+                  <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                    Enter your code
+                  </Text>
+                  <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                    We sent a 6-digit code to {forgotRecovery}. It expires in 10 minutes.
+                  </Text>
+
+                  <View style={styles.fields}>
+                    <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
+                      <TextInput
+                        style={[styles.input, styles.codeInput, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}
+                        placeholder="000000"
+                        placeholderTextColor={colors.mutedForeground}
+                        value={forgotCode}
+                        onChangeText={(t) => { setForgotCode(t.replace(/\D/g, "").slice(0, 6)); setForgotError(""); }}
+                        keyboardType="number-pad"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        maxLength={6}
+                        textContentType="oneTimeCode"
+                        returnKeyType="next"
+                      />
+                    </View>
+
+                    <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
+                      <TextInput
+                        style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+                        placeholder="New password (min. 6 characters)"
+                        placeholderTextColor={colors.mutedForeground}
+                        value={forgotNewPassword}
+                        onChangeText={(t) => { setForgotNewPassword(t); setForgotError(""); }}
+                        secureTextEntry
+                        returnKeyType="next"
+                      />
+                    </View>
+
+                    <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
+                      <TextInput
+                        style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+                        placeholder="Confirm new password"
+                        placeholderTextColor={colors.mutedForeground}
+                        value={forgotConfirmPassword}
+                        onChangeText={(t) => { setForgotConfirmPassword(t); setForgotError(""); }}
+                        secureTextEntry
+                        returnKeyType="done"
+                        onSubmitEditing={handleConfirmPasswordReset}
+                      />
+                    </View>
+
+                    {!!forgotError && (
+                      <Text style={[styles.errorText, { color: colors.destructive, fontFamily: "Inter_400Regular" }]}>
+                        {forgotError}
+                      </Text>
+                    )}
+
+                    <Pressable
+                      onPress={handleConfirmPasswordReset}
+                      disabled={forgotLoading}
+                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? "#333" : colors.primary, opacity: forgotLoading ? 0.7 : 1 }]}
+                    >
+                      {forgotLoading
+                        ? <ActivityIndicator color={colors.primaryForeground} size="small" />
+                        : <Text style={[styles.primaryBtnText, { color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }]}>
+                            Reset Password
+                          </Text>
+                      }
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => { setForgotCodeSent(false); setForgotCode(""); setForgotError(""); }}
+                      disabled={forgotLoading}
+                      style={styles.switchRow}
+                    >
+                      <Text style={[styles.switchText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                        Use a different recovery email
+                      </Text>
+                    </Pressable>
+                  </View>
+                </>
               ) : (
                 <>
                   <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
                     Reset password
                   </Text>
                   <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    Enter your AfuMail username. We'll send a reset link to the recovery email you registered with.
+                    Enter the external recovery email linked to your AfuMail account. We'll send a secure 6-digit code.
                   </Text>
 
                   <View style={styles.fields}>
                     <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
                         style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-                        placeholder="Your username (e.g. john)"
+                        placeholder="you@gmail.com"
                         placeholderTextColor={colors.mutedForeground}
                         value={forgotRecovery}
                         onChangeText={(t) => { setForgotRecovery(t); setForgotError(""); }}
@@ -433,7 +564,7 @@ export default function LoginScreen() {
                       {forgotLoading
                         ? <ActivityIndicator color={colors.primaryForeground} size="small" />
                         : <Text style={[styles.primaryBtnText, { color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }]}>
-                            Send Reset Link
+                            Send Verification Code
                           </Text>
                       }
                     </Pressable>
@@ -846,6 +977,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingHorizontal: 16,
     paddingVertical: 15,
+  },
+  codeInput: {
+    fontSize: 26,
+    letterSpacing: 8,
+    textAlign: "center",
   },
   usernameRow: {
     flexDirection: "row",

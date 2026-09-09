@@ -93,11 +93,11 @@ export async function registerUser(
   return { userId };
 }
 
-export async function sendPasswordReset(username: string): Promise<{ error?: string }> {
-  const slug = username.trim().toLowerCase().replace(/@afuchat\.com$/, "");
-  if (!slug) return { error: "Please enter your AfuMail username." };
-
-  const redirectTo = "afumail:///set-new-password";
+export async function sendPasswordReset(recoveryEmail: string): Promise<{ error?: string; recoveryEmail?: string }> {
+  const normalizedEmail = recoveryEmail.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || normalizedEmail.endsWith("@afuchat.com")) {
+    return { error: "Please enter the external recovery email linked to your AfuMail account." };
+  }
 
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/reset-password`, {
@@ -107,10 +107,38 @@ export async function sendPasswordReset(username: string): Promise<{ error?: str
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify({ username: slug, redirectTo }),
+      body: JSON.stringify({ action: "request", recoveryEmail: normalizedEmail }),
+    });
+    const data = await res.json() as { ok?: boolean; error?: string; recoveryEmail?: string };
+    if (!res.ok) return { error: data.error ?? "Failed to send reset email. Please try again." };
+    return { recoveryEmail: data.recoveryEmail };
+  } catch {
+    return { error: "Network error. Please check your connection and try again." };
+  }
+}
+
+export async function confirmPasswordReset(
+  recoveryEmail: string,
+  code: string,
+  newPassword: string,
+): Promise<{ error?: string }> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/reset-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        action: "confirm",
+        recoveryEmail: recoveryEmail.trim().toLowerCase(),
+        code: code.trim(),
+        newPassword,
+      }),
     });
     const data = await res.json() as { ok?: boolean; error?: string };
-    if (!res.ok) return { error: data.error ?? "Failed to send reset email. Please try again." };
+    if (!res.ok) return { error: data.error ?? "Could not reset your password. Please try again." };
     return {};
   } catch {
     return { error: "Network error. Please check your connection and try again." };

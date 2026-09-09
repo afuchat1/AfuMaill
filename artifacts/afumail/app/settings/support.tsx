@@ -19,7 +19,7 @@ const FAQ = [
   },
   {
     q: "How do I reset my password?",
-    a: "On the login screen, tap 'Forgot password?' and enter your recovery email or phone number. A reset link will be sent to your linked recovery email.",
+    a: "On the login screen, tap 'Forgot password?' and enter the external recovery email linked to your AfuMail account. AfuMail will send a 6-digit code that expires in 10 minutes.",
   },
   {
     q: "Can I use AfuMail to send emails to Gmail or Outlook users?",
@@ -27,7 +27,7 @@ const FAQ = [
   },
   {
     q: "What is a recovery email?",
-    a: "A recovery email is another AfuMail account that can receive a password-reset link if you ever get locked out of your main account. Set it in Settings → Account Recovery.",
+    a: "A recovery email is your external email address used to receive AfuMail password reset codes if you ever get locked out. Keep it up to date in Settings → Account Recovery.",
   },
   {
     q: "How do I star or archive an email?",
