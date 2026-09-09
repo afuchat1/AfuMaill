@@ -46,6 +46,7 @@ export default function LoginScreen() {
 
   // Forgot password fields
   const [forgotRecovery, setForgotRecovery] = useState("");
+  const [forgotRecoveryLabel, setForgotRecoveryLabel] = useState("");
   const [forgotCode, setForgotCode] = useState("");
   const [forgotNewPassword, setForgotNewPassword] = useState("");
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
@@ -207,12 +208,13 @@ export default function LoginScreen() {
     setForgotLoading(true);
     setForgotError("");
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const { error, recoveryEmail } = await sendPasswordReset(email);
+    const { error, recoveryEmail, maskedRecoveryEmail } = await sendPasswordReset(email);
     if (error) {
       setForgotError(error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } else {
       setForgotRecovery(recoveryEmail ?? email);
+      setForgotRecoveryLabel(maskedRecoveryEmail ?? email);
       setForgotCodeSent(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
@@ -254,6 +256,7 @@ export default function LoginScreen() {
   function switchToForgot() {
     setMode("forgot");
     setForgotRecovery("");
+    setForgotRecoveryLabel("");
     setForgotCode("");
     setForgotNewPassword("");
     setForgotConfirmPassword("");
@@ -268,6 +271,7 @@ export default function LoginScreen() {
     setRegisterError("");
     setLoginError("");
     setForgotRecovery("");
+    setForgotRecoveryLabel("");
     setForgotCode("");
     setForgotNewPassword("");
     setForgotConfirmPassword("");
@@ -450,7 +454,8 @@ export default function LoginScreen() {
                     Enter your code
                   </Text>
                   <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    We sent a 6-digit code to {forgotRecovery}. It expires in 10 minutes.
+                     We sent a 6-digit code to {forgotRecoveryLabel || forgotRecovery}. It expires in 10 minutes.
+                     {" "}AfuMail will never send a password reset link.
                   </Text>
 
                   <View style={styles.fields}>
@@ -515,7 +520,12 @@ export default function LoginScreen() {
                     </Pressable>
 
                     <Pressable
-                      onPress={() => { setForgotCodeSent(false); setForgotCode(""); setForgotError(""); }}
+                      onPress={() => {
+                        setForgotCodeSent(false);
+                        setForgotCode("");
+                        setForgotRecoveryLabel("");
+                        setForgotError("");
+                      }}
                       disabled={forgotLoading}
                       style={styles.switchRow}
                     >
@@ -531,7 +541,7 @@ export default function LoginScreen() {
                     Reset password
                   </Text>
                   <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    Enter the external recovery email linked to your AfuMail account. We'll send a secure 6-digit code.
+                     Enter the external recovery email linked to your AfuMail account. AfuMail will send a secure 6-digit code — never a reset link.
                   </Text>
 
                   <View style={styles.fields}>
@@ -774,7 +784,7 @@ export default function LoginScreen() {
                     Recovery email
                   </Text>
                   <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    Enter your real email address. We'll only use it to send password reset links — it won't be your AfuMail address.
+                    Enter your real email address. AfuMail uses it for branded verification codes and account recovery — it won't be your AfuMail address.
                   </Text>
 
                   <View style={styles.fields}>

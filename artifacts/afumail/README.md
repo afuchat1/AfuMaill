@@ -17,7 +17,7 @@ app/
   _layout.tsx              ← root layout: fonts, gesture handler, auth guard
   (auth)/
     login.tsx              ← sign in screen (native dark UI)
-    set-new-password.tsx   ← password reset screen
+     login.tsx              ← sign in and recovery-email code reset flow
   (tabs)/
     index.tsx              ← inbox screen (native tab)
     calendar.tsx           ← calendar tab

@@ -8,7 +8,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true,
+    // Password recovery is handled only through the branded recovery-email
+    // code flow. Do not let a Supabase recovery URL create a reset session.
+    detectSessionInUrl: false,
   },
 });
 
@@ -93,7 +95,9 @@ export async function registerUser(
   return { userId };
 }
 
-export async function sendPasswordReset(recoveryEmail: string): Promise<{ error?: string; recoveryEmail?: string }> {
+export async function sendPasswordReset(
+  recoveryEmail: string
+): Promise<{ error?: string; recoveryEmail?: string; maskedRecoveryEmail?: string }> {
   const normalizedEmail = recoveryEmail.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || normalizedEmail.endsWith("@afuchat.com")) {
     return { error: "Please enter the external recovery email linked to your AfuMail account." };
@@ -109,9 +113,19 @@ export async function sendPasswordReset(recoveryEmail: string): Promise<{ error?
       },
       body: JSON.stringify({ action: "request", recoveryEmail: normalizedEmail }),
     });
-    const data = await res.json() as { ok?: boolean; error?: string; recoveryEmail?: string };
+    const data = await res.json() as {
+      ok?: boolean;
+      error?: string;
+      recoveryEmail?: string;
+      maskedRecoveryEmail?: string;
+    };
     if (!res.ok) return { error: data.error ?? "Failed to send reset email. Please try again." };
-    return { recoveryEmail: data.recoveryEmail };
+    // Keep the normalized address for the confirm request. The API may return
+    // a masked address for display, but that value cannot be used for lookup.
+    return {
+      recoveryEmail: normalizedEmail,
+      maskedRecoveryEmail: data.maskedRecoveryEmail ?? data.recoveryEmail,
+    };
   } catch {
     return { error: "Network error. Please check your connection and try again." };
   }

@@ -245,7 +245,11 @@ async function requestReset(recoveryEmail: string): Promise<Response> {
     throw error;
   }
 
-  return jsonResponse({ ok: true, recoveryEmail: maskEmail(recoveryEmail), expiresInSeconds: CODE_TTL_MS / 1000 });
+  return jsonResponse({
+    ok: true,
+    maskedRecoveryEmail: maskEmail(recoveryEmail),
+    expiresInSeconds: CODE_TTL_MS / 1000,
+  });
 }
 
 async function confirmReset(

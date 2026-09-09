@@ -27,7 +27,7 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
-  const { isAuthenticated, isLoading, isPasswordRecovery } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
   const scheme = useColorScheme();
   const [pendingMailto, setPendingMailto] = useState<MailtoDraft | null>(null);
@@ -55,17 +55,13 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (isLoading) return;
-    if (isPasswordRecovery) {
-      router.replace("/(auth)/set-new-password");
-      return;
-    }
     const inAuthGroup = segments[0] === "(auth)";
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/(auth)/login");
     } else if (isAuthenticated && inAuthGroup) {
       router.replace("/(tabs)");
     }
-  }, [isAuthenticated, isLoading, isPasswordRecovery, segments]);
+  }, [isAuthenticated, isLoading, segments]);
 
   useEffect(() => {
     if (isLoading || !isAuthenticated || !pendingMailto || segments[0] !== "(tabs)") {
