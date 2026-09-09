@@ -57,6 +57,11 @@ async function loadProfile(userId: string): Promise<AuthUser | null> {
   };
 }
 
+function isAfuChatSession(session: Session): boolean {
+  const email = session.user.email?.trim().toLowerCase() ?? "";
+  return /^[^\s@]+@afuchat\.com$/.test(email);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,6 +91,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      if (!isAfuChatSession(session)) {
+        await supabase.auth.signOut();
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
       // A Supabase Auth session is the source of truth for authentication.
       // Do not turn a profile/RLS/network issue into an apparent login failure.
       // The profile query below only enriches the authenticated identity.
@@ -96,7 +108,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profile) setUser(profile);
     } catch (err) {
       console.warn("AuthContext hydrate error:", err);
-      if (session?.user) setUser(sessionFallback(session));
+      if (session?.user && isAfuChatSession(session)) setUser(sessionFallback(session));
+      else setUser(null);
     } finally {
       setIsLoading(false);
     }

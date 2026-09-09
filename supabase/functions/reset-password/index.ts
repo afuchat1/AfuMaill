@@ -119,12 +119,12 @@ async function findAccount(recoveryEmail: string): Promise<{
   if (!profile?.id) return null;
 
   const addressResult = await restJson(
-    `/rest/v1/email_addresses?user_id=eq.${encodeURIComponent(profile.id)}&is_primary=eq.true&select=full_email&limit=1`,
+    `/rest/v1/email_addresses?user_id=eq.${encodeURIComponent(profile.id)}&is_primary=eq.true&domain=eq.afuchat.com&select=full_email&limit=1`,
   );
   if (!addressResult.response.ok) throw new Error("Could not look up the AfuMail account.");
 
   const address = (addressResult.data as AddressRow[])[0];
-  if (!address?.full_email) return null;
+  if (!address?.full_email || !isValidRecoveryEmail(address.full_email.toLowerCase())) return null;
 
   return { profile, authEmail: address.full_email };
 }

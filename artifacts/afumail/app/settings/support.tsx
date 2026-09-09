@@ -19,11 +19,11 @@ const FAQ = [
   },
   {
     q: "How do I reset my password?",
-    a: "On the login screen, tap 'Forgot password?' and enter the existing @afuchat.com recovery address linked to your profile. AfuMail will send a 6-digit code that expires in 10 minutes.",
+    a: "On the login screen, tap 'Forgot password?' and enter the existing @afuchat.com recovery address linked to your profile. AfuMail will send a six digit code that expires in 10 minutes.",
   },
   {
     q: "Can I use AfuMail to send emails to Gmail or Outlook users?",
-    a: "Currently AfuMail is a closed network — you can only exchange messages with other @afuchat.com users. External email support is on our roadmap.",
+    a: "Currently AfuMail is a closed network. You can only exchange messages with other @afuchat.com users. External email support is on our roadmap.",
   },
   {
     q: "What is a recovery email?",
@@ -35,11 +35,11 @@ const FAQ = [
   },
   {
     q: "How do I set up a vacation reply?",
-    a: "Go to Settings → Account → Vacation Reply. Enable it and write your auto-reply message. AfuMail will automatically respond to senders while the feature is on.",
+    a: "Go to Settings → Account → Vacation Reply. Enable it and write your automatic reply message. AfuMail will automatically respond to senders while the feature is on.",
   },
   {
     q: "Is my data private?",
-    a: "Yes. Your emails are stored securely in our database with row-level security. Only you can read your own messages. We do not share your data with third parties.",
+    a: "Yes. Your emails are stored securely in our database with row level security. Only you can read your own messages. We do not share your data with third parties.",
   },
 ];
 

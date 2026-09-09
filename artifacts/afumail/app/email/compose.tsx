@@ -64,7 +64,7 @@ export default function ComposeScreen() {
     getProfile(user.id)
       .then((p) => {
         if (p?.signature) {
-          setBody(`\n\n— \n${p.signature}`);
+          setBody(`\n\n${p.signature}`);
         }
       })
       .catch((err) => console.warn("Failed to load signature:", err));
@@ -115,7 +115,7 @@ export default function ComposeScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showAiError(err?.message ?? "AI assist failed — try again");
+      showAiError(err?.message ?? "AI assist failed. Try again.");
     } finally {
       setActiveAiAction(null);
     }

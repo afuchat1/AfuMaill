@@ -61,7 +61,7 @@ We use your information solely to:
 - Improve app performance and reliability
 
 3. DATA STORAGE
-Your data is stored in secure cloud infrastructure with row-level security. Only you can access your own emails and profile data. No employee of AfuChat Technologies Limited can read your emails without your explicit consent.
+Your data is stored in secure cloud infrastructure with row level security. Only you can access your own emails and profile data. No employee of AfuChat Technologies Limited can read your emails without your explicit consent.
 
 4. DATA SHARING
 We do not sell, trade, or share your personal information with third parties. We do not use your email content for advertising purposes.
@@ -70,7 +70,7 @@ We do not sell, trade, or share your personal information with third parties. We
 Your data is retained as long as your account is active. You may request deletion of your account and associated data at any time by contacting support.
 
 6. SECURITY
-We implement industry-standard security measures including encrypted connections (TLS), row-level access controls, and secure multi-factor authentication.
+We implement industry standard security measures including encrypted connections (TLS), row level access controls, and secure multi factor authentication.
 
 7. YOUR RIGHTS
 Under applicable Ugandan and international data protection law, you have the right to:

@@ -208,7 +208,7 @@ export default function SettingsScreen() {
           label: "Quiet Hours",
           icon: "moon",
           type: "nav" as const,
-          value: prefs.quietHoursEnabled ? `${prefs.quietHoursStart} – ${prefs.quietHoursEnd}` : "Off",
+          value: prefs.quietHoursEnabled ? `${prefs.quietHoursStart} to ${prefs.quietHoursEnd}` : "Off",
         },
       ],
     },

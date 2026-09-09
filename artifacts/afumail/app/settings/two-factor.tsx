@@ -162,7 +162,7 @@ export default function TwoFactorScreen() {
           {qrUri && (
             <View style={{ gap: 14 }}>
               <Text style={[styles.hint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code below.
+                Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.), then enter the six digit code below.
               </Text>
 
               <View style={[styles.qrBox, { backgroundColor: "#fff", borderColor: colors.border }]}>

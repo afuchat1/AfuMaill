@@ -16,7 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
-import { confirmPasswordReset, isUsernameAvailable, registerUser, savePhoneNumber, sendPasswordReset, signInUser } from "@/lib/supabase";
+import { confirmPasswordReset, isExistingAfuChatAddress, isUsernameAvailable, normalizeAfuChatEmail, registerUser, savePhoneNumber, sendPasswordReset, signInUser } from "@/lib/supabase";
 import { useColors } from "@/hooks/useColors";
 
 type Mode = "login" | "register" | "forgot";
@@ -201,7 +201,7 @@ export default function LoginScreen() {
       setForgotError("Please enter your recovery email.");
       return;
     }
-    if (!/^[^\s@]+@afuchat\.com$/.test(email)) {
+    if (!normalizeAfuChatEmail(email)) {
       setForgotError("Use the AfuChat recovery address linked to your profile.");
       return;
     }
@@ -223,7 +223,7 @@ export default function LoginScreen() {
 
   async function handleConfirmPasswordReset() {
     if (!/^\d{6}$/.test(forgotCode.trim())) {
-      setForgotError("Enter the 6-digit verification code from your email.");
+      setForgotError("Enter the six digit verification code from your email.");
       return;
     }
     if (forgotNewPassword.length < 6) {
@@ -299,17 +299,28 @@ export default function LoginScreen() {
   }
 
   // ─── Register step 3 → 4 ─────────────────────────────────
-  function handleStep3Next() {
+  async function handleStep3Next() {
     const email = accountRecoveryEmail.trim().toLowerCase();
     if (!email) {
       setRegisterError("Please enter an existing AfuChat recovery address.");
       return;
     }
-    if (!/^[^\s@]+@afuchat\.com$/.test(email)) {
+    if (!normalizeAfuChatEmail(email)) {
       setRegisterError("Use an existing AfuChat recovery address (username@afuchat.com).");
       return;
     }
     setRegisterError("");
+    setRegisterLoading(true);
+    const { exists, error } = await isExistingAfuChatAddress(email);
+    setRegisterLoading(false);
+    if (error) {
+      setRegisterError(error);
+      return;
+    }
+    if (!exists) {
+      setRegisterError("That AfuChat address does not exist yet. Create the account before linking it.");
+      return;
+    }
     setStep(4);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }
@@ -450,7 +461,7 @@ export default function LoginScreen() {
                     Enter your code
                   </Text>
                   <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                     We sent a 6-digit code to {forgotRecoveryLabel || forgotRecovery}. It expires in 10 minutes.
+                     We sent a six digit code to {forgotRecoveryLabel || forgotRecovery}. It expires in 10 minutes.
                      {" "}AfuMail will never send a password reset link.
                   </Text>
 
@@ -537,7 +548,7 @@ export default function LoginScreen() {
                     Reset password
                   </Text>
                   <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                     Enter the existing AfuChat recovery address linked to your profile. AfuMail will send a secure 6-digit code — never a reset link.
+                     Enter the existing AfuChat recovery address linked to your profile. AfuMail will send a secure six digit code. We never send a reset link.
                   </Text>
 
                   <View style={styles.fields}>
@@ -708,7 +719,7 @@ export default function LoginScreen() {
                       <View style={styles.availRow}>
                         <Feather name="x-circle" size={15} color={colors.destructive} />
                         <Text style={[styles.availText, { color: colors.destructive, fontFamily: "Inter_500Medium" }]}>
-                          Already taken — try another
+                          Already taken. Try another.
                         </Text>
                       </View>
                     )}
@@ -888,7 +899,7 @@ export default function LoginScreen() {
                     Add a phone number
                   </Text>
                   <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    Used only for phone-based identity verification if you ever lose account access. You can skip this and add it later in Settings.
+                    Used only for identity verification by phone if you ever lose account access. You can skip this and add it later in Settings.
                   </Text>
 
                   <View style={styles.fields}>

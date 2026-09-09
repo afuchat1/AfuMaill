@@ -286,7 +286,7 @@ export default function CalendarScreen() {
         >
           <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
           <Text style={[styles.sheetTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-            New Event — {MONTHS[month]} {selectedDay}
+            New Event for {MONTHS[month]} {selectedDay}
           </Text>
 
           {/* Title */}

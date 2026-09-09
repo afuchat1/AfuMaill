@@ -14,6 +14,13 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 });
 
+const AFUCHAT_EMAIL_RE = /^[^\s@]+@afuchat\.com$/i;
+
+export function normalizeAfuChatEmail(value: string): string | null {
+  const normalized = value.trim().toLowerCase();
+  return AFUCHAT_EMAIL_RE.test(normalized) ? normalized : null;
+}
+
 export interface Profile {
   id: string;
   username: string;
@@ -72,9 +79,17 @@ export async function registerUser(
   fullName: string,
   recoveryEmail: string
 ): Promise<{ error?: string; userId?: string }> {
-  const normalizedRecoveryEmail = recoveryEmail.trim().toLowerCase();
-  if (!/^[^\s@]+@afuchat\.com$/.test(normalizedRecoveryEmail)) {
+  const normalizedRecoveryEmail = normalizeAfuChatEmail(recoveryEmail);
+  if (!normalizedRecoveryEmail) {
     return { error: "Enter an existing AfuChat recovery address (username@afuchat.com)." };
+  }
+
+  const recoveryAddressExists = await isExistingAfuChatAddress(normalizedRecoveryEmail);
+  if (recoveryAddressExists.error) {
+    return { error: recoveryAddressExists.error };
+  }
+  if (!recoveryAddressExists.exists) {
+    return { error: "That AfuChat address does not exist yet. Create the account before linking it." };
   }
 
   const { data, error: signUpError } = await supabase.auth.signUp({
@@ -110,8 +125,8 @@ export async function registerUser(
 export async function sendPasswordReset(
   recoveryEmail: string
 ): Promise<{ error?: string; recoveryEmail?: string; maskedRecoveryEmail?: string }> {
-  const normalizedEmail = recoveryEmail.trim().toLowerCase();
-  if (!/^[^\s@]+@afuchat\.com$/.test(normalizedEmail)) {
+  const normalizedEmail = normalizeAfuChatEmail(recoveryEmail);
+  if (!normalizedEmail) {
     return { error: "Please enter the linked AfuChat recovery address (username@afuchat.com)." };
   }
 
@@ -148,8 +163,8 @@ export async function confirmPasswordReset(
   code: string,
   newPassword: string,
 ): Promise<{ error?: string }> {
-  const normalizedEmail = recoveryEmail.trim().toLowerCase();
-  if (!/^[^\s@]+@afuchat\.com$/.test(normalizedEmail)) {
+  const normalizedEmail = normalizeAfuChatEmail(recoveryEmail);
+  if (!normalizedEmail) {
     return { error: "Please enter the linked AfuChat recovery address (username@afuchat.com)." };
   }
 
@@ -203,12 +218,30 @@ export async function saveRecoveryEmail(
 
   const normalized = recoveryUsername.trim().toLowerCase();
   const full = normalized.includes("@") ? normalized : `${normalized}@afuchat.com`;
-  if (!/^[^\s@]+@afuchat\.com$/.test(full)) {
+  if (!normalizeAfuChatEmail(full)) {
     return { error: "Use an existing AfuChat recovery address (username@afuchat.com)." };
   }
   const { error } = await supabase.rpc("set_recovery_email", { _email: full });
   if (error) return { error: error.message };
   return {};
+}
+
+export async function isExistingAfuChatAddress(
+  email: string,
+): Promise<{ exists: boolean; error?: string }> {
+  const normalized = normalizeAfuChatEmail(email);
+  if (!normalized) {
+    return { exists: false, error: "Use an existing AfuChat address (username@afuchat.com)." };
+  }
+
+  const { data, error } = await supabase.rpc("afuchat_email_exists", {
+    _email: normalized,
+  });
+  if (error) {
+    console.warn("AfuChat address check error:", error.message);
+    return { exists: false, error: "We could not verify that AfuChat address. Please try again." };
+  }
+  return { exists: data === true };
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
@@ -230,7 +263,8 @@ export async function getProfile(userId: string): Promise<Profile | null> {
       .select("full_email")
       .eq("id", data.recovery_email_address_id)
       .maybeSingle();
-    recoveryEmail = recovery?.full_email ?? null;
+    const candidate = recovery?.full_email ?? null;
+    recoveryEmail = candidate && normalizeAfuChatEmail(candidate) ? candidate : null;
   }
 
   return {
@@ -253,6 +287,9 @@ export async function signInUser(
   email: string,
   password: string
 ): Promise<{ error?: string }> {
+  if (!normalizeAfuChatEmail(email)) {
+    return { error: "Sign in with your @afuchat.com AfuMail address." };
+  }
   const { error } = await supabase.auth.signInWithPassword({
     email: email.trim().toLowerCase(),
     password,

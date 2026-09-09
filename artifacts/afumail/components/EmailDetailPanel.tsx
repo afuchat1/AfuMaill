@@ -127,7 +127,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
       setSmartReplies(replies);
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showToast(err?.message ?? "Smart Reply unavailable — try again");
+      showToast(err?.message ?? "Smart Reply unavailable. Try again.");
     } finally {
       setIsRepliesLoading(false);
     }
@@ -145,7 +145,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
       setSummary(content);
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showToast(err?.message ?? "Summary unavailable — try again");
+      showToast(err?.message ?? "Summary unavailable. Try again.");
     } finally {
       setIsSummaryLoading(false);
     }

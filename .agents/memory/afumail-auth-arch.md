@@ -24,3 +24,10 @@ Configured with Resend SMTP: host=smtp.resend.com, port=465, user=resend, sender
 
 ## Recovery link handling
 The native app intentionally keeps `detectSessionInUrl` disabled. Password reset is code-only and is completed inside the branded AfuMail app.
+
+## Legacy external aliases
+Three old non-primary aliases use an external domain and are intentionally retained for now. They must never be exposed as recovery addresses, linked to profiles, or used by password reset; new external aliases are blocked at the database trigger.
+
+**Why:** Removing old aliases could affect historical mail references, but allowing them in recovery would violate the AfuChat-only identity boundary.
+
+**How to apply:** Treat only existing `@afuchat.com` rows as linkable/recoverable, and keep the legacy external rows out of all account and recovery flows.
