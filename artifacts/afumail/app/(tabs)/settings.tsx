@@ -20,7 +20,7 @@ import { Dialog } from "@/components/ui/Dialog";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { getPreferences, Preferences, setPref } from "@/lib/preferences";
-import { getEmailStats, getProfile, saveNotificationEmail, savePhoneNumber } from "@/lib/supabase";
+import { getEmailStats, getProfile, savePhoneNumber, saveRecoveryEmail } from "@/lib/supabase";
 
 export default function SettingsScreen() {
   const colors = useColors();
@@ -65,7 +65,7 @@ export default function SettingsScreen() {
       .then((p) => {
         if (!p) return;
         setPhoneNumber(p.phone_number ?? "");
-        setRecoveryEmail(p.notification_email ?? "");
+        setRecoveryEmail(p.recovery_email ?? "");
       })
       .catch((err) => console.warn("Failed to load profile:", err));
     getEmailStats(user.id)
@@ -121,7 +121,7 @@ export default function SettingsScreen() {
     if (!user) return;
     setRecoveryError("");
     setSaving(true);
-    const { error } = await saveNotificationEmail(user.id, recoveryInput);
+    const { error } = await saveRecoveryEmail(user.id, recoveryInput);
     setSaving(false);
     if (error) { setRecoveryError(error); return; }
     const full = recoveryInput.trim().toLowerCase();
@@ -421,12 +421,12 @@ export default function SettingsScreen() {
         <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Recovery Email</Text>
           <Text style={[styles.modalSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            AfuMail uses this external email to send password reset codes.
+            Only an existing AfuChat address linked to your profile can receive password reset codes.
           </Text>
           <View style={[styles.usernameRow, { borderColor: colors.border, backgroundColor: colors.background }]}>
             <TextInput
               style={{ flex: 1, fontSize: 16, color: colors.foreground, fontFamily: "Inter_400Regular", paddingHorizontal: 14, paddingVertical: 13 }}
-              placeholder="you@gmail.com"
+              placeholder="recovery@afuchat.com"
               placeholderTextColor={colors.mutedForeground}
               value={recoveryInput}
               onChangeText={(t) => { setRecoveryInput(t); setRecoveryError(""); }}

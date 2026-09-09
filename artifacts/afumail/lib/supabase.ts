@@ -21,7 +21,6 @@ export interface Profile {
   email: string;
   phone_number: string | null;
   recovery_email: string | null;
-  notification_email: string | null;
   signature: string;
   vacation_reply_enabled: boolean;
   vacation_reply_message: string;
@@ -71,8 +70,13 @@ export async function registerUser(
   password: string,
   username: string,
   fullName: string,
-  notificationEmail?: string
+  recoveryEmail: string
 ): Promise<{ error?: string; userId?: string }> {
+  const normalizedRecoveryEmail = recoveryEmail.trim().toLowerCase();
+  if (!/^[^\s@]+@afuchat\.com$/.test(normalizedRecoveryEmail)) {
+    return { error: "Enter an existing AfuChat recovery address (username@afuchat.com)." };
+  }
+
   const { data, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
@@ -87,11 +91,19 @@ export async function registerUser(
     .from("profiles")
     .update({
       full_name: fullName,
-      notification_email: notificationEmail?.trim().toLowerCase() || null,
     })
     .eq("id", userId);
 
   if (profileError) return { error: profileError.message };
+
+  const { error: recoveryError } = await supabase.rpc("set_recovery_email", {
+    _email: normalizedRecoveryEmail,
+  });
+  if (recoveryError) {
+    await supabase.auth.signOut();
+    return { error: recoveryError.message };
+  }
+
   return { userId };
 }
 
@@ -99,8 +111,8 @@ export async function sendPasswordReset(
   recoveryEmail: string
 ): Promise<{ error?: string; recoveryEmail?: string; maskedRecoveryEmail?: string }> {
   const normalizedEmail = recoveryEmail.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || normalizedEmail.endsWith("@afuchat.com")) {
-    return { error: "Please enter the external recovery email linked to your AfuMail account." };
+  if (!/^[^\s@]+@afuchat\.com$/.test(normalizedEmail)) {
+    return { error: "Please enter the linked AfuChat recovery address (username@afuchat.com)." };
   }
 
   try {
@@ -111,7 +123,7 @@ export async function sendPasswordReset(
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify({ action: "request", recoveryEmail: normalizedEmail }),
+      body: JSON.stringify({ action: "request", afuchatRecoveryEmail: normalizedEmail }),
     });
     const data = await res.json() as {
       ok?: boolean;
@@ -136,6 +148,11 @@ export async function confirmPasswordReset(
   code: string,
   newPassword: string,
 ): Promise<{ error?: string }> {
+  const normalizedEmail = recoveryEmail.trim().toLowerCase();
+  if (!/^[^\s@]+@afuchat\.com$/.test(normalizedEmail)) {
+    return { error: "Please enter the linked AfuChat recovery address (username@afuchat.com)." };
+  }
+
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/reset-password`, {
       method: "POST",
@@ -146,7 +163,7 @@ export async function confirmPasswordReset(
       },
       body: JSON.stringify({
         action: "confirm",
-        recoveryEmail: recoveryEmail.trim().toLowerCase(),
+        afuchatRecoveryEmail: normalizedEmail,
         code: code.trim(),
         newPassword,
       }),
@@ -171,25 +188,6 @@ export async function savePhoneNumber(
   return {};
 }
 
-export async function saveNotificationEmail(
-  userId: string,
-  email: string
-): Promise<{ error?: string }> {
-  const trimmed = email.trim().toLowerCase();
-  if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-    return { error: "Please enter a valid email address." };
-  }
-  if (trimmed.endsWith("@afuchat.com")) {
-    return { error: "Please use a real external email (e.g. Gmail, Outlook)." };
-  }
-  const { error } = await supabase
-    .from("profiles")
-    .update({ notification_email: trimmed || null })
-    .eq("id", userId);
-  if (error) return { error: error.message };
-  return {};
-}
-
 export async function saveRecoveryEmail(
   userId: string,
   recoveryUsername: string
@@ -205,6 +203,9 @@ export async function saveRecoveryEmail(
 
   const normalized = recoveryUsername.trim().toLowerCase();
   const full = normalized.includes("@") ? normalized : `${normalized}@afuchat.com`;
+  if (!/^[^\s@]+@afuchat\.com$/.test(full)) {
+    return { error: "Use an existing AfuChat recovery address (username@afuchat.com)." };
+  }
   const { error } = await supabase.rpc("set_recovery_email", { _email: full });
   if (error) return { error: error.message };
   return {};
@@ -239,7 +240,6 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     email: address?.full_email ?? (address ? `${address.local_part}@${address.domain}` : ""),
     phone_number: data.phone_number ?? null,
     recovery_email: recoveryEmail,
-    notification_email: data.notification_email ?? null,
     signature: settings?.email_signature ?? "",
     vacation_reply_enabled: settings?.vacation_reply_enabled ?? false,
     vacation_reply_message: settings?.vacation_reply_message ?? "",

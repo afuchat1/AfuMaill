@@ -17,7 +17,7 @@ app/
   _layout.tsx              ← root layout: fonts, gesture handler, auth guard
   (auth)/
     login.tsx              ← sign in screen (native dark UI)
-     login.tsx              ← sign in and recovery-email code reset flow
+     login.tsx              ← sign in and linked AfuChat recovery-code reset flow
   (tabs)/
     index.tsx              ← inbox screen (native tab)
     calendar.tsx           ← calendar tab

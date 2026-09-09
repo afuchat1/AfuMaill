@@ -50,7 +50,7 @@ AfuChat Technologies Limited ("we", "us") operates the AfuMail mobile applicatio
 1. INFORMATION WE COLLECT
 - Account information: name, username, email address
 - Messages: content of emails you send and receive
-- Optional recovery information: phone number, recovery email address
+- Optional recovery information: phone number and an AfuChat recovery address
 - App preferences stored securely in your account
 
 2. HOW WE USE YOUR INFORMATION

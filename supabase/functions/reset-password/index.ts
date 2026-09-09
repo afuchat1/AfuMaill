@@ -12,10 +12,11 @@ const MAX_CODE_ATTEMPTS = 5;
 type ProfileRow = {
   id: string;
   full_name: string | null;
-  notification_email: string | null;
 };
 
 type AddressRow = {
+  id: string;
+  user_id: string;
   full_email: string | null;
 };
 
@@ -66,7 +67,7 @@ function normalizeRecoveryEmail(value: unknown): string {
 }
 
 function isValidRecoveryEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !email.endsWith("@afuchat.com");
+  return /^[^\s@]+@afuchat\.com$/.test(email);
 }
 
 function createCode(): string {
@@ -101,10 +102,18 @@ async function findAccount(recoveryEmail: string): Promise<{
   profile: ProfileRow;
   authEmail: string;
 } | null> {
-  const profileResult = await restJson(
-    `/rest/v1/profiles?notification_email=eq.${encodeURIComponent(recoveryEmail)}&select=id,full_name,notification_email&limit=1`,
+  const recoveryAddressResult = await restJson(
+    `/rest/v1/email_addresses?full_email=eq.${encodeURIComponent(recoveryEmail)}&domain=eq.afuchat.com&select=id,user_id,full_email&limit=1`,
   );
-  if (!profileResult.response.ok) throw new Error("Could not look up the recovery email.");
+  if (!recoveryAddressResult.response.ok) throw new Error("Could not look up the AfuChat recovery address.");
+
+  const recoveryAddress = (recoveryAddressResult.data as AddressRow[])[0];
+  if (!recoveryAddress?.id || !recoveryAddress.user_id) return null;
+
+  const profileResult = await restJson(
+    `/rest/v1/profiles?recovery_email_address_id=eq.${encodeURIComponent(recoveryAddress.id)}&select=id,full_name&limit=1`,
+  );
+  if (!profileResult.response.ok) throw new Error("Could not look up the linked AfuChat profile.");
 
   const profile = (profileResult.data as ProfileRow[])[0];
   if (!profile?.id) return null;
@@ -189,7 +198,7 @@ async function sendRecoveryCodeEmail(
 async function requestReset(recoveryEmail: string): Promise<Response> {
   const account = await findAccount(recoveryEmail);
   if (!account) {
-    return jsonResponse({ error: "No AfuMail account is registered with that recovery email." }, 404);
+    return jsonResponse({ error: "No AfuChat recovery address is linked to an AfuMail profile." }, 404);
   }
 
   const activeResult = await restJson(
@@ -335,13 +344,14 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json() as {
       action?: "request" | "confirm";
+      afuchatRecoveryEmail?: unknown;
       recoveryEmail?: unknown;
       code?: unknown;
       newPassword?: unknown;
     };
-    const recoveryEmail = normalizeRecoveryEmail(body.recoveryEmail);
+    const recoveryEmail = normalizeRecoveryEmail(body.afuchatRecoveryEmail ?? body.recoveryEmail);
     if (!isValidRecoveryEmail(recoveryEmail)) {
-      return jsonResponse({ error: "Enter the external recovery email linked to your AfuMail account." }, 400);
+       return jsonResponse({ error: "Enter the linked AfuChat recovery address (username@afuchat.com)." }, 400);
     }
 
     if ((body.action ?? "request") === "request") {

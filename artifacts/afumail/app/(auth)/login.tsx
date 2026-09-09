@@ -61,7 +61,7 @@ export default function LoginScreen() {
   const [username, setUsername] = useState("");
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
-  const [notificationEmail, setNotificationEmail] = useState("");
+  const [accountRecoveryEmail, setAccountRecoveryEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [registerLoading, setRegisterLoading] = useState(false);
@@ -167,7 +167,7 @@ export default function LoginScreen() {
       password,
       username.trim().toLowerCase(),
       fullName,
-      notificationEmail.trim().toLowerCase()
+      accountRecoveryEmail.trim().toLowerCase()
     );
 
     if (error) {
@@ -201,8 +201,8 @@ export default function LoginScreen() {
       setForgotError("Please enter your recovery email.");
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.endsWith("@afuchat.com")) {
-      setForgotError("Use the external recovery email linked to your AfuMail account.");
+    if (!/^[^\s@]+@afuchat\.com$/.test(email)) {
+      setForgotError("Use the AfuChat recovery address linked to your profile.");
       return;
     }
     setForgotLoading(true);
@@ -300,17 +300,13 @@ export default function LoginScreen() {
 
   // ─── Register step 3 → 4 ─────────────────────────────────
   function handleStep3Next() {
-    const email = notificationEmail.trim().toLowerCase();
+    const email = accountRecoveryEmail.trim().toLowerCase();
     if (!email) {
-      setRegisterError("Please enter your real email address.");
+      setRegisterError("Please enter an existing AfuChat recovery address.");
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setRegisterError("Please enter a valid email address.");
-      return;
-    }
-    if (email.endsWith("@afuchat.com")) {
-      setRegisterError("Please use a real external email (e.g. Gmail, Outlook).");
+    if (!/^[^\s@]+@afuchat\.com$/.test(email)) {
+      setRegisterError("Use an existing AfuChat recovery address (username@afuchat.com).");
       return;
     }
     setRegisterError("");
@@ -530,7 +526,7 @@ export default function LoginScreen() {
                       style={styles.switchRow}
                     >
                       <Text style={[styles.switchText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                        Use a different recovery email
+                        Use a different AfuChat recovery address
                       </Text>
                     </Pressable>
                   </View>
@@ -541,14 +537,14 @@ export default function LoginScreen() {
                     Reset password
                   </Text>
                   <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                     Enter the external recovery email linked to your AfuMail account. AfuMail will send a secure 6-digit code — never a reset link.
+                     Enter the existing AfuChat recovery address linked to your profile. AfuMail will send a secure 6-digit code — never a reset link.
                   </Text>
 
                   <View style={styles.fields}>
                     <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
                         style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-                        placeholder="you@gmail.com"
+                         placeholder="recovery@afuchat.com"
                         placeholderTextColor={colors.mutedForeground}
                         value={forgotRecovery}
                         onChangeText={(t) => { setForgotRecovery(t); setForgotError(""); }}
@@ -784,17 +780,17 @@ export default function LoginScreen() {
                     Recovery email
                   </Text>
                   <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    Enter your real email address. AfuMail uses it for branded verification codes and account recovery — it won't be your AfuMail address.
+                    Enter an existing AfuChat address belonging to someone you trust. AfuMail uses it for branded verification codes and never sends recovery mail outside AfuChat.
                   </Text>
 
                   <View style={styles.fields}>
                     <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
                         style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-                        placeholder="you@gmail.com"
+                         placeholder="recovery@afuchat.com"
                         placeholderTextColor={colors.mutedForeground}
-                        value={notificationEmail}
-                        onChangeText={(t) => { setNotificationEmail(t); setRegisterError(""); }}
+                         value={accountRecoveryEmail}
+                         onChangeText={(t) => { setAccountRecoveryEmail(t); setRegisterError(""); }}
                         autoCapitalize="none"
                         autoCorrect={false}
                         keyboardType="email-address"
@@ -892,7 +888,7 @@ export default function LoginScreen() {
                     Add a phone number
                   </Text>
                   <Text style={[styles.cardSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    Used only for account recovery if you ever forget your password. You can skip this and add it later in Settings.
+                    Used only for phone-based identity verification if you ever lose account access. You can skip this and add it later in Settings.
                   </Text>
 
                   <View style={styles.fields}>
