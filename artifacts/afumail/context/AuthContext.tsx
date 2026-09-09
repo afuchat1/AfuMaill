@@ -31,26 +31,31 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 async function loadProfile(userId: string): Promise<AuthUser | null> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .maybeSingle();
+  const [{ data, error }, { data: address, error: addressError }] = await Promise.all([
+    supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+    supabase
+      .from("email_addresses")
+      .select("local_part,domain,full_email")
+      .eq("user_id", userId)
+      .eq("is_primary", true)
+      .maybeSingle(),
+  ]);
 
-  if (error) {
-    console.warn("Profile load error:", error.message);
+  if (error || addressError) {
+    console.warn("Profile load error:", error?.message ?? addressError?.message);
     return null;
   }
-  if (!data) {
-    console.warn("Profile load returned no row for authenticated user.");
+  if (!data || !address) {
+    console.warn("Profile load returned no profile or primary address for authenticated user.");
     return null;
   }
 
+  const email = address.full_email ?? `${address.local_part}@${address.domain}`;
   return {
     id: userId,
-    name: data.full_name as string,
-    email: data.email as string,
-    username: data.username as string,
+    name: data.full_name ?? address.local_part,
+    email,
+    username: address.local_part,
   };
 }
 

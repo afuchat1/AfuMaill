@@ -15,7 +15,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 export interface Profile {
   id: string;
   username: string;
-  full_name: string;
+  full_name: string | null;
   email: string;
   phone_number: string | null;
   recovery_email: string | null;
@@ -29,17 +29,14 @@ export interface Profile {
 }
 
 export async function isUsernameAvailable(username: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("username", username.toLowerCase().trim())
-    .maybeSingle();
-
+  const { data, error } = await supabase.rpc("username_available", {
+    _username: username.toLowerCase().trim(),
+  });
   if (error) {
     console.warn("Username check error:", error.message);
-    return true;
+    return false;
   }
-  return data === null;
+  return data === true;
 }
 
 export async function registerUser(
@@ -59,15 +56,13 @@ export async function registerUser(
   const userId = data.user?.id;
   if (!userId) return { error: "Registration failed. Please try again." };
 
-  const { error: profileError } = await supabase.from("profiles").insert({
-    id: userId,
-    username: username.toLowerCase().trim(),
-    full_name: fullName,
-    email,
-    phone_number: null,
-    recovery_email: null,
-    notification_email: notificationEmail ?? null,
-  });
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({
+      full_name: fullName,
+      notification_email: notificationEmail?.trim().toLowerCase() || null,
+    })
+    .eq("id", userId);
 
   if (profileError) return { error: profileError.message };
   return { userId };
@@ -142,7 +137,7 @@ export async function saveRecoveryEmail(
   if (!recoveryUsername.trim()) {
     const { error } = await supabase
       .from("profiles")
-      .update({ recovery_email: null })
+      .update({ recovery_email_address_id: null })
       .eq("id", userId);
     if (error) return { error: error.message };
     return {};
@@ -150,32 +145,53 @@ export async function saveRecoveryEmail(
 
   const normalized = recoveryUsername.trim().toLowerCase();
   const full = normalized.includes("@") ? normalized : `${normalized}@afuchat.com`;
-
-  const { data: found } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("email", full)
-    .neq("id", userId)
-    .maybeSingle();
-
-  if (!found) return { error: "No AfuMail account found with that username." };
-
-  const { error } = await supabase
-    .from("profiles")
-    .update({ recovery_email: full })
-    .eq("id", userId);
+  const { error } = await supabase.rpc("set_recovery_email", { _email: full });
   if (error) return { error: error.message };
   return {};
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .maybeSingle();
-  if (error || !data) return null;
-  return data as Profile;
+  const [{ data, error }, { data: address }, { data: settings }] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+    supabase
+      .from("email_addresses")
+      .select("id,local_part,domain,full_email,is_primary")
+      .eq("user_id", userId)
+      .eq("is_primary", true)
+      .maybeSingle(),
+    supabase
+      .from("user_settings")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
+  if (error || !data || !address) return null;
+
+  let recoveryEmail: string | null = null;
+  if (data.recovery_email_address_id) {
+    const { data: recovery } = await supabase
+      .from("email_addresses")
+      .select("full_email")
+      .eq("id", data.recovery_email_address_id)
+      .maybeSingle();
+    recoveryEmail = recovery?.full_email ?? null;
+  }
+
+  return {
+    id: userId,
+    username: address.local_part,
+    full_name: data.full_name ?? "",
+    email: address.full_email ?? `${address.local_part}@${address.domain}`,
+    phone_number: data.phone_number ?? null,
+    recovery_email: recoveryEmail,
+    notification_email: data.notification_email ?? null,
+    signature: settings?.email_signature ?? "",
+    vacation_reply_enabled: settings?.vacation_reply_enabled ?? false,
+    vacation_reply_message: settings?.vacation_reply_message ?? "",
+    preferences: data.preferences ?? {},
+    recent_searches: data.recent_searches ?? [],
+    created_at: data.created_at,
+  };
 }
 
 export async function signInUser(
@@ -194,10 +210,18 @@ export async function saveSignature(
   userId: string,
   signature: string
 ): Promise<{ error?: string }> {
+  const { data: address } = await supabase
+    .from("email_addresses")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("is_primary", true)
+    .maybeSingle();
+  if (!address) return { error: "Primary AfuMail address not found." };
   const { error } = await supabase
-    .from("profiles")
-    .update({ signature })
-    .eq("id", userId);
+    .from("user_settings")
+    .upsert({ user_id: userId, email_address_id: address.id, email_signature: signature }, {
+      onConflict: "user_id",
+    });
   if (error) return { error: error.message };
   return {};
 }
@@ -207,10 +231,21 @@ export async function saveVacationReply(
   enabled: boolean,
   message: string
 ): Promise<{ error?: string }> {
+  const { data: address } = await supabase
+    .from("email_addresses")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("is_primary", true)
+    .maybeSingle();
+  if (!address) return { error: "Primary AfuMail address not found." };
   const { error } = await supabase
-    .from("profiles")
-    .update({ vacation_reply_enabled: enabled, vacation_reply_message: message })
-    .eq("id", userId);
+    .from("user_settings")
+    .upsert({
+      user_id: userId,
+      email_address_id: address.id,
+      vacation_reply_enabled: enabled,
+      vacation_reply_message: message,
+    }, { onConflict: "user_id" });
   if (error) return { error: error.message };
   return {};
 }
@@ -221,14 +256,14 @@ export async function getEmailStats(userId: string): Promise<{
 }> {
   const { data, error } = await supabase
     .from("emails")
-    .select("folder")
-    .eq("owner_id", userId);
+    .select("folder_id, folders!emails_folder_id_fkey(type)")
+    .eq("user_id", userId);
 
   if (error || !data) return { total: 0, byFolder: {} };
 
   const byFolder: Record<string, number> = {};
   for (const row of data) {
-    const f = (row.folder as string) || "inbox";
+    const f = ((row.folders as { type?: string } | null)?.type ?? "inbox");
     byFolder[f] = (byFolder[f] ?? 0) + 1;
   }
   return { total: data.length, byFolder };

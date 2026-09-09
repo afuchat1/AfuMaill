@@ -27,9 +27,9 @@ Deno.serve(async (req) => {
       .replace(/^@/, "")
       .replace(/@afuchat\.com$/, "");
 
-    // 1. Look up the requesting user's profile
+    // 1. Look up the requesting user's primary mailbox address.
     const profileRes = await fetch(
-      `${projectUrl}/rest/v1/profiles?username=eq.${encodeURIComponent(slug)}&select=id,email,recovery_email,full_name&limit=1`,
+      `${projectUrl}/rest/v1/email_addresses?local_part=eq.${encodeURIComponent(slug)}&domain=eq.afuchat.com&is_primary=eq.true&select=id,user_id,full_email&limit=1`,
       {
         headers: {
           Authorization: `Bearer ${serviceRoleKey}`,
@@ -45,32 +45,41 @@ Deno.serve(async (req) => {
       });
     }
 
-    const profiles = await profileRes.json() as Array<{
+    const addresses = await profileRes.json() as Array<{
       id: string;
-      email: string;
-      recovery_email: string | null;
-      full_name: string | null;
+      user_id: string;
+      full_email: string;
     }>;
 
-    const profile = profiles[0];
+    const address = addresses[0];
 
-    if (!profile) {
+    if (!address) {
       return new Response(JSON.stringify({ error: "No account found with that username." }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (!profile.recovery_email) {
+    const profileLookup = await fetch(
+      `${projectUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(address.user_id)}&select=id,full_name,recovery_email_address_id&limit=1`,
+      { headers: { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey } },
+    );
+    const profiles = await profileLookup.json() as Array<{
+      id: string;
+      full_name: string | null;
+      recovery_email_address_id: string | null;
+    }>;
+    const profile = profiles[0];
+    if (!profile?.recovery_email_address_id) {
       return new Response(JSON.stringify({ error: "No recovery email is set for this account. Please sign in and add one under Settings → Account." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 2. Validate that recovery_email belongs to a real AfuMail user
+    // 2. Validate that the recovery address belongs to a different AfuMail user.
     const recoveryRes = await fetch(
-      `${projectUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(profile.recovery_email)}&select=id,username,full_name&limit=1`,
+      `${projectUrl}/rest/v1/email_addresses?id=eq.${encodeURIComponent(profile.recovery_email_address_id)}&select=id,user_id,full_email&limit=1`,
       {
         headers: {
           Authorization: `Bearer ${serviceRoleKey}`,
@@ -86,12 +95,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    const recoveryProfiles = await recoveryRes.json() as Array<{
+    const recoveryAddresses = await recoveryRes.json() as Array<{
       id: string;
-      username: string;
-      full_name: string | null;
+      user_id: string;
+      full_email: string;
     }>;
 
+    const recoveryAddress = recoveryAddresses[0];
+    if (!recoveryAddress || recoveryAddress.user_id === address.user_id) {
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const recoveryProfileRes = await fetch(
+      `${projectUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(recoveryAddress.user_id)}&select=id,full_name&limit=1`,
+      { headers: { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey } },
+    );
+    const recoveryProfiles = await recoveryProfileRes.json() as Array<{
+      id: string;
+      full_name: string | null;
+    }>;
     const recoveryUser = recoveryProfiles[0];
     if (!recoveryUser) {
       return new Response(JSON.stringify({ ok: true }), {
@@ -110,7 +135,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         type: "recovery",
-        email: profile.email,
+        email: address.full_email,
         options: {
           redirect_to: redirectTo ?? projectUrl,
         },
@@ -135,7 +160,7 @@ Deno.serve(async (req) => {
     const displayName = profile.full_name ?? slug;
     const now = new Date().toISOString();
 
-    const body = `Hi ${recoveryUser.full_name ?? recoveryUser.username},\n\n${displayName} (${slug}@afuchat.com) has requested a password reset on AfuMail.\n\nClick the link below to reset their password:\n\n${resetLink}\n\nThis link expires in 1 hour. If you didn't expect this request, you can ignore it.`;
+    const body = `Hi ${recoveryUser.full_name ?? recoveryAddress.full_email},\n\n${displayName} (${address.full_email}) has requested a password reset on AfuMail.\n\nClick the link below to reset their password:\n\n${resetLink}\n\nThis link expires in 1 hour. If you didn't expect this request, you can ignore it.`;
 
     const preview = `Password reset request for ${slug}@afuchat.com — click to reset.`;
 
@@ -160,6 +185,19 @@ Deno.serve(async (req) => {
 </div>`;
 
     // 4. Deliver the reset email directly into the recovery user's AfuMail inbox
+    const folderRes = await fetch(
+      `${projectUrl}/rest/v1/folders?user_id=eq.${encodeURIComponent(recoveryUser.id)}&type=eq.inbox&select=id&limit=1`,
+      { headers: { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey } },
+    );
+    const folders = await folderRes.json() as Array<{ id: string }>;
+    const folder = folders[0];
+    if (!folder) {
+      return new Response(JSON.stringify({ error: "Failed to locate the recovery inbox." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const insertRes = await fetch(`${projectUrl}/rest/v1/emails`, {
       method: "POST",
       headers: {
@@ -169,21 +207,24 @@ Deno.serve(async (req) => {
         Prefer: "return=minimal",
       },
       body: JSON.stringify({
-        owner_id: recoveryUser.id,
-        from_name: "AfuMail",
-        from_email: "noreply@afuchat.com",
-        to_emails: [{ name: recoveryUser.full_name ?? recoveryUser.username, email: profile.recovery_email }],
-        cc_emails: [],
+          user_id: recoveryUser.id,
+          email_address_id: recoveryAddress.id,
+          folder_id: folder.id,
+          from_address: "AfuMail <noreply@afuchat.com>",
+          to_addresses: [recoveryAddress.full_email],
+          cc_addresses: [],
+          bcc_addresses: [],
         subject: `Password reset for ${slug}@afuchat.com`,
-        body: htmlBody,
+          body_text: body,
+          body_html: htmlBody,
         preview,
-        timestamp: now,
-        read: false,
-        starred: false,
-        pinned: false,
+          received_at: now,
+          is_read: false,
+          is_starred: false,
+          is_important: false,
+          is_draft: false,
         attachments: [],
         category: "primary",
-        folder: "inbox",
       }),
     });
 

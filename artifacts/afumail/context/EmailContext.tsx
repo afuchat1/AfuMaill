@@ -106,23 +106,33 @@ const EmailContext = createContext<EmailContextType>({
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToEmail(row: any): Email {
-  const folder = String(row.folder ?? "inbox").toLowerCase() as EmailFolder;
+  const folderRow = Array.isArray(row.folders) ? row.folders[0] : row.folders;
+  const rawFolder = String(folderRow?.type ?? (row.deleted_at ? "trash" : "inbox")).toLowerCase();
+  const folder = (rawFolder === "custom" ? "archived" : rawFolder) as EmailFolder;
   const category = String(row.category ?? "primary").toLowerCase() as EmailCategory;
+  const parseAddress = (value: unknown): EmailAddress => {
+    const raw = String(value ?? "");
+    const match = raw.match(/^(.*?)\s*<([^>]+)>$/);
+    return match
+      ? { name: match[1]?.trim() || match[2], email: match[2]?.trim() ?? "" }
+      : { name: raw.split("@")[0] ?? raw, email: raw };
+  };
+  const addresses = (value: unknown): EmailAddress[] =>
+    Array.isArray(value) ? value.map(parseAddress).filter((item) => item.email) : [];
+  const body = String(row.body_html ?? row.body_text ?? "");
 
   return {
     id: row.id as string,
-    from: { name: (row.from_name ?? row.from_email ?? "") as string, email: row.from_email as string },
-    to: (row.to_emails ?? []) as EmailAddress[],
-    cc: (row.cc_emails as EmailAddress[] | undefined)?.length
-      ? (row.cc_emails as EmailAddress[])
-      : undefined,
+    from: parseAddress(row.from_address),
+    to: addresses(row.to_addresses),
+    cc: addresses(row.cc_addresses).length ? addresses(row.cc_addresses) : undefined,
     subject: (row.subject ?? "(No Subject)") as string,
-    body: (row.body ?? "") as string,
-    preview: (row.preview ?? row.body ?? "") as string,
-    timestamp: (row.timestamp ?? row.created_at ?? new Date().toISOString()) as string,
-    read: Boolean(row.read),
-    starred: Boolean(row.starred),
-    pinned: Boolean(row.pinned),
+    body,
+    preview: (row.preview ?? row.body_text ?? body) as string,
+    timestamp: (row.sent_at ?? row.received_at ?? row.created_at ?? new Date().toISOString()) as string,
+    read: Boolean(row.is_read),
+    starred: Boolean(row.is_starred),
+    pinned: Boolean(row.is_important),
     attachments: (row.attachments ?? []) as Attachment[],
     category,
     folder,
@@ -132,22 +142,32 @@ function rowToEmail(row: any): Email {
 // ─── Welcome email seed ─────────────────────────────────────────────────────
 
 async function seedWelcomeEmail(ownerId: string, userEmail: string) {
+  const [{ data: address }, { data: folder }] = await Promise.all([
+    supabase.from("email_addresses").select("id").eq("user_id", ownerId).eq("is_primary", true).maybeSingle(),
+    supabase.from("folders").select("id").eq("user_id", ownerId).eq("type", "inbox").maybeSingle(),
+  ]);
+  if (!address || !folder) {
+    console.warn("seedWelcomeEmail could not find the primary address or inbox folder.");
+    return;
+  }
   const { error } = await supabase.from("emails").insert({
-    owner_id: ownerId,
-    from_name: "AfuChat Team",
-    from_email: "team@afuchat.com",
-    to_emails: [{ name: "Me", email: userEmail }],
-    cc_emails: [],
+    user_id: ownerId,
+    email_address_id: address.id,
+    folder_id: folder.id,
+    from_address: "team@afuchat.com",
+    to_addresses: [userEmail],
+    cc_addresses: [],
+    bcc_addresses: [],
     subject: "Welcome to AfuMail 👋",
-    body: "Welcome to AfuMail — a next-generation email experience designed for focus, clarity, and productivity.\n\nYour inbox is now smarter, faster, and more organised than ever.\n\nGet started:\n• Smart inbox automatically sorts your emails by category\n• Compose and send messages to anyone\n• Star important messages to find them instantly\n• Use Search to find anything in your inbox\n\nHappy emailing!\n\nThe AfuChat Team",
+    body_text: "Welcome to AfuMail — a next-generation email experience designed for focus, clarity, and productivity.\n\nYour inbox is now smarter, faster, and more organised than ever.\n\nGet started:\n• Smart inbox automatically sorts your emails by category\n• Compose and send messages to anyone\n• Star important messages to find them instantly\n• Use Search to find anything in your inbox\n\nHappy emailing!\n\nThe AfuChat Team",
     preview: "Welcome to AfuMail — your inbox is now smarter, faster, and more organised than ever.",
-    timestamp: new Date().toISOString(),
-    read: false,
-    starred: false,
-    pinned: false,
+    received_at: new Date().toISOString(),
+    is_read: false,
+    is_starred: false,
+    is_important: false,
+    is_draft: false,
     attachments: [],
     category: "primary",
-    folder: "inbox",
   });
   if (error) {
     console.warn("seedWelcomeEmail error:", error.message);
@@ -167,9 +187,9 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase
         .from("emails")
-        .select("*")
-        .eq("owner_id", user.id)
-        .order("timestamp", { ascending: false });
+        .select("*, folders!emails_folder_id_fkey(type), email_addresses!emails_email_address_id_fkey(full_email)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (error) {
         console.warn("loadEmails error:", error.message, error.details ?? "");
@@ -185,9 +205,9 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
         await seedWelcomeEmail(user.id, user.email);
         const { data: seeded, error: seedLoadError } = await supabase
           .from("emails")
-          .select("*")
-          .eq("owner_id", user.id)
-          .order("timestamp", { ascending: false });
+          .select("*, folders!emails_folder_id_fkey(type), email_addresses!emails_email_address_id_fkey(full_email)")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
         if (seedLoadError) {
           console.warn("loadEmails after seed error:", seedLoadError.message);
         }
@@ -219,7 +239,7 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
           event: "*",
           schema: "public",
           table: "emails",
-          filter: `owner_id=eq.${user.id}`,
+          filter: `user_id=eq.${user.id}`,
         },
         () => {
           loadEmails();
@@ -241,13 +261,13 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
         prev.map((e) => (e.id === id ? { ...e, read: true } : e))
       );
       try {
-        const { error } = await supabase.from("emails").update({ read: true }).eq("id", id);
+        const { error } = await supabase.from("emails").update({ is_read: true }).eq("id", id).eq("user_id", user?.id ?? "");
         if (error) console.warn("markAsRead error:", error.message);
       } catch (err) {
         console.warn("markAsRead exception:", err);
       }
     },
-    []
+    [user?.id]
   );
 
   const toggleStar = useCallback(
@@ -259,48 +279,55 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
         prev.map((e) => (e.id === id ? { ...e, starred: next } : e))
       );
       try {
-        const { error } = await supabase.from("emails").update({ starred: next }).eq("id", id);
+        const { error } = await supabase.from("emails").update({ is_starred: next }).eq("id", id).eq("user_id", user?.id ?? "");
         if (error) console.warn("toggleStar error:", error.message);
       } catch (err) {
         console.warn("toggleStar exception:", err);
       }
     },
-    [emails]
+    [emails, user?.id]
   );
 
   const markAsUnread = useCallback(async (id: string) => {
     setEmails((prev) => prev.map((e) => (e.id === id ? { ...e, read: false } : e)));
     try {
-      const { error } = await supabase.from("emails").update({ read: false }).eq("id", id);
+      const { error } = await supabase.from("emails").update({ is_read: false }).eq("id", id).eq("user_id", user?.id ?? "");
       if (error) console.warn("markAsUnread error:", error.message);
     } catch (err) {
       console.warn("markAsUnread exception:", err);
     }
-  }, []);
+  }, [user?.id]);
 
   const moveToFolder = useCallback(async (id: string, folder: EmailFolder) => {
+    if (!user?.id) return;
+    const { data: folderRow, error: folderError } = await supabase
+      .from("folders")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("type", folder === "archived" ? "custom" : folder)
+      .maybeSingle();
+    if (folderError || !folderRow) {
+      console.warn("moveToFolder folder lookup error:", folderError?.message ?? `Missing ${folder} folder`);
+      return;
+    }
     setEmails((prev) => prev.map((e) => (e.id === id ? { ...e, folder } : e)));
     try {
-      const { error } = await supabase.from("emails").update({ folder }).eq("id", id);
+      const { error } = await supabase
+        .from("emails")
+        .update({ folder_id: folderRow.id, deleted_at: folder === "trash" ? new Date().toISOString() : null })
+        .eq("id", id)
+        .eq("user_id", user.id);
       if (error) console.warn("moveToFolder error:", error.message);
     } catch (err) {
       console.warn("moveToFolder exception:", err);
     }
-  }, []);
+  }, [user?.id]);
 
   const archiveEmail = useCallback(
     async (id: string) => {
-      setEmails((prev) =>
-        prev.map((e) => (e.id === id ? { ...e, folder: "archived" } : e))
-      );
-      try {
-        const { error } = await supabase.from("emails").update({ folder: "archived" }).eq("id", id);
-        if (error) console.warn("archiveEmail error:", error.message);
-      } catch (err) {
-        console.warn("archiveEmail exception:", err);
-      }
+      await moveToFolder(id, "archived");
     },
-    []
+    [moveToFolder]
   );
 
   const deleteEmail = useCallback(
@@ -310,20 +337,19 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
         // If already in trash, permanently delete
         if (email?.folder === "trash") {
           setEmails((prev) => prev.filter((e) => e.id !== id));
-          const { error } = await supabase.from("emails").delete().eq("id", id);
+          const { error } = await supabase.from("emails").delete().eq("id", id).eq("user_id", user?.id ?? "");
           if (error) console.warn("deleteEmail error:", error.message);
         } else {
           setEmails((prev) =>
             prev.map((e) => (e.id === id ? { ...e, folder: "trash" } : e))
           );
-          const { error } = await supabase.from("emails").update({ folder: "trash" }).eq("id", id);
-          if (error) console.warn("deleteEmail error:", error.message);
+          await moveToFolder(id, "trash");
         }
       } catch (err) {
         console.warn("deleteEmail exception:", err);
       }
     },
-    [emails]
+    [emails, moveToFolder, user?.id]
   );
 
   const sendEmail = useCallback(
@@ -366,38 +392,7 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
         throw new Error(fnError.message);
       }
 
-      // Save a copy to the sent folder in Supabase
-      try {
-        const { data: inserted, error } = await supabase
-          .from("emails")
-          .insert({
-            owner_id: user.id,
-            from_name: fromName,
-            from_email: fromEmail,
-            to_emails: toAddresses,
-            cc_emails: ccAddresses,
-            subject: data.subject || "(No Subject)",
-            body: data.body,
-            preview,
-            timestamp: new Date().toISOString(),
-            read: true,
-            starred: false,
-            pinned: false,
-            attachments: [],
-            category: "primary",
-            folder: "sent",
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.warn("sendEmail Supabase error:", error.message);
-        } else if (inserted) {
-          setEmails((prev) => [rowToEmail(inserted), ...prev]);
-        }
-      } catch (err) {
-        console.warn("sendEmail Supabase exception:", err);
-      }
+      await loadEmails();
     },
     [user?.id]
   );

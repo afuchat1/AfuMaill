@@ -1,14 +1,10 @@
--- Align the native AfuMail client with the existing normalized Supabase model.
--- This migration is additive and preserves existing profile, address, folder,
--- message, and OAuth records.
+-- Add the small native-client fields that are not part of the normalized
+-- mailbox model. Message ownership, addresses, and folders remain normalized.
 
 begin;
 
 alter table public.profiles
-  add column if not exists username text,
-  add column if not exists email text,
   add column if not exists phone_number text,
-  add column if not exists recovery_email text,
   add column if not exists notification_email text,
   add column if not exists preferences jsonb not null default '{}'::jsonb,
   add column if not exists recent_searches jsonb not null default '[]'::jsonb;
@@ -16,53 +12,22 @@ alter table public.profiles
 alter table public.user_settings
   add column if not exists vacation_reply_enabled boolean not null default false,
   add column if not exists vacation_reply_message text not null default '',
-  add column if not exists preferences jsonb not null default '{}'::jsonb,
-  add column if not exists recent_searches jsonb not null default '[]'::jsonb;
+  add column if not exists preferences jsonb not null default '{}'::jsonb;
 
 alter table public.emails
-  add column if not exists folder text not null default 'inbox',
   add column if not exists category text not null default 'primary',
   add column if not exists preview text not null default '';
 
--- Backfill the compatibility identity fields from each user's primary address.
-update public.profiles p
-set
-  username = coalesce(p.username, a.local_part),
-  email = coalesce(p.email, coalesce(a.full_email, a.local_part || '@' || a.domain))
-from public.email_addresses a
-where a.user_id = p.id
-  and a.is_primary
-  and (p.username is null or p.email is null);
+alter table public.oauth_applications
+  add column if not exists logo_url text,
+  add column if not exists is_first_party boolean not null default false,
+  add column if not exists client_type text not null default 'public',
+  add column if not exists client_secret_hash text,
+  add column if not exists status text not null default 'active';
 
--- Accounts without a primary address can still be recovered from Supabase Auth.
-update public.profiles p
-set
-  username = coalesce(p.username, split_part(u.email, '@', 1)),
-  email = coalesce(p.email, u.email)
-from auth.users u
-where u.id = p.id
-  and u.email is not null
-  and (p.username is null or p.email is null);
-
-create unique index if not exists profiles_username_compat_key
-  on public.profiles (lower(username))
-  where username is not null;
-
-create unique index if not exists profiles_email_compat_key
-  on public.profiles (lower(email))
-  where email is not null;
-
-update public.emails e
-set folder = f.type
-from public.folders f
-where e.folder_id = f.id;
-
-update public.emails
-set folder = case
-  when is_draft then 'drafts'
-  when deleted_at is not null then 'trash'
-  else coalesce(folder, 'inbox')
-end;
+alter table public.oauth_authorization_codes
+  add column if not exists code_challenge text,
+  add column if not exists code_challenge_method text not null default 'S256';
 
 update public.emails
 set preview = left(
@@ -77,7 +42,34 @@ alter table public.emails enable row level security;
 alter table public.email_addresses enable row level security;
 alter table public.folders enable row level security;
 
-grant select, insert, update on public.profiles to authenticated;
+insert into public.folders (user_id, name, type, icon)
+select distinct f.user_id, 'Archive', 'custom', 'archive'
+from public.folders f
+where not exists (
+  select 1 from public.folders existing
+  where existing.user_id = f.user_id and existing.type = 'custom' and existing.name = 'Archive'
+);
+
+create or replace function public.create_default_folders()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $function$
+begin
+  insert into public.folders (user_id, name, type, icon)
+  values
+    (new.id, 'Inbox', 'inbox', 'inbox'),
+    (new.id, 'Sent', 'sent', 'send'),
+    (new.id, 'Drafts', 'drafts', 'file-text'),
+    (new.id, 'Archive', 'custom', 'archive'),
+    (new.id, 'Spam', 'spam', 'alert-circle'),
+    (new.id, 'Trash', 'trash', 'trash-2');
+  return new;
+end;
+$function$;
+
+grant select, insert, update on public.profiles to anon, authenticated;
 grant select, insert, update, delete on public.email_addresses to authenticated;
 grant select, insert, update, delete on public.user_settings to authenticated;
 grant select, insert, update, delete on public.emails to authenticated;

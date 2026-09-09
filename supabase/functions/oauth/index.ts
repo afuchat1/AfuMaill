@@ -146,6 +146,7 @@ async function getUserFromBearerToken(
 // ── OAuth client helpers ──────────────────────────────────────────────────────
 
 type OAuthClient = {
+  application_id: string;
   client_id: string;
   name: string;
   logo_url: string | null;
@@ -158,11 +159,38 @@ type OAuthClient = {
 };
 
 async function getClient(clientId: string): Promise<OAuthClient | null> {
-  const rows = await dbSelect<OAuthClient>(
-    "oauth_clients",
+  const rows = await dbSelect<{
+    id: string;
+    client_id: string;
+    name: string;
+    logo_url: string | null;
+    redirect_uris: string[];
+    scopes: string[];
+    is_first_party: boolean;
+    status: "active" | "suspended";
+  }>(
+    "oauth_applications",
     `client_id=eq.${encodeURIComponent(clientId)}&select=*&limit=1`,
   );
-  return rows[0] ?? null;
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    ...row,
+    application_id: row.id ?? row.application_id,
+    logo_url: row.logo_url ?? null,
+    is_first_party: Boolean(row.is_first_party),
+    client_type: "public",
+    client_secret_hash: null,
+    status: row.status ?? "active",
+  };
+}
+
+async function getPrimaryAddressId(userId: string): Promise<string | null> {
+  const rows = await dbSelect<{ id: string }>(
+    "email_addresses",
+    `user_id=eq.${encodeURIComponent(userId)}&is_primary=eq.true&select=id&limit=1`,
+  );
+  return rows[0]?.id ?? null;
 }
 
 function isRedirectUriAllowed(redirectUri: string, client: OAuthClient): boolean {
@@ -289,17 +317,21 @@ async function handleAuthorize(req: Request): Promise<Response> {
     return oauthError(400, "invalid_request", "redirect_uri is not registered for this client.");
   }
 
+  const emailAddressId = await getPrimaryAddressId(user.id);
+  if (!emailAddressId) return oauthError(500, "server_error", "No primary AfuMail address is available.");
+
   const code      = genToken(32);
   const expiresAt = new Date(Date.now() + AUTH_CODE_TTL_MS).toISOString();
 
   const ins = await dbInsert("oauth_authorization_codes", {
     code,
-    client_id,
+    application_id: client.application_id,
     user_id: user.id,
+    email_address_id: emailAddressId,
     redirect_uri,
     code_challenge,
     code_challenge_method: code_challenge_method ?? "S256",
-    scope: scope ?? "profile email",
+    scopes: (scope ?? "profile email").split(" ").filter(Boolean),
     expires_at: expiresAt,
   });
   if (!ins.ok) return oauthError(500, "server_error", "Failed to create authorization code.");
@@ -325,12 +357,13 @@ async function handleToken(req: Request): Promise<Response> {
     if (!secretCheck.ok) return oauthError(401, "invalid_client", secretCheck.error);
 
     const rows = await dbSelect<{
-      code: string; used: boolean; client_id: string; redirect_uri: string;
-      user_id: string; expires_at: string; code_challenge: string; scope: string;
+      code: string; used: boolean; application_id: string; redirect_uri: string;
+      user_id: string; email_address_id: string; expires_at: string;
+      code_challenge: string; scopes: string[];
     }>("oauth_authorization_codes", `code=eq.${encodeURIComponent(code)}&select=*&limit=1`);
 
     const authCode = rows[0];
-    if (!authCode || authCode.used || authCode.client_id !== client_id || authCode.redirect_uri !== redirect_uri) {
+    if (!authCode || authCode.used || authCode.application_id !== client.application_id || authCode.redirect_uri !== redirect_uri) {
       return oauthError(400, "invalid_grant", "Authorization code is invalid.");
     }
     if (new Date(authCode.expires_at).getTime() < Date.now()) {
@@ -354,10 +387,11 @@ async function handleToken(req: Request): Promise<Response> {
     const ins = await dbInsert("oauth_tokens", {
       access_token: accessToken,
       refresh_token: refreshToken,
-      client_id,
+      application_id: client.application_id,
       user_id: authCode.user_id,
-      scope: authCode.scope,
-      access_expires_at: new Date(now + ACCESS_TOKEN_TTL_MS).toISOString(),
+      email_address_id: authCode.email_address_id,
+      scopes: authCode.scopes,
+      expires_at: new Date(now + ACCESS_TOKEN_TTL_MS).toISOString(),
       refresh_expires_at: new Date(now + REFRESH_TOKEN_TTL_MS).toISOString(),
     });
     if (!ins.ok) return oauthError(500, "server_error", "Failed to issue tokens. Please try again.");
@@ -367,7 +401,7 @@ async function handleToken(req: Request): Promise<Response> {
       refresh_token: refreshToken,
       token_type: "Bearer",
       expires_in: ACCESS_TOKEN_TTL_MS / 1000,
-      scope: authCode.scope,
+      scope: authCode.scopes.join(" "),
     });
   }
 
@@ -386,8 +420,9 @@ async function handleToken(req: Request): Promise<Response> {
 
     const rows = await dbSelect<{
       refresh_token: string; revoked: boolean; refresh_expires_at: string;
-      access_token: string; user_id: string; scope: string;
-    }>("oauth_tokens", `refresh_token=eq.${encodeURIComponent(refresh_token)}&client_id=eq.${encodeURIComponent(client_id)}&select=*&limit=1`);
+      access_token: string; user_id: string; email_address_id: string; scopes: string[];
+      expires_at: string;
+    }>("oauth_tokens", `refresh_token=eq.${encodeURIComponent(refresh_token)}&application_id=eq.${encodeURIComponent(client.application_id)}&select=*&limit=1`);
 
     const existing = rows[0];
     if (!existing || existing.revoked || new Date(existing.refresh_expires_at).getTime() < Date.now()) {
@@ -405,10 +440,11 @@ async function handleToken(req: Request): Promise<Response> {
     const ins = await dbInsert("oauth_tokens", {
       access_token: accessToken,
       refresh_token: newRefreshToken,
-      client_id,
+      application_id: client.application_id,
       user_id: existing.user_id,
-      scope: existing.scope,
-      access_expires_at: new Date(now + ACCESS_TOKEN_TTL_MS).toISOString(),
+      email_address_id: existing.email_address_id,
+      scopes: existing.scopes,
+      expires_at: new Date(now + ACCESS_TOKEN_TTL_MS).toISOString(),
       refresh_expires_at: new Date(now + REFRESH_TOKEN_TTL_MS).toISOString(),
     });
     if (!ins.ok) return oauthError(500, "server_error", "Failed to issue tokens. Please try again.");
@@ -418,7 +454,7 @@ async function handleToken(req: Request): Promise<Response> {
       refresh_token: newRefreshToken,
       token_type: "Bearer",
       expires_in: ACCESS_TOKEN_TTL_MS / 1000,
-      scope: existing.scope,
+      scope: existing.scopes.join(" "),
     });
   }
 
@@ -433,30 +469,35 @@ async function handleUserinfo(req: Request): Promise<Response> {
   const accessToken = authHeader.slice(7).trim();
 
   const tokenRows = await dbSelect<{
-    access_token: string; revoked: boolean; access_expires_at: string;
-    user_id: string; scope: string;
+    access_token: string; revoked: boolean; expires_at: string;
+    user_id: string; scopes: string[];
   }>("oauth_tokens", `access_token=eq.${encodeURIComponent(accessToken)}&select=*&limit=1`);
 
   const tokenRow = tokenRows[0];
-  if (!tokenRow || tokenRow.revoked || new Date(tokenRow.access_expires_at).getTime() < Date.now()) {
+  if (!tokenRow || tokenRow.revoked || new Date(tokenRow.expires_at).getTime() < Date.now()) {
     return oauthError(401, "invalid_token", "Access token is invalid or expired.");
   }
 
   const profileRows = await dbSelect<{
-    id: string; username: string; full_name: string; email: string; afumail_address: string;
-  }>("profiles", `id=eq.${encodeURIComponent(tokenRow.user_id)}&select=id,username,full_name,email,afumail_address&limit=1`);
+    id: string; full_name: string | null;
+  }>("profiles", `id=eq.${encodeURIComponent(tokenRow.user_id)}&select=id,full_name&limit=1`);
 
   const profile = profileRows[0];
   if (!profile) return oauthError(404, "invalid_token", "The user for this token no longer exists.");
 
-  const scopes = tokenRow.scope ? tokenRow.scope.split(" ") : [];
+  const addressRows = await dbSelect<{ local_part: string; full_email: string }>(
+    "email_addresses",
+    `user_id=eq.${encodeURIComponent(tokenRow.user_id)}&is_primary=eq.true&select=local_part,full_email&limit=1`,
+  );
+  const address = addressRows[0];
+  const scopes = tokenRow.scopes ?? [];
   const resp: Record<string, unknown> = { sub: profile.id };
   if (scopes.includes("profile")) {
     resp.name = profile.full_name;
-    resp.preferred_username = profile.username;
+    resp.preferred_username = address?.local_part;
   }
   if (scopes.includes("email")) {
-    resp.email = profile.afumail_address ?? profile.email;
+    resp.email = address?.full_email;
     resp.email_verified = true;
   }
   return jsonResp(resp);
@@ -466,12 +507,14 @@ async function handleRevoke(req: Request): Promise<Response> {
   const body = await parseBody(req);
   const { token, token_type_hint, client_id } = body;
   if (!token || !client_id) return oauthError(400, "invalid_request", "token and client_id are required.");
+  const client = await getClient(client_id);
+  if (!client) return oauthError(400, "invalid_client", "Unknown client_id.");
 
   if (token_type_hint === "refresh_token") {
-    await dbUpdate("oauth_tokens", `refresh_token=eq.${encodeURIComponent(token)}&client_id=eq.${encodeURIComponent(client_id)}`, { revoked: true });
+    await dbUpdate("oauth_tokens", `refresh_token=eq.${encodeURIComponent(token)}&application_id=eq.${encodeURIComponent(client.application_id)}`, { revoked: true });
   } else {
-    await dbUpdate("oauth_tokens", `access_token=eq.${encodeURIComponent(token)}&client_id=eq.${encodeURIComponent(client_id)}`, { revoked: true });
-    await dbUpdate("oauth_tokens", `refresh_token=eq.${encodeURIComponent(token)}&client_id=eq.${encodeURIComponent(client_id)}`, { revoked: true });
+    await dbUpdate("oauth_tokens", `access_token=eq.${encodeURIComponent(token)}&application_id=eq.${encodeURIComponent(client.application_id)}`, { revoked: true });
+    await dbUpdate("oauth_tokens", `refresh_token=eq.${encodeURIComponent(token)}&application_id=eq.${encodeURIComponent(client.application_id)}`, { revoked: true });
   }
   return jsonResp({ ok: true });
 }
@@ -488,20 +531,24 @@ async function handleIntrospect(req: Request): Promise<Response> {
   if (!token) return oauthError(400, "invalid_request", "token is required.");
 
   const rows = await dbSelect<{
-    access_token: string; revoked: boolean; access_expires_at: string;
-    user_id: string; client_id: string; scope: string; created_at: string;
+    access_token: string; revoked: boolean; expires_at: string;
+    user_id: string; application_id: string; scopes: string[]; created_at: string;
   }>("oauth_tokens", `access_token=eq.${encodeURIComponent(token)}&select=*&limit=1`);
 
   const tokenRow = rows[0];
-  if (!tokenRow || tokenRow.revoked || new Date(tokenRow.access_expires_at).getTime() < Date.now()) {
+  if (!tokenRow || tokenRow.revoked || new Date(tokenRow.expires_at).getTime() < Date.now()) {
     return jsonResp({ active: false });
   }
+  const clientRows = await dbSelect<{ client_id: string }>(
+    "oauth_applications",
+    `id=eq.${encodeURIComponent(tokenRow.application_id)}&select=client_id&limit=1`,
+  );
   return jsonResp({
     active: true,
     sub: tokenRow.user_id,
-    client_id: tokenRow.client_id,
-    scope: tokenRow.scope,
-    exp: Math.floor(new Date(tokenRow.access_expires_at).getTime() / 1000),
+    client_id: clientRows[0]?.client_id,
+    scope: tokenRow.scopes.join(" "),
+    exp: Math.floor(new Date(tokenRow.expires_at).getTime() / 1000),
     iat: Math.floor(new Date(tokenRow.created_at).getTime() / 1000),
     token_type: "Bearer",
   });
@@ -512,25 +559,25 @@ async function handleGetGrants(req: Request): Promise<Response> {
   if (!user) return oauthError(401, "unauthorized", "You must be signed in to AfuMail.");
 
   const tokens = await dbSelect<{
-    client_id: string; scope: string; created_at: string; access_expires_at: string;
-  }>("oauth_tokens", `user_id=eq.${encodeURIComponent(user.id)}&revoked=eq.false&refresh_expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=client_id,scope,created_at,access_expires_at`);
+    application_id: string; scopes: string[]; created_at: string; expires_at: string;
+  }>("oauth_tokens", `user_id=eq.${encodeURIComponent(user.id)}&revoked=eq.false&refresh_expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=application_id,scopes,created_at,expires_at`);
 
   if (!tokens.length) return jsonResp({ grants: [] });
 
-  const uniqueClientIds = [...new Set(tokens.map((t) => t.client_id))];
-  const clients = await dbSelect<{ client_id: string; name: string; logo_url: string | null }>(
-    "oauth_clients",
-    `client_id=in.(${uniqueClientIds.map(encodeURIComponent).join(",")})&select=client_id,name,logo_url`,
+  const uniqueApplicationIds = [...new Set(tokens.map((t) => t.application_id))];
+  const clients = await dbSelect<{ id: string; client_id: string; name: string; logo_url: string | null }>(
+    "oauth_applications",
+    `id=in.(${uniqueApplicationIds.map(encodeURIComponent).join(",")})&select=id,client_id,name,logo_url`,
   );
 
-  const clientMap = new Map(clients.map((c) => [c.client_id, c]));
-  const grants = uniqueClientIds.map((clientId) => {
-    const c = clientMap.get(clientId);
-    const grantTokens = tokens.filter((t) => t.client_id === clientId);
-    const scopes = new Set(grantTokens.flatMap((t) => t.scope.split(" ")));
+  const clientMap = new Map(clients.map((c) => [c.id, c]));
+  const grants = uniqueApplicationIds.map((applicationId) => {
+    const c = clientMap.get(applicationId);
+    const grantTokens = tokens.filter((t) => t.application_id === applicationId);
+    const scopes = new Set(grantTokens.flatMap((t) => t.scopes));
     return {
-      clientId,
-      name: c?.name ?? clientId,
+      clientId: c?.client_id ?? applicationId,
+      name: c?.name ?? applicationId,
       logoUrl: c?.logo_url ?? null,
       scopes: [...scopes],
       authorizedAt: grantTokens.map((t) => t.created_at).sort()[0],

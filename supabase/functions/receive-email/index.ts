@@ -232,7 +232,7 @@ Deno.serve(async (req) => {
 
     for (const recipient of afuchatRecipients) {
       const profileRes = await fetch(
-        `${projectUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(recipient.email)}&select=id`,
+        `${projectUrl}/rest/v1/email_addresses?full_email=eq.${encodeURIComponent(recipient.email)}&select=id,user_id&limit=1`,
         { headers: { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey } }
       );
 
@@ -241,10 +241,21 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const profiles = await profileRes.json() as Array<{ id: string }>;
-      const profile = profiles[0];
-      if (!profile) {
+      const addresses = await profileRes.json() as Array<{ id: string; user_id: string }>;
+      const address = addresses[0];
+      if (!address) {
         console.warn("[receive-email] no profile for:", recipient.email);
+        continue;
+      }
+
+      const folderRes = await fetch(
+        `${projectUrl}/rest/v1/folders?user_id=eq.${encodeURIComponent(address.user_id)}&type=eq.inbox&select=id&limit=1`,
+        { headers: { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey } },
+      );
+      const folders = await folderRes.json() as Array<{ id: string }>;
+      const folder = folders[0];
+      if (!folder) {
+        console.warn("[receive-email] no inbox folder for:", recipient.email);
         continue;
       }
 
@@ -257,18 +268,22 @@ Deno.serve(async (req) => {
           Prefer: "return=minimal",
         },
         body: JSON.stringify({
-          owner_id: profile.id,
-          from_name: fromAddr.name,
-          from_email: fromAddr.email,
-          to_emails: toAddresses,
-          cc_emails: ccAddresses,
+          user_id: address.user_id,
+          email_address_id: address.id,
+          folder_id: folder.id,
+          from_address: `${fromAddr.name} <${fromAddr.email}>`,
+          to_addresses: toAddresses.map((a) => a.email),
+          cc_addresses: ccAddresses.map((a) => a.email),
+          bcc_addresses: [],
           subject: rawSubject || "(No Subject)",
-          body,
+          body_text: finalTextBody || htmlToText(finalHtmlBody),
+          body_html: finalHtmlBody || null,
           preview,
-          timestamp: new Date().toISOString(),
-          read: false,
-          starred: false,
-          pinned: false,
+          received_at: new Date().toISOString(),
+          is_read: false,
+          is_starred: false,
+          is_important: false,
+          is_draft: false,
           attachments: attachments.map((a) => ({
             id: crypto.randomUUID(),
             name: a.filename ?? a.name ?? a.Name ?? "attachment",
@@ -276,7 +291,6 @@ Deno.serve(async (req) => {
             type: a.content_type ?? a.type ?? a.ContentType ?? "application/octet-stream",
           })),
           category,
-          folder: "inbox",
         }),
       });
 
