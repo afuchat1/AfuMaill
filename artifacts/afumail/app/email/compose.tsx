@@ -34,10 +34,10 @@ export default function ComposeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { sendEmail } = useEmails();
-  const params = useLocalSearchParams<{ to?: string; subject?: string; body?: string }>();
+  const params = useLocalSearchParams<{ to?: string; cc?: string; subject?: string; body?: string }>();
 
   const [to, setTo] = useState(params.to ?? "");
-  const [cc, setCc] = useState("");
+  const [cc, setCc] = useState(params.cc ?? "");
   const [subject, setSubject] = useState(params.subject ?? "");
   const [body, setBody] = useState(params.body ?? "");
   const [showCc, setShowCc] = useState(false);

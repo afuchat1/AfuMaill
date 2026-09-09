@@ -6,9 +6,10 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import * as Linking from "expo-linking";
 import { router, Stack, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
@@ -17,6 +18,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { EmailProvider } from "@/context/EmailContext";
+import { MailtoDraft, parseMailtoUrl } from "@/lib/mailto";
 
 const GestureRoot = GestureHandlerRootView as React.ComponentType<{ style?: object; children?: React.ReactNode }>;
 
@@ -28,6 +30,28 @@ function RootLayoutNav() {
   const { isAuthenticated, isLoading, isPasswordRecovery } = useAuth();
   const segments = useSegments();
   const scheme = useColorScheme();
+  const [pendingMailto, setPendingMailto] = useState<MailtoDraft | null>(null);
+
+  const handleIncomingUrl = useCallback((url: string) => {
+    const draft = parseMailtoUrl(url);
+    if (draft) setPendingMailto(draft);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    Linking.getInitialURL().then((url) => {
+      if (mounted && url) handleIncomingUrl(url);
+    });
+
+    const subscription = Linking.addEventListener("url", ({ url }) => {
+      handleIncomingUrl(url);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, [handleIncomingUrl]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -45,6 +69,18 @@ function RootLayoutNav() {
       router.replace("/(tabs)");
     }
   }, [isAuthenticated, isLoading, isPasswordRecovery, segments]);
+
+  useEffect(() => {
+    if (isLoading || !isAuthenticated || !pendingMailto || segments[0] !== "(tabs)") {
+      return;
+    }
+
+    const params = Object.fromEntries(
+      Object.entries(pendingMailto).filter(([, value]) => Boolean(value))
+    ) as Record<string, string>;
+    setPendingMailto(null);
+    router.push({ pathname: "/email/compose", params });
+  }, [isAuthenticated, isLoading, pendingMailto, segments]);
 
   if (isLoading) {
     const bg = scheme === "dark" ? "#0D0D0D" : "#FAF8F5";
