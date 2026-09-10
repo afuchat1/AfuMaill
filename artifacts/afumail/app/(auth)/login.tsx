@@ -68,6 +68,7 @@ export default function LoginScreen() {
   // Login fields
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [loginPasswordVisible, setLoginPasswordVisible] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
 
@@ -77,6 +78,8 @@ export default function LoginScreen() {
   const [forgotCode, setForgotCode] = useState("");
   const [forgotNewPassword, setForgotNewPassword] = useState("");
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
+  const [forgotNewPasswordVisible, setForgotNewPasswordVisible] = useState(false);
+  const [forgotConfirmPasswordVisible, setForgotConfirmPasswordVisible] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState("");
   const [forgotCodeSent, setForgotCodeSent] = useState(false);
@@ -92,6 +95,8 @@ export default function LoginScreen() {
   const [accountRecoveryEmail, setAccountRecoveryEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerError, setRegisterError] = useState("");
 
@@ -429,15 +434,24 @@ export default function LoginScreen() {
                 <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                   <TextInput
                     ref={passwordRef}
-                    style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+                     style={[styles.input, styles.passwordInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
                     placeholder="Password"
                     placeholderTextColor={colors.mutedForeground}
                     value={loginPassword}
                     onChangeText={(t) => { setLoginPassword(t); setLoginError(""); }}
-                    secureTextEntry
+                     secureTextEntry={!loginPasswordVisible}
                     returnKeyType="done"
                     onSubmitEditing={handleLogin}
                   />
+                   <Pressable
+                     onPress={() => setLoginPasswordVisible((visible) => !visible)}
+                     style={styles.passwordToggle}
+                     hitSlop={8}
+                     accessibilityRole="button"
+                     accessibilityLabel={loginPasswordVisible ? "Hide password" : "Show password"}
+                   >
+                     <Feather name={loginPasswordVisible ? "eye-off" : "eye"} size={19} color={colors.mutedForeground} />
+                   </Pressable>
                 </View>
 
                 <Pressable style={styles.forgotRow} onPress={switchToForgot}>
@@ -595,27 +609,45 @@ export default function LoginScreen() {
 
                     <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
-                        style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+                        style={[styles.input, styles.passwordInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
                         placeholder="New password (min. 6 characters)"
                         placeholderTextColor={colors.mutedForeground}
                         value={forgotNewPassword}
                         onChangeText={(t) => { setForgotNewPassword(t); setForgotError(""); }}
-                        secureTextEntry
+                        secureTextEntry={!forgotNewPasswordVisible}
                         returnKeyType="next"
                       />
+                      <Pressable
+                        onPress={() => setForgotNewPasswordVisible((visible) => !visible)}
+                        style={styles.passwordToggle}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={forgotNewPasswordVisible ? "Hide new password" : "Show new password"}
+                      >
+                        <Feather name={forgotNewPasswordVisible ? "eye-off" : "eye"} size={19} color={colors.mutedForeground} />
+                      </Pressable>
                     </View>
 
                     <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
-                        style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+                        style={[styles.input, styles.passwordInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
                         placeholder="Confirm new password"
                         placeholderTextColor={colors.mutedForeground}
                         value={forgotConfirmPassword}
                         onChangeText={(t) => { setForgotConfirmPassword(t); setForgotError(""); }}
-                        secureTextEntry
+                        secureTextEntry={!forgotConfirmPasswordVisible}
                         returnKeyType="done"
                         onSubmitEditing={handleConfirmPasswordReset}
                       />
+                      <Pressable
+                        onPress={() => setForgotConfirmPasswordVisible((visible) => !visible)}
+                        style={styles.passwordToggle}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={forgotConfirmPasswordVisible ? "Hide confirmed password" : "Show confirmed password"}
+                      >
+                        <Feather name={forgotConfirmPasswordVisible ? "eye-off" : "eye"} size={19} color={colors.mutedForeground} />
+                      </Pressable>
                     </View>
 
                     {!!forgotError && (
@@ -941,29 +973,47 @@ export default function LoginScreen() {
                   <View style={styles.fields}>
                     <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
-                        style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+                        style={[styles.input, styles.passwordInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
                         placeholder="Password (min. 6 characters)"
                         placeholderTextColor={colors.mutedForeground}
                         value={password}
                         onChangeText={(t) => { setPassword(t); setRegisterError(""); }}
-                        secureTextEntry
+                        secureTextEntry={!passwordVisible}
                         returnKeyType="next"
                         onSubmitEditing={() => confirmRef.current?.focus()}
                       />
+                      <Pressable
+                        onPress={() => setPasswordVisible((visible) => !visible)}
+                        style={styles.passwordToggle}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={passwordVisible ? "Hide password" : "Show password"}
+                      >
+                        <Feather name={passwordVisible ? "eye-off" : "eye"} size={19} color={colors.mutedForeground} />
+                      </Pressable>
                     </View>
 
                     <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                       <TextInput
                         ref={confirmRef}
-                        style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+                        style={[styles.input, styles.passwordInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
                         placeholder="Confirm password"
                         placeholderTextColor={colors.mutedForeground}
                         value={confirmPassword}
                         onChangeText={(t) => { setConfirmPassword(t); setRegisterError(""); }}
-                        secureTextEntry
+                        secureTextEntry={!confirmPasswordVisible}
                         returnKeyType="done"
                         onSubmitEditing={handleRegister}
                       />
+                      <Pressable
+                        onPress={() => setConfirmPasswordVisible((visible) => !visible)}
+                        style={styles.passwordToggle}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={confirmPasswordVisible ? "Hide confirmed password" : "Show confirmed password"}
+                      >
+                        <Feather name={confirmPasswordVisible ? "eye-off" : "eye"} size={19} color={colors.mutedForeground} />
+                      </Pressable>
                     </View>
 
                     {!!registerError && (
@@ -1089,11 +1139,24 @@ const styles = StyleSheet.create({
   inputWrap: {
     borderRadius: 100,
     overflow: "hidden",
+    position: "relative",
   },
   input: {
     fontSize: 16,
     paddingHorizontal: 16,
     paddingVertical: 15,
+  },
+  passwordInput: {
+    paddingRight: 52,
+  },
+  passwordToggle: {
+    position: "absolute",
+    right: 14,
+    top: 0,
+    bottom: 0,
+    width: 32,
+    alignItems: "center",
+    justifyContent: "center",
   },
   codeInput: {
     fontSize: 26,
