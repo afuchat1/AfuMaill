@@ -8,3 +8,5 @@ The AfuMail workspace must be reinstalled from the committed pnpm lockfile when 
 **Why:** A stale workspace install ran Expo 55 even though the AfuMail manifest and lockfile required Expo 57, producing misleading compatibility warnings and masking the real toolchain state.
 
 **How to apply:** Run the lockfile-based workspace install, confirm the resolved Expo line and declared native modules are present, then restart the managed Expo workflow before judging runtime behavior. Expo prebuild can promote Expo, React, and React Native into production dependencies; sync the lockfile afterward.
+
+The managed preview can still serve Metro and render the app when the optional desktop React Native DevTools helper cannot load a Linux graphics library; treat that message separately from app or bundler failures.
