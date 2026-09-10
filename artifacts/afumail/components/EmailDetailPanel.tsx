@@ -390,7 +390,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
       </View>
 
       <ScrollView
-        style={styles.scroll}
+        style={[styles.scroll, { backgroundColor: colors.background }]}
         contentContainerStyle={{ paddingBottom: replyRailHeight + 12 }}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
@@ -463,7 +463,13 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
         </View>
 
         {/* Body */}
-        <View style={[styles.bodySection, isHtml && { paddingHorizontal: 12, paddingTop: 12 }]}>
+        <View
+          style={[
+            styles.bodySection,
+            { backgroundColor: colors.background },
+            isHtml && { paddingHorizontal: 12, paddingTop: 12 },
+          ]}
+        >
           {isHtml ? (
             Platform.OS === "web" ? (
               React.createElement("iframe", {
@@ -526,7 +532,15 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
             // Plain-text body: render tappable URLs inline
             <Text
               selectable
-              style={[styles.body, { color: colors.foreground, fontFamily: "Inter_400Regular", fontSize: 16 * fontScale, lineHeight: 27 * fontScale }]}
+              style={[
+                styles.body,
+                {
+                  color: colors.foreground,
+                  fontFamily: "Inter_400Regular",
+                  fontSize: 16 * fontScale,
+                  lineHeight: 27 * fontScale,
+                },
+              ]}
             >
               {linkifyText(email.body ?? "", colors.accent)}
             </Text>
