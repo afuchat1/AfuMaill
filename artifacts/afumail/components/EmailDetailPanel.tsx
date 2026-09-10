@@ -69,6 +69,74 @@ function looksLikeHtmlDocument(value: string): boolean {
   return /^(?:<!doctype\s+html\b|<(?:html|head|body|style|meta|link|div|p|table|section|article|main|blockquote|ul|ol|h[1-6]|tr|td|th|tbody|thead|span|br|img|a|strong|em|pre|code|font|form|svg|header|footer|center)\b)/i.test(body);
 }
 
+type RgbColor = { r: number; g: number; b: number };
+
+function parseCssColor(value: string): RgbColor | null {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "black") return { r: 0, g: 0, b: 0 };
+  if (normalized === "white") return { r: 255, g: 255, b: 255 };
+
+  const hex = normalized.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)?.[1];
+  if (hex) {
+    const expanded = hex.length === 3
+      ? hex.split("").map((part) => part + part).join("")
+      : hex;
+    return {
+      r: parseInt(expanded.slice(0, 2), 16),
+      g: parseInt(expanded.slice(2, 4), 16),
+      b: parseInt(expanded.slice(4, 6), 16),
+    };
+  }
+
+  const rgb = normalized.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
+  if (rgb) {
+    return {
+      r: Math.min(255, Number(rgb[1])),
+      g: Math.min(255, Number(rgb[2])),
+      b: Math.min(255, Number(rgb[3])),
+    };
+  }
+
+  return null;
+}
+
+function colorLuminance({ r, g, b }: RgbColor): number {
+  const channel = (value: number) => {
+    const normalized = value / 255;
+    return normalized <= 0.03928
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  };
+  return (0.2126 * channel(r)) + (0.7152 * channel(g)) + (0.0722 * channel(b));
+}
+
+/**
+ * Keep an email's declared text colors intact. If those colors are clearly
+ * designed for the opposite theme and the email has no declared background,
+ * use a contrasting document surface so the sender's colors remain readable.
+ */
+function getEmailDocumentBackground(html: string, themeBackground: string): string {
+  const declarations = Array.from(
+    html.matchAll(/(?:^|[;{"])\s*color\s*:\s*([^;}"']+)/gi),
+  );
+  const luminances = declarations
+    .map((match) => parseCssColor(match[1] ?? ""))
+    .filter((color): color is RgbColor => color !== null)
+    .map(colorLuminance);
+
+  if (!luminances.length || /\b(?:background|background-color)\s*[:=]/i.test(html)) {
+    return themeBackground;
+  }
+
+  const themeIsDark = colorLuminance(parseCssColor(themeBackground) ?? { r: 13, g: 13, b: 13 }) < 0.5;
+  const darkTextCount = luminances.filter((value) => value < 0.45).length;
+  const lightTextCount = luminances.filter((value) => value > 0.75).length;
+
+  if (themeIsDark && darkTextCount > lightTextCount) return "#FFFFFF";
+  if (!themeIsDark && lightTextCount > darkTextCount) return "#000000";
+  return themeBackground;
+}
+
 function extractEmailMarkup(html: string): { markup: string; styles: string } {
   const bodyMatch = html.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i);
   const markup = (bodyMatch ? bodyMatch[1] : html)
@@ -289,6 +357,9 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
   const { markup: emailMarkup, styles: emailStyles } = isHtml
     ? extractEmailMarkup(htmlBody)
     : { markup: "", styles: "" };
+  const emailDocumentBackground = isHtml
+    ? getEmailDocumentBackground(htmlBody, colors.background)
+    : colors.background;
 
   const htmlDoc = isHtml
     ? `<!DOCTYPE html><html><head>
@@ -302,7 +373,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
             max-width: 100%;
             overflow-x: hidden;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background-color: ${colors.background};
+            background-color: ${emailDocumentBackground};
             color: ${colors.foreground};
           }
           body { padding: 4px 0; font-size: ${16 * fontScale}px; color: ${colors.foreground}; overflow-wrap: anywhere; }
@@ -491,14 +562,14 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
                   width: "100%",
                   height: webHeight,
                   border: "0",
-                   backgroundColor: colors.background,
+                   backgroundColor: emailDocumentBackground,
                 },
               })
             ) : (
               <NativeWebView
                 source={{ html: htmlDoc }}
                 scrollEnabled={false}
-                 style={{ height: webHeight, width: "100%", backgroundColor: colors.background }}
+                 style={{ height: webHeight, width: "100%", backgroundColor: emailDocumentBackground }}
                 injectedJavaScript={webViewScript}
                 onMessage={(e: any) => {
                   try {
