@@ -128,6 +128,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
   const [moveVisible,    setMoveVisible]    = useState(false);
   const [toast,          setToast]          = useState<string | null>(null);
   const [webHeight,      setWebHeight]      = useState(120);
+  const [replyRailHeight, setReplyRailHeight] = useState(76);
 
   const [smartReplies, setSmartReplies] = useState<string[] | null>(null);
   const [isRepliesLoading, setIsRepliesLoading] = useState(false);
@@ -362,9 +363,10 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+        contentContainerStyle={{ paddingBottom: replyRailHeight + 12 }}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
+        contentInsetAdjustmentBehavior="never"
       >
         {/* Subject */}
         <View style={styles.subjectSection}>
@@ -573,8 +575,14 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
         )}
       </ScrollView>
 
-        {/* Reply bar */}
-        <View style={{ gap: 0 }}>
+      {/* Reply rail */}
+      <View
+        style={styles.replyRail}
+        onLayout={(event) => {
+          const nextHeight = Math.ceil(event.nativeEvent.layout.height);
+          if (nextHeight !== replyRailHeight) setReplyRailHeight(nextHeight);
+        }}
+      >
           {/* Smart reply chips — shown after button tap */}
           {smartReplies && smartReplies.length > 0 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.smartRepliesContainer}>
@@ -592,7 +600,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
               ))}
             </ScrollView>
           )}
-          <View style={[styles.replyBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 12 }]}>
+          <View style={[styles.replyBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, Platform.OS === "web" ? 34 : 0) + 10 }]}>
             <Pressable
               onPress={handleReply}
               style={({ pressed }) => [styles.replyButton, { backgroundColor: pressed ? colors.accent + "22" : colors.muted, borderColor: colors.border }]}
@@ -626,7 +634,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
               <Text style={[styles.replyBtnText, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>Smart Reply</Text>
             </Pressable>
           </View>
-        </View>
+      </View>
 
       {/* More Actions Sheet */}
       <BottomSheet visible={actionsVisible} onClose={() => setActionsVisible(false)}>
@@ -742,6 +750,7 @@ const styles = StyleSheet.create({
   attachName: { fontSize: 14 },
   attachSize: { fontSize: 12 },
   downloadBtn: { width: 32, height: 32, borderRadius: 100, alignItems: "center", justifyContent: "center" },
+  replyRail: { gap: 0 },
   replyBar: {
     flexDirection: "row", paddingHorizontal: 12, paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth, gap: 6,
