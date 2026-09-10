@@ -69,7 +69,10 @@ type EngageraMessage = {
   content: string;
 };
 
-async function callEngagera(messages: EngageraMessage[], model: "engagera-pro" | "engagera-lite"): Promise<string> {
+async function callEngagera(
+  messages: EngageraMessage[],
+  model: "engagera-pro" | "engagera-lite" = "engagera-pro",
+): Promise<string> {
   const apiKey = Deno.env.get("ENGAGERA_API_KEY");
   if (!apiKey) throw new Error("ENGAGERA_API_KEY is not configured.");
 
@@ -233,14 +236,17 @@ Deno.serve(async (req) => {
         },
       ];
 
-      const content = await callEngagera(messages, "engagera-lite");
+      // Keep the model consistent with compose. The lite model is not enabled
+      // for every Engagera account and made the detail-screen AI features fail
+      // even though compose was working.
+      const content = await callEngagera(messages, "engagera-pro");
       const replies = parseReplyList(content);
       if (replies.length === 0) return jsonResp({ error: "Could not generate replies." }, 502);
       return jsonResp({ replies });
     }
 
     if (mode === "summarize") {
-      const emailBody = textField(body.emailBody, MAX_EMAIL_BODY_LENGTH);
+       const emailBody = stripHtml(textField(body.emailBody, MAX_EMAIL_BODY_LENGTH));
       if (!emailBody) return jsonResp({ error: "emailBody is required." }, 400);
       const emailSubject = typeof body.emailSubject === "string" ? body.emailSubject : "";
 
@@ -258,7 +264,7 @@ Deno.serve(async (req) => {
         },
       ];
 
-      const content = await callEngagera(messages, "engagera-lite");
+       const content = await callEngagera(messages, "engagera-pro");
       return jsonResp({ content: content.trim() });
     }
 

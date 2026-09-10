@@ -16,6 +16,10 @@ async function callAiAssist<T>(body: Record<string, unknown>): Promise<T> {
     throw new Error(data.error);
   }
 
+  if (!data || typeof data !== "object") {
+    throw new Error("The AI assistant returned an empty response.");
+  }
+
   return data as T;
 }
 
@@ -36,11 +40,18 @@ export async function aiSmartReplies(params: {
   emailSubject?: string;
   emailFrom?: string;
 }): Promise<string[]> {
-  const { replies } = await callAiAssist<{ replies: string[] }>({
+  const response = await callAiAssist<{ replies?: unknown }>({
     mode: "reply",
     ...params,
     emailBody: htmlToPlainText(params.emailBody),
   });
+  if (!Array.isArray(response.replies)) {
+    throw new Error("The AI assistant returned invalid reply suggestions.");
+  }
+  const replies = response.replies.filter((reply): reply is string => typeof reply === "string" && reply.trim().length > 0);
+  if (replies.length === 0) {
+    throw new Error("No reply suggestions were generated. Try again.");
+  }
   return replies;
 }
 
@@ -49,10 +60,13 @@ export async function aiSummarize(params: {
   emailBody: string;
   emailSubject?: string;
 }): Promise<string> {
-  const { content } = await callAiAssist<{ content: string }>({
+  const response = await callAiAssist<{ content?: unknown }>({
     mode: "summarize",
     emailSubject: params.emailSubject,
     emailBody: htmlToPlainText(params.emailBody),
   });
-  return content;
+  if (typeof response.content !== "string" || !response.content.trim()) {
+    throw new Error("The AI assistant returned an empty summary.");
+  }
+  return response.content.trim();
 }

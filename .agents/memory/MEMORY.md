@@ -12,3 +12,4 @@
 - [AfuMail Expo preview](afumail-expo-preview.md) — the managed workflow serves Expo Web on the browser preview while retaining Expo Go QR access for native checks.
 - [AfuMail SDK 57 maintenance](afumail-sdk57-maintenance.md) — Expo Go and Expo Web share one SDK 57 dependency line; verify both through the managed workflow.
 - [AfuMail workspace dependency alignment](afumail-workspace-dependency-alignment.md) — after dependency or lockfile changes, reinstall the workspace so the linked Expo runtime matches the committed SDK line.
+- [AfuMail AI model availability](afumail-ai-model-availability.md) — use Engagera Pro for all mail-assist modes; Lite may not be enabled for the account.
