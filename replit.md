@@ -11,6 +11,7 @@ Supabase project by default.
 ## Stack
 
 - **Frontend:** React Native / Expo (shared bundle for mobile + web)
+- **Expo SDK:** 57 only. Do not downgrade this artifact to SDK 55; the target Expo Go app is SDK 57.
 - **Backend:** Supabase exclusively (no custom API server)
   - Auth, Postgres DB, and Edge Functions (Deno/TypeScript in `supabase/functions/`)
 - **Package manager:** pnpm with workspaces

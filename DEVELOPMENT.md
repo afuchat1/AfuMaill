@@ -29,6 +29,9 @@ Preview the app with Expo Go by scanning the QR code in the workflow logs.
 ## Architecture
 
 - **Client:** React Native with Expo Router.
+- **Expo SDK:** 57 is the required SDK line for AfuMail. Keep Expo Go, Expo
+  packages, React Native, and the lockfile aligned to SDK 57; SDK 55 is not
+  compatible with the target phone.
 - **Authentication and data:** Supabase.
 - **Server-side behavior:** Supabase Edge Functions only.
 - **Email updates:** Supabase Realtime.
@@ -40,6 +43,8 @@ operations belong in `supabase/functions/`.
 ## Important rules
 
 - Keep the mobile workflow on port 8099.
+- Keep the project on Expo SDK 57. After dependency changes, reinstall from the
+  lockfile and verify the resolved Expo version before scanning a new QR code.
 - Use pnpm; npm and yarn are not supported.
 - Do not import Edge Function dependencies from `esm.sh`; use native fetch and
   the Supabase REST APIs when a package is unavailable in the Edge runtime.
