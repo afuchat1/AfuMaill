@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
 import { router, Stack, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -18,6 +19,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { EmailProvider } from "@/context/EmailContext";
+import { useColors } from "@/hooks/useColors";
 import { MailtoDraft, parseMailtoUrl } from "@/lib/mailto";
 
 const GestureRoot = GestureHandlerRootView as React.ComponentType<{ style?: object; children?: React.ReactNode }>;
@@ -30,6 +32,7 @@ function RootLayoutNav() {
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
   const scheme = useColorScheme();
+  const colors = useColors();
   const [pendingMailto, setPendingMailto] = useState<MailtoDraft | null>(null);
 
   const handleIncomingUrl = useCallback((url: string) => {
@@ -76,30 +79,42 @@ function RootLayoutNav() {
   }, [isAuthenticated, isLoading, pendingMailto, segments]);
 
   if (isLoading) {
-    const bg = scheme === "dark" ? "#0D0D0D" : "#FAF8F5";
-    const fg = scheme === "dark" ? "#F5F3F0" : "#1A1A1A";
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: bg }}>
-        <ActivityIndicator size="large" color={fg} />
-      </View>
+      <>
+        <StatusBar
+          style={scheme === "dark" ? "light" : "dark"}
+          backgroundColor={colors.background}
+          translucent={false}
+        />
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
+          <ActivityIndicator size="large" color={colors.foreground} />
+        </View>
+      </>
     );
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="(auth)" options={{ headerShown: false, animation: "fade" }} />
-      <Stack.Screen name="email/[id]" options={{ headerShown: false, animation: "none", gestureEnabled: false }} />
-      <Stack.Screen
-        name="email/compose"
-        options={{
-          headerShown: false,
-          animation: "none",
-          gestureEnabled: false,
-        }}
+    <>
+      <StatusBar
+        style={scheme === "dark" ? "light" : "dark"}
+        backgroundColor={colors.background}
+        translucent={false}
       />
-      <Stack.Screen name="settings" options={{ headerShown: false, animation: "none", gestureEnabled: false }} />
-    </Stack>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false, animation: "fade" }} />
+        <Stack.Screen name="email/[id]" options={{ headerShown: false, animation: "none", gestureEnabled: false }} />
+        <Stack.Screen
+          name="email/compose"
+          options={{
+            headerShown: false,
+            animation: "none",
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen name="settings" options={{ headerShown: false, animation: "none", gestureEnabled: false }} />
+      </Stack>
+    </>
   );
 }
 
