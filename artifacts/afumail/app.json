@@ -2,7 +2,7 @@
   "expo": {
     "name": "AfuMail",
     "slug": "afumail",
-    "version": "2.2.25",
+    "version": "2.2.26",
     "orientation": "portrait",
     "icon": "./assets/images/brand-icon.png",
     "scheme": "afumail",
@@ -26,7 +26,7 @@
     },
     "android": {
       "package": "com.afuchat.afuapp",
-      "versionCode": 2247,
+      "versionCode": 2248,
       "blockedPermissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
