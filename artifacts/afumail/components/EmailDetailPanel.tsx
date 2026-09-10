@@ -214,6 +214,10 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
 
   const email = getEmailById(emailId);
   const threadMessages = getEmailsInThread(emailId);
+  const chronologicalThreadMessages = [...threadMessages].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  );
+  const displayEmail = chronologicalThreadMessages[chronologicalThreadMessages.length - 1] ?? email;
 
   const [actionsVisible, setActionsVisible] = useState(false);
   const [moveVisible,    setMoveVisible]    = useState(false);
@@ -384,18 +388,18 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
     });
   }
 
-  if (!email) return null;
+  if (!email || !displayEmail) return null;
 
   // The database field is authoritative for current messages. Cached messages
   // from before bodyFormat existed use a conservative document-shape fallback.
   const isHtml =
-    email.bodyFormat === "html"
-      ? looksLikeHtmlDocument(email.body ?? "")
-      : email.bodyFormat === "text"
+    displayEmail.bodyFormat === "html"
+      ? looksLikeHtmlDocument(displayEmail.body ?? "")
+      : displayEmail.bodyFormat === "text"
         ? false
-        : looksLikeHtmlDocument(email.body ?? "");
+        : looksLikeHtmlDocument(displayEmail.body ?? "");
   const htmlBody = isHtml
-    ? (preferences.externalImages ? (email.body ?? "") : blockExternalImages(email.body ?? "", colors.mutedForeground))
+    ? (preferences.externalImages ? (displayEmail.body ?? "") : blockExternalImages(displayEmail.body ?? "", colors.mutedForeground))
     : "";
   const { markup: emailMarkup, styles: emailStyles } = isHtml
     ? extractEmailMarkup(htmlBody)
@@ -457,11 +461,11 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
     true;
   `;
 
-  const olderThreadMessages = threadMessages.filter((message) => message.id !== email.id);
+  const olderThreadMessages = chronologicalThreadMessages.filter((message) => message.id !== displayEmail.id);
   const signedInEmail = user?.email?.trim().toLowerCase() ?? "";
   const isMessageFromUser = (message: { from: { email: string } }) =>
     Boolean(signedInEmail && message.from.email.trim().toLowerCase() === signedInEmail);
-  const latestMessageIsFromUser = isMessageFromUser(email);
+  const latestMessageIsFromUser = isMessageFromUser(displayEmail);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -558,7 +562,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
 
         {/* Sender info */}
         <View style={[styles.senderSection, { borderBottomColor: colors.border }]}>
-          <Avatar name={email.from.name} size={44} fontSize={15} />
+          <Avatar name={displayEmail.from.name} size={44} fontSize={15} />
           <View style={styles.senderInfo}>
              <View style={styles.ownerLine}>
                <View
@@ -589,21 +593,21 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
              </View>
             <View style={styles.senderTopRow}>
               <Text style={[styles.senderName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                 {latestMessageIsFromUser ? "You" : email.from.name}
+                  {latestMessageIsFromUser ? "You" : displayEmail.from.name}
               </Text>
               <Text style={[styles.timestamp, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                {formatFullDate(email.timestamp)}
+                {formatFullDate(displayEmail.timestamp)}
               </Text>
             </View>
             <Text style={[styles.senderEmail, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-               {latestMessageIsFromUser ? `From: ${email.from.email}` : email.from.email}
+                {latestMessageIsFromUser ? `From: ${displayEmail.from.email}` : displayEmail.from.email}
             </Text>
             <Text style={[styles.recipientLine, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              To: {email.to.map((t) => t.name || t.email).join(", ")}
+              To: {displayEmail.to.map((t) => t.name || t.email).join(", ")}
             </Text>
-            {email.cc && email.cc.length > 0 && (
+            {displayEmail.cc && displayEmail.cc.length > 0 && (
               <Text style={[styles.recipientLine, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                Cc: {email.cc.map((c) => c.name || c.email).join(", ")}
+                Cc: {displayEmail.cc.map((c) => c.name || c.email).join(", ")}
               </Text>
             )}
           </View>
@@ -765,18 +769,18 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
                 },
               ]}
             >
-              {linkifyText(email.body ?? "", colors.accent)}
+              {linkifyText(displayEmail.body ?? "", colors.accent)}
             </Text>
           )}
         </View>
 
         {/* Attachments */}
-        {email.attachments.length > 0 && (
+        {displayEmail.attachments.length > 0 && (
           <View style={[styles.attachmentsSection, { borderTopColor: colors.border }]}>
             <Text style={[styles.attachTitle, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>
-              {email.attachments.length} Attachment{email.attachments.length > 1 ? "s" : ""}
+              {displayEmail.attachments.length} Attachment{displayEmail.attachments.length > 1 ? "s" : ""}
             </Text>
-            {email.attachments.map((att) => {
+            {displayEmail.attachments.map((att) => {
               const fileExt = att.name.split(".").pop()?.toLowerCase() ?? "";
               const icon = ATTACHMENT_ICONS[fileExt] ?? "file";
               return (
