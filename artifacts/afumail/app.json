@@ -28,8 +28,8 @@
       "package": "com.afuchat.afuapp",
       "versionCode": 2245,
       "adaptiveIcon": {
-          "foregroundImage": "./assets/images/brand-icon.png",
-          "backgroundColor": "#0D1526"
+        "foregroundImage": "./assets/images/brand-icon.png",
+        "backgroundColor": "#0D1526"
       },
       "intentFilters": [
         {
@@ -61,6 +61,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b8908389-fdad-425a-bd47-d07bf2eac74f"
+      }
+    },
+    "owner": "afuchat-2"
   }
 }
