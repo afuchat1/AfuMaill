@@ -1,10 +1,10 @@
 ---
 name: AfuMail Expo preview
-description: Runtime verification for the native AfuMail artifact uses the Expo workflow.
+description: Runtime verification for AfuMail's Expo Web and native previews.
 ---
 
-The AfuMail mobile workflow starts Metro on its managed Expo port rather than serving a browser page on the default web preview port. A native workflow can be healthy even when the generic browser screenshot endpoint returns connection refused. React Native DevTools may also log a missing `libnspr4.so` warning while Metro remains available.
+The managed AfuMail workflow serves Expo Web through the browser preview port and also exposes an Expo Go QR URL for native checks. The browser preview should render the app UI, while Expo Go is used for device-specific validation.
 
-**Why:** The native artifact is consumed through Expo Go or the Replit mobile preview, not as a browser-rendered web app.
+**Why:** The project needs a visible Replit browser preview without losing the native Expo workflow.
 
-**How to apply:** Restart `artifacts/afumail: expo`, inspect workflow logs, and use the Expo QR/mobile preview for runtime checks. Treat the DevTools shared-library warning as separate from Metro startup unless the workflow itself fails.
+**How to apply:** Restart `artifacts/afumail: expo`, inspect workflow logs, and screenshot the browser preview for UI checks. Use the Expo QR/mobile preview for native checks. DevTools library errors are separate from app rendering unless bundling or the workflow fails.
