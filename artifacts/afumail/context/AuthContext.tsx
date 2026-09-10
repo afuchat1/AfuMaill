@@ -48,12 +48,17 @@ async function loadProfile(userId: string): Promise<AuthUser | null> {
     return null;
   }
 
-  const email = address?.full_email ?? (address ? `${address.local_part}@${address.domain}` : "");
+  // Keep the authenticated session identity when legacy data has no
+  // email_addresses row. This prevents a valid session from being replaced
+  // with an empty sender address while the account is repaired.
+  const sessionEmail = (await supabase.auth.getUser()).data.user?.email ?? "";
+  const email = address?.full_email
+    ?? (address ? `${address.local_part}@${address.domain}` : sessionEmail);
   return {
     id: userId,
-    name: data.full_name ?? address?.local_part ?? "AfuMail user",
+    name: data.full_name ?? address?.local_part ?? sessionEmail.split("@")[0] ?? "AfuMail user",
     email,
-    username: address?.local_part ?? "",
+    username: address?.local_part ?? sessionEmail.split("@")[0] ?? "",
   };
 }
 

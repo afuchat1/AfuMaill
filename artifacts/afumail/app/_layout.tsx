@@ -19,6 +19,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { EmailProvider } from "@/context/EmailContext";
+import { PreferencesProvider } from "@/context/PreferencesContext";
 import { useColors } from "@/hooks/useColors";
 import { MailtoDraft, parseMailtoUrl } from "@/lib/mailto";
 
@@ -141,9 +142,11 @@ export default function RootLayout() {
           <GestureRoot style={{ flex: 1 }}>
             <KeyboardProvider>
               <AuthProvider>
-                <EmailProvider>
-                  <RootLayoutNav />
-                </EmailProvider>
+                <PreferencesProvider>
+                  <EmailProvider>
+                    <RootLayoutNav />
+                  </EmailProvider>
+                </PreferencesProvider>
               </AuthProvider>
             </KeyboardProvider>
           </GestureRoot>

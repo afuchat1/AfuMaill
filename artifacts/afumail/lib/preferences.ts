@@ -3,33 +3,19 @@ import { getPreferencesRaw, savePreferencesRaw } from "./supabase";
 export interface Preferences {
   fontSize: "Small" | "Medium" | "Large";
   emailDensity: "Compact" | "Comfortable";
-  quietHoursEnabled: boolean;
-  quietHoursStart: string;
-  quietHoursEnd: string;
-  pushNotifications: boolean;
-  priorityNotifications: boolean;
-  biometricLock: boolean;
-  readReceipts: boolean;
   externalImages: boolean;
 }
 
-const DEFAULTS: Preferences = {
+export const DEFAULT_PREFERENCES: Preferences = {
   fontSize: "Medium",
   emailDensity: "Comfortable",
-  quietHoursEnabled: false,
-  quietHoursStart: "22:00",
-  quietHoursEnd: "07:00",
-  pushNotifications: true,
-  priorityNotifications: true,
-  biometricLock: false,
-  readReceipts: true,
   externalImages: true,
 };
 
 export async function getPreferences(userId: string): Promise<Preferences> {
-  if (!userId) return { ...DEFAULTS };
+  if (!userId) return { ...DEFAULT_PREFERENCES };
   const raw = await getPreferencesRaw(userId);
-  return { ...DEFAULTS, ...raw } as Preferences;
+  return { ...DEFAULT_PREFERENCES, ...raw } as Preferences;
 }
 
 export async function setPref<K extends keyof Preferences>(
@@ -41,4 +27,10 @@ export async function setPref<K extends keyof Preferences>(
   const current = await getPreferences(userId);
   const { error } = await savePreferencesRaw(userId, { ...current, [key]: value });
   if (error) throw new Error(error);
+}
+
+export function getFontScale(fontSize: Preferences["fontSize"]): number {
+  if (fontSize === "Small") return 0.9;
+  if (fontSize === "Large") return 1.1;
+  return 1;
 }

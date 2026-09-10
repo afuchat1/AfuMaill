@@ -18,26 +18,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar } from "@/components/Avatar";
 import { Dialog } from "@/components/ui/Dialog";
 import { useAuth } from "@/context/AuthContext";
+import { usePreferences } from "@/context/PreferencesContext";
 import { useColors } from "@/hooks/useColors";
-import { getPreferences, Preferences, setPref } from "@/lib/preferences";
+import { Preferences } from "@/lib/preferences";
 import { getEmailStats, getProfile, savePhoneNumber, saveRecoveryEmail } from "@/lib/supabase";
 
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
-  const [prefs, setPrefs] = useState<Preferences>({
-    fontSize: "Medium",
-    emailDensity: "Comfortable",
-    quietHoursEnabled: false,
-    quietHoursStart: "22:00",
-    quietHoursEnd: "07:00",
-    pushNotifications: true,
-    priorityNotifications: true,
-    biometricLock: false,
-    readReceipts: true,
-    externalImages: true,
-  });
+  const { preferences: prefs, updatePreference } = usePreferences();
 
   const [emailCount, setEmailCount] = useState<number | null>(null);
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -48,19 +38,13 @@ export default function SettingsScreen() {
   const [recoveryModal, setRecoveryModal] = useState(false);
   const [fontSizeModal, setFontSizeModal] = useState(false);
   const [densityModal, setDensityModal] = useState(false);
-  const [quietModal, setQuietModal] = useState(false);
 
   const [phoneInput, setPhoneInput] = useState("");
   const [recoveryInput, setRecoveryInput] = useState("");
   const [recoveryError, setRecoveryError] = useState("");
-  const [quietStart, setQuietStart] = useState("22:00");
-  const [quietEnd, setQuietEnd] = useState("07:00");
 
   useEffect(() => {
     if (!user) return;
-    getPreferences(user.id)
-      .then(setPrefs)
-      .catch((err) => console.warn("Failed to load preferences:", err));
     getProfile(user.id)
       .then((p) => {
         if (!p) return;
@@ -76,10 +60,9 @@ export default function SettingsScreen() {
   async function toggleSwitch(key: keyof Preferences) {
     if (!user) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const next = !prefs[key] as any;
-    setPrefs((p) => ({ ...p, [key]: next }));
+    const next = !prefs[key] as Preferences[typeof key];
     try {
-      await setPref(user.id, key, next);
+      await updatePreference(key, next);
     } catch (err) {
       console.warn("Failed to save preference:", err);
     }
@@ -92,11 +75,6 @@ export default function SettingsScreen() {
       case "Vacation Reply":      router.push("/settings/vacation"); break;
       case "Font Size":           setFontSizeModal(true); break;
       case "Email Density":       setDensityModal(true); break;
-      case "Quiet Hours":
-        setQuietStart(prefs.quietHoursStart);
-        setQuietEnd(prefs.quietHoursEnd);
-        setQuietModal(true);
-        break;
       case "Two-Factor Auth":     router.push("/settings/two-factor"); break;
       case "Privacy Controls":    router.push("/settings/privacy"); break;
       case "Manage Storage":      router.push("/settings/storage"); break;
@@ -132,10 +110,8 @@ export default function SettingsScreen() {
   }
 
   async function pickFontSize(v: Preferences["fontSize"]) {
-    if (!user) return;
     try {
-      await setPref(user.id, "fontSize", v);
-      setPrefs((p) => ({ ...p, fontSize: v }));
+      await updatePreference("fontSize", v);
     } catch (err) {
       console.warn("Failed to save font size:", err);
     }
@@ -144,40 +120,13 @@ export default function SettingsScreen() {
   }
 
   async function pickDensity(v: Preferences["emailDensity"]) {
-    if (!user) return;
     try {
-      await setPref(user.id, "emailDensity", v);
-      setPrefs((p) => ({ ...p, emailDensity: v }));
+      await updatePreference("emailDensity", v);
     } catch (err) {
       console.warn("Failed to save email density:", err);
     }
     setDensityModal(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }
-
-  async function saveQuietHours() {
-    if (!user) return;
-    try {
-      await setPref(user.id, "quietHoursStart", quietStart);
-      await setPref(user.id, "quietHoursEnd", quietEnd);
-      await setPref(user.id, "quietHoursEnabled", true);
-      setPrefs((p) => ({ ...p, quietHoursStart: quietStart, quietHoursEnd: quietEnd, quietHoursEnabled: true }));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (err) {
-      console.warn("Failed to save quiet hours:", err);
-    }
-    setQuietModal(false);
-  }
-
-  async function disableQuietHours() {
-    if (!user) return;
-    try {
-      await setPref(user.id, "quietHoursEnabled", false);
-      setPrefs((p) => ({ ...p, quietHoursEnabled: false }));
-    } catch (err) {
-      console.warn("Failed to disable quiet hours:", err);
-    }
-    setQuietModal(false);
   }
 
   async function handleLogout() {
@@ -201,22 +150,8 @@ export default function SettingsScreen() {
       ],
     },
     {
-      title: "Notifications",
-      rows: [
-        { label: "Push Notifications", icon: "bell", type: "toggle" as const, toggleKey: "pushNotifications" as keyof Preferences },
-        { label: "Priority Notifications", icon: "star", type: "toggle" as const, toggleKey: "priorityNotifications" as keyof Preferences },
-        {
-          label: "Quiet Hours",
-          icon: "moon",
-          type: "nav" as const,
-          value: prefs.quietHoursEnabled ? `${prefs.quietHoursStart} to ${prefs.quietHoursEnd}` : "Off",
-        },
-      ],
-    },
-    {
       title: "Privacy & Security",
       rows: [
-        { label: "Biometric Lock", icon: "shield", type: "toggle" as const, toggleKey: "biometricLock" as keyof Preferences },
         { label: "Two-Factor Auth", icon: "lock", type: "nav" as const },
         { label: "Privacy Controls", icon: "eye-off", type: "nav" as const },
       ],

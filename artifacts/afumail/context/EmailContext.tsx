@@ -40,6 +40,7 @@ export interface Attachment {
   name: string;
   size: number;
   type: string;
+  url?: string;
 }
 
 export interface Email {

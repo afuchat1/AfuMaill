@@ -8,47 +8,28 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SwipeBackView } from "@/components/SwipeBackView";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
-import { getPreferences, setPref } from "@/lib/preferences";
+import { usePreferences } from "@/context/PreferencesContext";
 
 export default function PrivacyScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { preferences, updatePreference } = usePreferences();
 
-  const [readReceipts, setReadReceipts] = useState(true);
-  const [externalImages, setExternalImages] = useState(true);
+  const externalImages = preferences.externalImages;
 
-  useEffect(() => {
-    if (!user) return;
-    getPreferences(user.id)
-      .then((p) => {
-        setReadReceipts(p.readReceipts);
-        setExternalImages(p.externalImages);
-      })
-      .catch((err) => console.warn("Failed to load privacy preferences:", err));
-  }, [user]);
-
-  async function toggle(key: "readReceipts" | "externalImages", current: boolean) {
+  async function toggleExternalImages() {
     if (!user) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const next = !current;
+    const next = !externalImages;
     try {
-      await setPref(user.id, key, next);
-      if (key === "readReceipts") setReadReceipts(next);
-      else setExternalImages(next);
+      await updatePreference("externalImages", next);
     } catch (err) {
       console.warn("Failed to save privacy preference:", err);
     }
   }
 
   const rows = [
-    {
-      key: "readReceipts" as const,
-      label: "Read Receipts",
-      icon: "eye",
-      description: "Let senders know when you've opened their email.",
-      value: readReceipts,
-    },
     {
       key: "externalImages" as const,
       label: "Load External Images",
@@ -88,9 +69,9 @@ export default function PrivacyScreen() {
                     {row.description}
                   </Text>
                 </View>
-                <Switch
-                  value={row.value}
-                  onValueChange={() => toggle(row.key, row.value)}
+              <Switch
+                value={row.value}
+                onValueChange={toggleExternalImages}
                   trackColor={{ false: colors.border, true: colors.accent }}
                   thumbColor="#FFFFFF"
                 />

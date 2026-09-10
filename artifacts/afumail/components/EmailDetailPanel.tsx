@@ -19,8 +19,10 @@ import { Avatar } from "@/components/Avatar";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import type { EmailFolder } from "@/context/EmailContext";
 import { useEmails } from "@/context/EmailContext";
+import { usePreferences } from "@/context/PreferencesContext";
 import { useColors } from "@/hooks/useColors";
 import { aiSmartReplies, aiSummarize } from "@/lib/ai";
+import { getFontScale } from "@/lib/preferences";
 
 // react-native-webview's React 19 declarations lag behind the Expo SDK's
 // JSX types. Keep the native runtime component while normalizing its public
@@ -44,6 +46,16 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function blockExternalImages(html: string): string {
+  return html
+    .replace(/<img\b[^>]*>/gi, (tag) => {
+      const alt = tag.match(/\balt\s*=\s*(['"])(.*?)\1/i)?.[2]?.trim();
+      return `<div style="padding:8px 0;color:#777;font-size:12px;">${alt || "External image blocked"}</div>`;
+    })
+    .replace(/\s(?:src|srcset)\s*=\s*(['"])[^'"]*\1/gi, "")
+    .replace(/url\(\s*(['"]?)(?:https?:|data:)[^)]*\1\s*\)/gi, "none");
 }
 
 const URL_REGEX = /(https?:\/\/[^\s<>"']+)/g;
@@ -92,6 +104,8 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { getEmailById, toggleStar, archiveEmail, deleteEmail, markAsRead, markAsUnread, moveToFolder } = useEmails();
+  const { preferences } = usePreferences();
+  const fontScale = getFontScale(preferences.fontSize);
 
   const email = getEmailById(emailId);
 
@@ -236,6 +250,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
 
   // Detect HTML emails robustly — check for any common HTML tag anywhere in the body
   const isHtml = /<\s*(html|head|body|div|p|table|tr|td|span|br|img|a\s|h[1-6]|ul|ol|li|blockquote|style|font)\b/i.test(email.body ?? "");
+  const htmlBody = preferences.externalImages ? email.body : blockExternalImages(email.body);
 
   const htmlDoc = isHtml
     ? `<!DOCTYPE html><html><head>
@@ -244,12 +259,12 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
         <style>
           * { box-sizing: border-box; }
           html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-          body { padding: 8px 0; }
+          body { padding: 8px 0; font-size: ${16 * fontScale}px; }
           a { word-break: break-all; cursor: pointer; }
           img { max-width: 100%; height: auto; }
           pre, code { white-space: pre-wrap; word-break: break-word; }
         </style>
-      </head><body>${email.body}</body></html>`
+      </head><body>${htmlBody}</body></html>`
     : "";
 
   // Combined script: report height + intercept ALL link clicks and send them out
@@ -333,7 +348,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
       >
         {/* Subject */}
         <View style={styles.subjectSection}>
-          <Text style={[styles.subject, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+          <Text style={[styles.subject, { color: colors.foreground, fontFamily: "Inter_700Bold", fontSize: 22 * fontScale, lineHeight: 30 * fontScale }]}>
             {email.subject}
           </Text>
           <View style={styles.badgeRow}>
@@ -413,7 +428,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
             // Plain-text body: render tappable URLs inline
             <Text
               selectable
-              style={[styles.body, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+              style={[styles.body, { color: colors.foreground, fontFamily: "Inter_400Regular", fontSize: 16 * fontScale, lineHeight: 27 * fontScale }]}
             >
               {linkifyText(email.body ?? "", colors.accent)}
             </Text>
@@ -432,9 +447,17 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
               return (
                 <Pressable
                   key={att.id}
+                  disabled={!att.url}
+                  onPress={() => {
+                    if (att.url) Linking.openURL(att.url).catch(() => showToast("Could not open attachment"));
+                  }}
                   style={({ pressed }) => [
                     styles.attachmentCard,
-                    { backgroundColor: pressed ? colors.secondary : colors.muted, borderColor: colors.border },
+                    {
+                      backgroundColor: pressed ? colors.secondary : colors.muted,
+                      borderColor: colors.border,
+                      opacity: att.url ? 1 : 0.7,
+                    },
                   ]}
                 >
                   <View style={[styles.attachIconWrap, { backgroundColor: colors.accent + "18" }]}>

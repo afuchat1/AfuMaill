@@ -14,7 +14,9 @@ import Animated, {
 import { Avatar } from "@/components/Avatar";
 import type { Email, EmailFolder } from "@/context/EmailContext";
 import { useEmails } from "@/context/EmailContext";
+import { usePreferences } from "@/context/PreferencesContext";
 import { useColors } from "@/hooks/useColors";
+import { getFontScale } from "@/lib/preferences";
 
 const THRESHOLD = 80;
 const SPRING_CONFIG = { damping: 20, stiffness: 280, mass: 0.8 };
@@ -44,6 +46,9 @@ interface EmailRowProps {
 export function EmailRow({ email, currentFolder, onOpenEmail }: EmailRowProps) {
   const colors = useColors();
   const { markAsRead, toggleStar, archiveEmail, moveToFolder } = useEmails();
+  const { preferences } = usePreferences();
+  const fontScale = getFontScale(preferences.fontSize);
+  const rowPadding = preferences.emailDensity === "Compact" ? 10 : 14;
 
   const translateX = useSharedValue(0);
   const hapticFired = useRef(false);
@@ -162,6 +167,7 @@ export function EmailRow({ email, currentFolder, onOpenEmail }: EmailRowProps) {
               {
                 backgroundColor: pressed ? colors.secondary : colors.card,
                 borderBottomColor: colors.border,
+                  paddingVertical: rowPadding,
               },
             ]}
           >
@@ -182,6 +188,7 @@ export function EmailRow({ email, currentFolder, onOpenEmail }: EmailRowProps) {
                     styles.senderName,
                     {
                       color: colors.foreground,
+                       fontSize: 15 * fontScale,
                       fontFamily: email.read ? "Inter_400Regular" : "Inter_600SemiBold",
                     },
                   ]}
@@ -193,6 +200,7 @@ export function EmailRow({ email, currentFolder, onOpenEmail }: EmailRowProps) {
                     styles.time,
                     {
                       color: email.read ? colors.mutedForeground : colors.accent,
+                      fontSize: 12 * fontScale,
                       fontFamily: email.read ? "Inter_400Regular" : "Inter_500Medium",
                     },
                   ]}
@@ -207,6 +215,7 @@ export function EmailRow({ email, currentFolder, onOpenEmail }: EmailRowProps) {
                   styles.subject,
                   {
                     color: colors.foreground,
+                     fontSize: 14 * fontScale,
                     fontFamily: email.read ? "Inter_400Regular" : "Inter_500Medium",
                   },
                 ]}
@@ -217,7 +226,10 @@ export function EmailRow({ email, currentFolder, onOpenEmail }: EmailRowProps) {
               <View style={styles.bottomRow}>
                 <Text
                   numberOfLines={1}
-                  style={[styles.preview, { color: colors.mutedForeground, flex: 1 }]}
+                   style={[
+                     styles.preview,
+                     { color: colors.mutedForeground, flex: 1, fontSize: 13 * fontScale, lineHeight: 18 * fontScale },
+                   ]}
                 >
                   {email.preview}
                 </Text>
