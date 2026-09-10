@@ -247,18 +247,13 @@ export async function saveRecoveryEmail(
   userId: string,
   recoveryUsername: string
 ): Promise<{ error?: string }> {
-  if (!recoveryUsername.trim()) {
-    const { error } = await supabase
-      .from("profiles")
-      .update({ recovery_email_address_id: null })
-      .eq("id", userId);
-    if (error) return { error: error.message };
-    return {};
-  }
-
   const normalized = recoveryUsername.trim().toLowerCase();
-  const full = normalized.includes("@") ? normalized : `${normalized}@afuchat.com`;
-  if (!normalizeAfuChatEmail(full)) {
+  const full = !normalized
+    ? ""
+    : normalized.includes("@")
+      ? normalized
+      : `${normalized}@afuchat.com`;
+  if (full && !normalizeAfuChatEmail(full)) {
     return { error: "Use an existing AfuChat recovery address (username@afuchat.com)." };
   }
   const { error } = await supabase.rpc("set_recovery_email", { _email: full });
@@ -285,7 +280,7 @@ export async function isExistingAfuChatAddress(
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
-  const [{ data, error }, address, { data: settings }] = await Promise.all([
+  const [{ data, error }, address, { data: settings }, { data: linkedRecoveryEmail }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
     getPreferredEmailAddress(userId),
     supabase
@@ -293,18 +288,14 @@ export async function getProfile(userId: string): Promise<Profile | null> {
       .select("*")
       .eq("user_id", userId)
       .maybeSingle(),
+    supabase.rpc("get_recovery_email"),
   ]);
   if (error || !data) return null;
 
-  let recoveryEmail: string | null = null;
-  if (data.recovery_email_address_id) {
-    const { data: recovery } = await supabase
-      .from("email_addresses")
-      .select("full_email,local_part,domain")
-      .eq("id", data.recovery_email_address_id)
-      .maybeSingle();
-    recoveryEmail = normalizedAddressEmail(recovery);
-  }
+  const recoveryEmail =
+    typeof linkedRecoveryEmail === "string"
+      ? normalizeAfuChatEmail(linkedRecoveryEmail)
+      : null;
 
   return {
     id: userId,

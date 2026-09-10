@@ -18,6 +18,12 @@ description: How authentication, identity, and password reset work in AfuMail
 
 Recovery address resolution must use the same normalized linked mailbox in both the profile UI and the reset Edge Function. If `full_email` is empty, fall back to `local_part@domain`; otherwise a valid database link can appear as unset and password reset will incorrectly stop.
 
+The linked recovery mailbox belongs to another user, so normal `email_addresses` row-level security cannot be used to reload it from the profile screen. Profile reads must use the authenticated, security-definer recovery lookup rather than weakening mailbox policies.
+
+**Why:** The save RPC can persist the foreign mailbox link while an owner-scoped address query returns no row, making the setting appear to disappear after reload.
+
+**How to apply:** Keep recovery-address persistence in `set_recovery_email` and readback in `get_recovery_email`; do not grant users general read access to other users' `email_addresses` rows.
+
 ## Supabase SMTP
 Configured with Resend SMTP: host=smtp.resend.com, port=465, user=resend, sender=noreply@afuchat.com.
 `site_url` = Replit dev domain (must match where reset link lands).
