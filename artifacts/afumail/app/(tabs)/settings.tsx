@@ -372,7 +372,7 @@ export default function SettingsScreen() {
                   ]
                 );
               }}
-              style={({ pressed }) => [styles.settingRow, { backgroundColor: pressed ? "#FFEBEE" : "transparent" }]}
+              style={({ pressed }) => [styles.settingRow, { backgroundColor: pressed ? colors.secondary : "transparent" }]}
             >
               <View style={styles.iconWrap}>
                 <Feather name="log-out" size={21} color={colors.destructive} />
@@ -411,7 +411,7 @@ export default function SettingsScreen() {
               <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.foreground }}>Cancel</Text>
             </Pressable>
             <Pressable onPress={handleSavePhone} disabled={saving} style={[styles.modalSaveBtn, { backgroundColor: colors.primary, opacity: saving ? 0.7 : 1 }]}>
-              {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground }}>Save</Text>}
+              {saving ? <ActivityIndicator color={colors.primaryForeground} size="small" /> : <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground }}>Save</Text>}
             </Pressable>
           </View>
         </View>
@@ -443,7 +443,7 @@ export default function SettingsScreen() {
               <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.foreground }}>Cancel</Text>
             </Pressable>
             <Pressable onPress={handleSaveRecoveryEmail} disabled={saving} style={[styles.modalSaveBtn, { backgroundColor: colors.primary, opacity: saving ? 0.7 : 1 }]}>
-              {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground }}>Save</Text>}
+              {saving ? <ActivityIndicator color={colors.primaryForeground} size="small" /> : <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground }}>Save</Text>}
             </Pressable>
           </View>
         </View>

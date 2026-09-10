@@ -161,7 +161,7 @@ export default function ComposeScreen() {
                 !to.trim() || isSending
                   ? colors.muted
                   : pressed
-                  ? "#1558B5"
+                   ? colors.tint
                   : colors.accent,
             },
           ]}

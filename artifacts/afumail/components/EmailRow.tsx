@@ -138,7 +138,7 @@ export function EmailRow({ email, currentFolder, onOpenEmail }: EmailRowProps) {
     <View style={styles.wrapper}>
       {/* ── Archive backdrop (left swipe) ── */}
       {canArchive && (
-        <Animated.View style={[styles.backdrop, styles.archiveBg, archiveBgStyle]}>
+        <Animated.View style={[styles.backdrop, styles.archiveBg, { backgroundColor: colors.warning }, archiveBgStyle]}>
           <Feather name="archive" size={22} color="#fff" />
           <Text style={styles.backdropLabel}>Archive</Text>
         </Animated.View>
@@ -146,7 +146,7 @@ export function EmailRow({ email, currentFolder, onOpenEmail }: EmailRowProps) {
 
       {/* ── Unarchive backdrop (right swipe) ── */}
       {canUnarchive && (
-        <Animated.View style={[styles.backdrop, styles.unarchiveBg, unarchiveBgStyle]}>
+        <Animated.View style={[styles.backdrop, styles.unarchiveBg, { backgroundColor: colors.success }, unarchiveBgStyle]}>
           <Feather name="inbox" size={22} color="#fff" />
           <Text style={styles.backdropLabel}>Inbox</Text>
         </Animated.View>
@@ -169,7 +169,7 @@ export function EmailRow({ email, currentFolder, onOpenEmail }: EmailRowProps) {
             <View style={styles.avatarContainer}>
               <Avatar name={email.from.name} size={44} fontSize={15} />
               {!email.read && (
-                <View style={[styles.unreadDot, { backgroundColor: colors.accent }]} />
+                <View style={[styles.unreadDot, { backgroundColor: colors.accent, borderColor: colors.card }]} />
               )}
             </View>
 
@@ -261,11 +261,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   archiveBg: {
-    backgroundColor: "#F59E0B",
     justifyContent: "flex-end",
   },
   unarchiveBg: {
-    backgroundColor: "#10B981",
     justifyContent: "flex-start",
   },
   backdropLabel: {
@@ -293,7 +291,6 @@ const styles = StyleSheet.create({
     height: 9,
     borderRadius: 4.5,
     borderWidth: 1.5,
-    borderColor: "#FFFFFF",
   },
   content: {
     flex: 1,

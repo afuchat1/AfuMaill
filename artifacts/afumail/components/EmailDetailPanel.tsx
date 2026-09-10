@@ -304,7 +304,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
 
         <View style={styles.headerActions}>
           <Pressable onPress={handleStar} hitSlop={8}>
-            <Feather name="star" size={20} color={email.starred ? "#F59E0B" : colors.mutedForeground} />
+             <Feather name="star" size={20} color={email.starred ? colors.warning : colors.mutedForeground} />
           </Pressable>
           <Pressable onPress={email.folder === "archived" ? handleUnarchive : handleArchive} hitSlop={8}>
             <Feather

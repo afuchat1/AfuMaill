@@ -72,9 +72,9 @@ export default function SignatureScreen() {
           style={[styles.saveBtn, { backgroundColor: saving ? colors.muted : colors.primary }]}
         >
           {saving ? (
-            <ActivityIndicator color="#fff" size="small" />
+            <ActivityIndicator color={colors.primaryForeground} size="small" />
           ) : saved ? (
-            <Feather name="check" size={16} color="#fff" />
+            <Feather name="check" size={16} color={colors.primaryForeground} />
           ) : (
             <Text style={[styles.saveBtnText, { color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }]}>
               Save

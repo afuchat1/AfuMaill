@@ -414,7 +414,7 @@ export default function CalendarScreen() {
                   style={[
                     styles.colorSwatch,
                     { backgroundColor: c },
-                    newColor === c && styles.colorSwatchSelected,
+                     newColor === c && [styles.colorSwatchSelected, { borderColor: colors.card }],
                   ]}
                 >
                   {newColor === c && <Feather name="check" size={14} color="#FFFFFF" />}

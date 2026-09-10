@@ -150,10 +150,10 @@ export default function TwoFactorScreen() {
             <Pressable
               onPress={startEnroll}
               disabled={enrolling}
-              style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? "#333" : colors.primary, opacity: enrolling ? 0.7 : 1 }]}
+               style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? colors.secondary : colors.primary, opacity: enrolling ? 0.7 : 1 }]}
             >
               {enrolling
-                ? <ActivityIndicator color="#fff" size="small" />
+                ? <ActivityIndicator color={colors.primaryForeground} size="small" />
                 : <><Feather name="shield" size={16} color={colors.primaryForeground} /><Text style={[styles.primaryBtnText, { color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }]}>Set Up Authenticator App</Text></>
               }
             </Pressable>
@@ -189,10 +189,10 @@ export default function TwoFactorScreen() {
               <Pressable
                 onPress={verifyCode}
                 disabled={verifying || code.length < 6}
-                style={({ pressed }) => [styles.primaryBtn, { backgroundColor: code.length < 6 ? colors.muted : pressed ? "#333" : colors.primary }]}
+                 style={({ pressed }) => [styles.primaryBtn, { backgroundColor: code.length < 6 ? colors.muted : pressed ? colors.secondary : colors.primary }]}
               >
                 {verifying
-                  ? <ActivityIndicator color="#fff" size="small" />
+                  ? <ActivityIndicator color={colors.primaryForeground} size="small" />
                   : <Text style={[styles.primaryBtnText, { color: code.length < 6 ? colors.mutedForeground : colors.primaryForeground, fontFamily: "Inter_600SemiBold" }]}>Verify & Enable</Text>
                 }
               </Pressable>
