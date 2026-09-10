@@ -12,10 +12,12 @@
 
 const http = require("http");
 const net = require("net");
+const path = require("path");
 const { spawn } = require("child_process");
 
 const LISTEN_PORT = parseInt(process.env.PORT || "8099", 10);
 const EXPO_PORT = 5001;
+const APP_DIR = path.resolve(__dirname, "..");
 let expoProcess = null;
 let restartTimer = null;
 let shuttingDown = false;
@@ -36,7 +38,10 @@ function startExpo() {
         EXPO_NO_TELEMETRY: "1",
       },
       stdio: "inherit",
-      cwd: process.cwd(),
+      // The managed pnpm workflow can invoke this script from the monorepo
+      // root. Metro must run from the AfuMail package so it resolves this
+      // artifact's Expo/Expo Router versions and app directory.
+      cwd: APP_DIR,
     }
   );
 

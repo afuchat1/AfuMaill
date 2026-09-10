@@ -14,3 +14,4 @@
 - [AfuMail workspace dependency alignment](afumail-workspace-dependency-alignment.md) — after dependency or lockfile changes, reinstall the workspace so the linked Expo runtime matches the committed SDK line.
 - [AfuMail AI model availability](afumail-ai-model-availability.md) — use Engagera Pro for all mail-assist modes; Lite may not be enabled for the account.
 - [AfuMail sender display names](afumail-sender-display-names.md) — internal mail uses the sender profile name; external fallback uses a recognizable domain brand.
+- [AfuMail Expo proxy working directory](afumail-expo-proxy-cwd.md) — Metro must launch from the artifact directory; stale port 8099 processes can make the preview appear blank.
