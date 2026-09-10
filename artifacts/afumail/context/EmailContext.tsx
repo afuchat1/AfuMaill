@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -254,6 +255,42 @@ async function seedWelcomeEmail(ownerId: string, userEmail: string) {
 
 // ─── Provider ───────────────────────────────────────────────────────────────
 
+const EMAIL_CACHE_PREFIX = "afumail:emails:";
+const EMAIL_CACHE_VERSION = 1;
+
+function emailCacheKey(userId: string): string {
+  return `${EMAIL_CACHE_PREFIX}${userId}`;
+}
+
+async function readCachedEmails(userId: string): Promise<Email[] | null> {
+  try {
+    const raw = await AsyncStorage.getItem(emailCacheKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { version?: number; emails?: unknown };
+    if (parsed.version !== EMAIL_CACHE_VERSION || !Array.isArray(parsed.emails)) {
+      return null;
+    }
+    return parsed.emails as Email[];
+  } catch {
+    return null;
+  }
+}
+
+async function writeCachedEmails(userId: string, emails: Email[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(
+      emailCacheKey(userId),
+      JSON.stringify({
+        version: EMAIL_CACHE_VERSION,
+        cachedAt: new Date().toISOString(),
+        emails,
+      }),
+    );
+  } catch (error) {
+    console.warn("email cache write error:", error);
+  }
+}
+
 export function EmailProvider({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated } = useAuth();
   const [emails, setEmails] = useState<Email[]>([]);
@@ -271,7 +308,6 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.warn("loadEmails error:", error.message, error.details ?? "");
-        setEmails([]);
         setIsLoading(false);
         return;
       }
@@ -293,9 +329,12 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
         }
         const seededRows = seeded ?? [];
         const senderNames = await getSenderNameMap(seededRows);
-        setEmails(seededRows.map((row) => rowToEmail(row, senderNames)));
+        const seededEmails = seededRows.map((row) => rowToEmail(row, senderNames));
+        setEmails(seededEmails);
+        void writeCachedEmails(user.id, seededEmails);
       } else {
         setEmails(loaded);
+        void writeCachedEmails(user.id, loaded);
       }
     } catch (err) {
       console.warn("loadEmails exception:", err);
@@ -310,6 +349,11 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    let active = true;
+
+    readCachedEmails(user.id).then((cachedEmails) => {
+      if (active && cachedEmails) setEmails(cachedEmails);
+    });
     loadEmails();
 
     // Real-time subscription for live inbox updates
@@ -330,6 +374,7 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
       .subscribe();
 
     return () => {
+      active = false;
       supabase.removeChannel(channel);
     };
   }, [isAuthenticated, user?.id, loadEmails]);

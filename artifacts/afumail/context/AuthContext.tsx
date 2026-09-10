@@ -1,4 +1,5 @@
 import type { Session } from "@supabase/supabase-js";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
@@ -25,6 +26,44 @@ const AuthContext = createContext<AuthContextType>({
   logout: async () => {},
   refreshUser: async () => {},
 });
+
+const PROFILE_CACHE_PREFIX = "afumail:profile:";
+
+function profileCacheKey(userId: string): string {
+  return `${PROFILE_CACHE_PREFIX}${userId}`;
+}
+
+async function readCachedProfile(userId: string): Promise<AuthUser | null> {
+  try {
+    const raw = await AsyncStorage.getItem(profileCacheKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<AuthUser>;
+    if (
+      parsed.id !== userId ||
+      typeof parsed.name !== "string" ||
+      typeof parsed.email !== "string" ||
+      typeof parsed.username !== "string"
+    ) {
+      return null;
+    }
+    return {
+      id: parsed.id,
+      name: parsed.name,
+      email: parsed.email,
+      username: parsed.username,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function writeCachedProfile(profile: AuthUser): Promise<void> {
+  try {
+    await AsyncStorage.setItem(profileCacheKey(profile.id), JSON.stringify(profile));
+  } catch (error) {
+    console.warn("profile cache write error:", error);
+  }
+}
 
 async function loadProfile(userId: string): Promise<AuthUser | null> {
   const [{ data, error }, { data: address, error: addressError }] = await Promise.all([
@@ -109,8 +148,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(sessionFallback(session));
       setIsLoading(false);
 
+      const cachedProfile = await readCachedProfile(session.user.id);
+      if (cachedProfile) setUser(cachedProfile);
+
       const profile = await loadProfile(session.user.id);
-      if (profile) setUser(profile);
+      if (profile) {
+        setUser(profile);
+        void writeCachedProfile(profile);
+      }
     } catch (err) {
       console.warn("AuthContext hydrate error:", err);
       if (session?.user && isAfuChatSession(session)) setUser(sessionFallback(session));
@@ -158,8 +203,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
       setUser(sessionFallback(session));
+      const cachedProfile = await readCachedProfile(session.user.id);
+      if (cachedProfile) setUser(cachedProfile);
       const profile = await loadProfile(session.user.id);
-      if (profile) setUser(profile);
+      if (profile) {
+        setUser(profile);
+        void writeCachedProfile(profile);
+      }
     }
   }
 
