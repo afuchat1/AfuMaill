@@ -61,6 +61,11 @@ export interface Email {
   attachments: Attachment[];
   category: EmailCategory;
   folder: EmailFolder;
+  threadId?: string;
+  messageId?: string;
+  inReplyTo?: string;
+  references?: string;
+  threadCount?: number;
 }
 
 interface ComposeData {
@@ -68,6 +73,15 @@ interface ComposeData {
   cc?: string;
   subject: string;
   body: string;
+  threadId?: string;
+  inReplyTo?: string;
+  references?: string;
+}
+
+export interface EmailThread {
+  id: string;
+  latest: Email;
+  messages: Email[];
 }
 
 interface EmailContextType {
@@ -75,6 +89,8 @@ interface EmailContextType {
   isLoading: boolean;
   getEmailsByFolder: (folder: EmailFolder) => Email[];
   getEmailsByCategory: (category: EmailCategory) => Email[];
+  getThreadsByFolder: (folder: EmailFolder) => EmailThread[];
+  getEmailsInThread: (emailId: string) => Email[];
   getEmailById: (id: string) => Email | undefined;
   markAsRead: (id: string) => Promise<void>;
   markAsUnread: (id: string) => Promise<void>;
@@ -94,6 +110,8 @@ const EmailContext = createContext<EmailContextType>({
   isLoading: false,
   getEmailsByFolder: () => [],
   getEmailsByCategory: () => [],
+  getThreadsByFolder: () => [],
+  getEmailsInThread: () => [],
   getEmailById: () => undefined,
   markAsRead: async () => {},
   markAsUnread: async () => {},
@@ -175,11 +193,23 @@ function rowToEmail(row: any, senderNames: Record<string, string> = {}): Email {
     normalizeBody(htmlToPlainText(htmlBody)) === normalizeBody(textBody);
   const body = htmlBody && !htmlIsOnlyPlainText ? htmlBody : textBody || htmlBody;
 
+  const from = parseAddress(row.from_address, true);
+  const to = addresses(row.to_addresses);
+  const cc = addresses(row.cc_addresses);
+  const fallbackThreadId = `legacy:${normalizedSubject((row.subject ?? "(No Subject)") as string)}:${[
+    from.email,
+    ...to.map((address) => address.email),
+    ...cc.map((address) => address.email),
+  ]
+    .filter(Boolean)
+    .sort()
+    .join(",")}`;
+
   return {
     id: row.id as string,
-    from: parseAddress(row.from_address, true),
-    to: addresses(row.to_addresses),
-    cc: addresses(row.cc_addresses).length ? addresses(row.cc_addresses) : undefined,
+    from,
+    to,
+    cc: cc.length ? cc : undefined,
     subject: (row.subject ?? "(No Subject)") as string,
     body,
     bodyFormat: htmlBody && !htmlIsOnlyPlainText ? "html" : "text",
@@ -191,7 +221,57 @@ function rowToEmail(row: any, senderNames: Record<string, string> = {}): Email {
     attachments: (row.attachments ?? []) as Attachment[],
     category,
     folder,
+    threadId: typeof row.thread_id === "string" && row.thread_id.trim()
+      ? row.thread_id
+      : fallbackThreadId,
+    messageId: typeof row.message_id === "string" ? row.message_id : undefined,
+    inReplyTo: typeof row.in_reply_to === "string" ? row.in_reply_to : undefined,
+    references: typeof row.references_header === "string" ? row.references_header : undefined,
   };
+}
+
+function normalizedSubject(subject: string): string {
+  return subject
+    .replace(/^(?:(?:re|fw|fwd)\s*:\s*)+/i, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function threadKey(email: Email): string {
+  if (email.threadId) return `thread:${email.threadId}`;
+  const participants = [
+    email.from.email,
+    ...email.to.map((address) => address.email),
+    ...(email.cc ?? []).map((address) => address.email),
+  ]
+    .map((address) => address.trim().toLowerCase())
+    .filter(Boolean)
+    .sort()
+    .join(",");
+  return `legacy:${normalizedSubject(email.subject)}:${participants}`;
+}
+
+function buildThreads(source: Email[]): EmailThread[] {
+  const groups = new Map<string, Email[]>();
+  for (const email of source) {
+    const key = threadKey(email);
+    const group = groups.get(key);
+    if (group) group.push(email);
+    else groups.set(key, [email]);
+  }
+
+  return Array.from(groups.entries())
+    .map(([id, messages]) => {
+      const sorted = [...messages].sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      );
+      return { id, latest: sorted[0]!, messages: sorted };
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.latest.timestamp).getTime() - new Date(a.latest.timestamp).getTime(),
+    );
 }
 
 async function getSenderNameMap(rows: any[]): Promise<Record<string, string>> {
@@ -518,6 +598,9 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
           cc: ccAddresses.map((a) => a.email),
           subject: data.subject || "(No Subject)",
           body: data.body,
+          threadId: data.threadId,
+          inReplyTo: data.inReplyTo,
+          references: data.references,
           fromEmail,
           fromName,
         },
@@ -536,28 +619,43 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
   // ─── Selectors ──────────────────────────────────────────────
 
   const getEmailsByFolder = useCallback(
-    (folder: EmailFolder) =>
-      emails
-        .filter((e) => {
-          if (folder === "starred") return e.starred;
-          return e.folder === folder;
-        })
-        .sort(
-          (a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        ),
+    (folder: EmailFolder) => {
+      const source = emails.filter((e) => (folder === "starred" ? e.starred : e.folder === folder));
+      return buildThreads(source).map(({ latest, messages }) => ({
+        ...latest,
+        threadCount: messages.length,
+      }));
+    },
     [emails]
   );
 
   const getEmailsByCategory = useCallback(
-    (category: EmailCategory) =>
-      emails
-        .filter((e) => e.folder === "inbox" && e.category === category)
-        .sort(
-          (a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        ),
+    (category: EmailCategory) => {
+      const source = emails.filter((e) => e.folder === "inbox" && e.category === category);
+      return buildThreads(source).map(({ latest, messages }) => ({
+        ...latest,
+        threadCount: messages.length,
+      }));
+    },
     [emails]
+  );
+
+  const getThreadsByFolder = useCallback(
+    (folder: EmailFolder) =>
+      buildThreads(emails.filter((e) => (folder === "starred" ? e.starred : e.folder === folder))),
+    [emails],
+  );
+
+  const getEmailsInThread = useCallback(
+    (emailId: string) => {
+      const selected = emails.find((email) => email.id === emailId);
+      if (!selected) return [];
+      const key = threadKey(selected);
+      return emails
+        .filter((email) => threadKey(email) === key)
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    },
+    [emails],
   );
 
   const getEmailById = useCallback(
@@ -576,6 +674,8 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         getEmailsByFolder,
         getEmailsByCategory,
+        getThreadsByFolder,
+        getEmailsInThread,
         getEmailById,
         markAsRead,
         markAsUnread,

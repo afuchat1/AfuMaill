@@ -221,6 +221,7 @@ export function EmailRow({ email, currentFolder, onOpenEmail }: EmailRowProps) {
                 ]}
               >
                 {email.subject}
+                 {email.threadCount && email.threadCount > 1 ? `  ·  ${email.threadCount}` : ""}
               </Text>
 
               <View style={styles.bottomRow}>

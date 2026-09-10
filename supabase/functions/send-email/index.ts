@@ -22,7 +22,17 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { to, cc, subject, body, fromEmail, fromName } = await req.json();
+    const {
+      to,
+      cc,
+      subject,
+      body,
+      fromEmail,
+      fromName,
+      threadId: requestedThreadId,
+      inReplyTo,
+      references: requestedReferences,
+    } = await req.json();
 
     if (!to || to.length === 0) {
       return new Response(JSON.stringify({ error: "At least one recipient is required." }), {
@@ -46,6 +56,13 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString();
     const preview = (body ?? "").slice(0, 140).replace(/\n/g, " ");
     const category = guessCategory(fromEmail ?? "", subject ?? "");
+    const threadId = typeof requestedThreadId === "string" && requestedThreadId.trim()
+      ? requestedThreadId.trim()
+      : crypto.randomUUID();
+    const messageId = `<${crypto.randomUUID()}@afuchat.com>`;
+    const references = typeof requestedReferences === "string"
+      ? requestedReferences.trim()
+      : "";
 
     const toAddresses = (to ?? []).map((e: string) => ({
       name: e.split("@")[0] ?? e,
@@ -112,6 +129,10 @@ Deno.serve(async (req) => {
           is_draft: false,
           attachments: [],
           category,
+          thread_id: threadId,
+          message_id: messageId,
+          in_reply_to: typeof inReplyTo === "string" && inReplyTo.trim() ? inReplyTo.trim() : null,
+          references_header: references || null,
         }),
       });
     }
@@ -153,6 +174,13 @@ Deno.serve(async (req) => {
       to: externalTo,
       subject: subject || "(No Subject)",
       text: body,
+      headers: {
+        "Message-ID": messageId,
+        ...(typeof inReplyTo === "string" && inReplyTo.trim()
+          ? { "In-Reply-To": inReplyTo.trim() }
+          : {}),
+        ...(references ? { References: references } : {}),
+      },
     };
     if (externalCc.length > 0) payload.cc = externalCc;
 

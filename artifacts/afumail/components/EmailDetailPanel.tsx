@@ -23,6 +23,7 @@ import { useEmails } from "@/context/EmailContext";
 import { usePreferences } from "@/context/PreferencesContext";
 import { useColors } from "@/hooks/useColors";
 import { aiSmartReplies, aiSummarize } from "@/lib/ai";
+import { htmlToPlainText } from "@/lib/htmlToPlainText";
 import { getFontScale } from "@/lib/preferences";
 
 // react-native-webview's React 19 declarations lag behind the Expo SDK's
@@ -196,11 +197,21 @@ interface Props {
 export default function EmailDetailPanel({ emailId, onClose }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { getEmailById, toggleStar, archiveEmail, deleteEmail, markAsRead, markAsUnread, moveToFolder } = useEmails();
+  const {
+    getEmailById,
+    getEmailsInThread,
+    toggleStar,
+    archiveEmail,
+    deleteEmail,
+    markAsRead,
+    markAsUnread,
+    moveToFolder,
+  } = useEmails();
   const { preferences } = usePreferences();
   const fontScale = getFontScale(preferences.fontSize);
 
   const email = getEmailById(emailId);
+  const threadMessages = getEmailsInThread(emailId);
 
   const [actionsVisible, setActionsVisible] = useState(false);
   const [moveVisible,    setMoveVisible]    = useState(false);
@@ -267,13 +278,31 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
 
   function handleReply() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push({ pathname: "/email/compose", params: { to: email!.from.email, subject: `Re: ${email!.subject}` } });
+    router.push({
+      pathname: "/email/compose",
+      params: {
+        to: email!.from.email,
+        subject: `Re: ${email!.subject}`,
+        threadId: email!.threadId,
+        inReplyTo: email!.messageId,
+        references: [email!.references, email!.messageId].filter(Boolean).join(" "),
+      },
+    });
   }
 
   function handleReplyAll() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const allRecipients = [email!.from.email, ...(email!.cc?.map((c) => c.email) ?? [])].join(", ");
-    router.push({ pathname: "/email/compose", params: { to: allRecipients, subject: `Re: ${email!.subject}` } });
+    router.push({
+      pathname: "/email/compose",
+      params: {
+        to: allRecipients,
+        subject: `Re: ${email!.subject}`,
+        threadId: email!.threadId,
+        inReplyTo: email!.messageId,
+        references: [email!.references, email!.messageId].filter(Boolean).join(" "),
+      },
+    });
   }
 
   function handleForward() {
@@ -338,7 +367,17 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
 
   function handleSmartReply(replyText: string) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push({ pathname: "/email/compose", params: { to: email!.from.email, subject: `Re: ${email!.subject}`, body: replyText } });
+    router.push({
+      pathname: "/email/compose",
+      params: {
+        to: email!.from.email,
+        subject: `Re: ${email!.subject}`,
+        body: replyText,
+        threadId: email!.threadId,
+        inReplyTo: email!.messageId,
+        references: [email!.references, email!.messageId].filter(Boolean).join(" "),
+      },
+    });
   }
 
   if (!email) return null;
@@ -413,6 +452,8 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
     })();
     true;
   `;
+
+  const olderThreadMessages = threadMessages.filter((message) => message.id !== email.id);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -532,6 +573,38 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
             )}
           </View>
         </View>
+
+        {threadMessages.length > 1 && (
+          <View style={[styles.threadSummary, { backgroundColor: colors.secondary, borderBottomColor: colors.border }]}>
+            <Feather name="message-circle" size={16} color={colors.accent} />
+            <Text style={[styles.threadSummaryText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+              {threadMessages.length} messages in this conversation
+            </Text>
+          </View>
+        )}
+
+        {olderThreadMessages.map((message) => (
+          <View key={message.id} style={[styles.previousMessage, { borderBottomColor: colors.border }]}>
+            <View style={styles.previousMessageHeader}>
+              <Avatar name={message.from.name} size={32} fontSize={11} />
+              <View style={styles.previousMessageInfo}>
+                <Text style={[styles.previousMessageName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                  {message.from.name}
+                </Text>
+                <Text style={[styles.previousMessageMeta, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  {formatFullDate(message.timestamp)}
+                </Text>
+              </View>
+            </View>
+            <Text
+              selectable
+              numberOfLines={8}
+              style={[styles.previousMessageBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}
+            >
+              {htmlToPlainText(message.body || message.preview || "No message body")}
+            </Text>
+          </View>
+        ))}
 
         {/* Body */}
         <View
@@ -847,6 +920,29 @@ const styles = StyleSheet.create({
   timestamp: { fontSize: 12, flexShrink: 0 },
   senderEmail: { fontSize: 13 },
   recipientLine: { fontSize: 12, marginTop: 1 },
+  threadSummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 20,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  threadSummaryText: { fontSize: 13 },
+  previousMessage: {
+    marginHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 10,
+  },
+  previousMessageHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  previousMessageInfo: { flex: 1, gap: 2 },
+  previousMessageName: { fontSize: 14 },
+  previousMessageMeta: { fontSize: 11 },
+  previousMessageBody: { fontSize: 14, lineHeight: 21 },
   bodySection: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24 },
   body: { fontSize: 16, lineHeight: 27, letterSpacing: 0.1 },
   attachmentsSection: {

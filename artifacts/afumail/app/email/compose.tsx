@@ -34,7 +34,15 @@ export default function ComposeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { sendEmail } = useEmails();
-  const params = useLocalSearchParams<{ to?: string; cc?: string; subject?: string; body?: string }>();
+  const params = useLocalSearchParams<{
+    to?: string;
+    cc?: string;
+    subject?: string;
+    body?: string;
+    threadId?: string;
+    inReplyTo?: string;
+    references?: string;
+  }>();
 
   const [to, setTo] = useState(params.to ?? "");
   const [cc, setCc] = useState(params.cc ?? "");
@@ -75,7 +83,15 @@ export default function ComposeScreen() {
     setIsSending(true);
     try {
       await sendEmail(
-        { to: to.trim(), cc: cc.trim() || undefined, subject, body },
+        {
+          to: to.trim(),
+          cc: cc.trim() || undefined,
+          subject,
+          body,
+          threadId: params.threadId,
+          inReplyTo: params.inReplyTo,
+          references: params.references,
+        },
         user?.email ?? "me@afuchat.com",
         user?.name ?? "Me"
       );

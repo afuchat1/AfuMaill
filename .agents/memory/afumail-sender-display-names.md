@@ -9,4 +9,4 @@ External addresses with no meaningful display name should use a recognizable dom
 
 **Why:** Showing `hello` or `user` as a sender name makes company mail look like a personal mailbox and hides the identity AfuChat users chose for their profile.
 
-**How to apply:** Resolve internal names through the privacy-scoped sender-name RPC for addresses visible in the current user's mailbox; keep parsing and presentation centralized in the email row mapper so search and detail views stay consistent.
+**How to apply:** Resolve internal names through the privacy-scoped sender-name RPC for addresses visible in the current user's mailbox; preserve provider `From` header names for external mail; keep parsing and presentation centralized in the email row mapper so search and detail views stay consistent. There is no universal external profile directory to query without a provider-specific integration.
