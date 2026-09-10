@@ -70,11 +70,12 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
+    "owner": "afuchat",
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "b8908389-fdad-425a-bd47-d07bf2eac74f"
+        "projectId": "9909adfd-c4ca-4e59-98ec-3387dea08688"
       }
-    },
-    "owner": "afuchat-2"
+    }
   }
 }
