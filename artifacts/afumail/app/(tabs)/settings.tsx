@@ -6,8 +6,6 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Linking,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -93,7 +91,6 @@ export default function SettingsScreen() {
     switch (label) {
       case "Signature":           router.push("/settings/signature"); break;
       case "Vacation Reply":      router.push("/settings/vacation"); break;
-      case "Default Email App":   void openDefaultEmailSettings(); break;
       case "Font Size":           setFontSizeModal(true); break;
       case "Email Density":       setDensityModal(true); break;
       case "Two-Factor Auth":     router.push("/settings/two-factor"); break;
@@ -102,22 +99,6 @@ export default function SettingsScreen() {
       case "Help & Support":      router.push("/settings/support"); break;
       case "Terms of Service":    router.push("/settings/legal"); break;
       case "Privacy Policy":      router.push("/settings/legal"); break;
-    }
-  }
-
-  async function openDefaultEmailSettings() {
-    if (Platform.OS !== "android") {
-      Alert.alert("Android setting", "Default email app selection is available in Android Settings.");
-      return;
-    }
-
-    try {
-      await Linking.sendIntent("android.settings.MANAGE_DEFAULT_APPS_SETTINGS");
-    } catch {
-      Alert.alert(
-        "Choose AfuMail as default",
-        "Open Android Settings, choose Default apps, then choose Email app and select AfuMail.",
-      );
     }
   }
 
@@ -243,7 +224,6 @@ export default function SettingsScreen() {
       rows: [
         { label: "Signature", icon: "edit-3", type: "nav" as const },
         { label: "Vacation Reply", icon: "umbrella", type: "nav" as const },
-        { label: "Default Email App", icon: "mail", type: "nav" as const, value: "Android Settings" },
       ],
     },
     {
