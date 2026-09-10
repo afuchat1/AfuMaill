@@ -9,6 +9,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { htmlToPlainText } from "@/lib/htmlToPlainText";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -168,7 +169,11 @@ function rowToEmail(row: any, senderNames: Record<string, string> = {}): Email {
     Array.isArray(value) ? value.map((item) => parseAddress(item)).filter((item) => item.email) : [];
   const htmlBody = typeof row.body_html === "string" ? row.body_html.trim() : "";
   const textBody = typeof row.body_text === "string" ? row.body_text : "";
-  const body = htmlBody || textBody;
+  const normalizeBody = (value: string) => value.replace(/\s+/g, " ").trim();
+  const htmlIsOnlyPlainText =
+    Boolean(htmlBody && textBody.trim()) &&
+    normalizeBody(htmlToPlainText(htmlBody)) === normalizeBody(textBody);
+  const body = htmlBody && !htmlIsOnlyPlainText ? htmlBody : textBody || htmlBody;
 
   return {
     id: row.id as string,
@@ -177,7 +182,7 @@ function rowToEmail(row: any, senderNames: Record<string, string> = {}): Email {
     cc: addresses(row.cc_addresses).length ? addresses(row.cc_addresses) : undefined,
     subject: (row.subject ?? "(No Subject)") as string,
     body,
-    bodyFormat: htmlBody ? "html" : "text",
+    bodyFormat: htmlBody && !htmlIsOnlyPlainText ? "html" : "text",
     preview: (row.preview ?? row.body_text ?? body) as string,
     timestamp: (row.sent_at ?? row.received_at ?? row.created_at ?? new Date().toISOString()) as string,
     read: Boolean(row.is_read),
@@ -260,7 +265,7 @@ async function seedWelcomeEmail(ownerId: string, userEmail: string) {
 // ─── Provider ───────────────────────────────────────────────────────────────
 
 const EMAIL_CACHE_PREFIX = "afumail:emails:";
-const EMAIL_CACHE_VERSION = 1;
+const EMAIL_CACHE_VERSION = 2;
 
 function emailCacheKey(userId: string): string {
   return `${EMAIL_CACHE_PREFIX}${userId}`;
