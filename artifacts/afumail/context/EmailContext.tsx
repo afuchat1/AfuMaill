@@ -106,25 +106,69 @@ const EmailContext = createContext<EmailContextType>({
 // ─── DB row → Email mapper ──────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function rowToEmail(row: any): Email {
+const KNOWN_DOMAIN_BRANDS: Record<string, string> = {
+  "afuchat.com": "AfuChat",
+  "gmail.com": "Gmail",
+  "googlemail.com": "Gmail",
+  "outlook.com": "Outlook",
+  "hotmail.com": "Outlook",
+  "live.com": "Outlook",
+  "yahoo.com": "Yahoo",
+  "icloud.com": "iCloud",
+  "proton.me": "Proton Mail",
+  "protonmail.com": "Proton Mail",
+};
+
+function domainBrand(email: string): string {
+  const domain = email.split("@")[1]?.toLowerCase() ?? "";
+  if (KNOWN_DOMAIN_BRANDS[domain]) return KNOWN_DOMAIN_BRANDS[domain];
+
+  const parts = domain.split(".").filter(Boolean);
+  const label = parts.length > 1 ? parts[parts.length - 2] : parts[0];
+  if (!label) return "Unknown sender";
+  return label
+    .split(/[-_]/g)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function isMailboxFallback(name: string, email: string): boolean {
+  const localPart = email.split("@")[0]?.toLowerCase() ?? "";
+  const normalizedName = name.trim().toLowerCase();
+  return !normalizedName || normalizedName === localPart || normalizedName === email.toLowerCase();
+}
+
+function extractAddressEmail(value: unknown): string {
+  const raw = String(value ?? "");
+  const match = raw.match(/<([^>]+)>/);
+  return (match?.[1] ?? raw).trim().toLowerCase();
+}
+
+function rowToEmail(row: any, senderNames: Record<string, string> = {}): Email {
   const folderRow = Array.isArray(row.folders) ? row.folders[0] : row.folders;
   const rawFolder = String(folderRow?.type ?? (row.deleted_at ? "trash" : "inbox")).toLowerCase();
   const folder = (rawFolder === "custom" ? "archived" : rawFolder) as EmailFolder;
   const category = String(row.category ?? "primary").toLowerCase() as EmailCategory;
-  const parseAddress = (value: unknown): EmailAddress => {
+  const parseAddress = (value: unknown, resolveSenderName = false): EmailAddress => {
     const raw = String(value ?? "");
     const match = raw.match(/^(.*?)\s*<([^>]+)>$/);
-    return match
-      ? { name: match[1]?.trim() || match[2], email: match[2]?.trim() ?? "" }
-      : { name: raw.split("@")[0] ?? raw, email: raw };
+    const email = (match?.[2] ?? raw).trim().toLowerCase();
+    const rawName = match?.[1]?.trim().replace(/^["']|["']$/g, "") ?? "";
+    const name = resolveSenderName
+      ? senderNames[email]?.trim()
+        || (!isMailboxFallback(rawName, email) ? rawName : domainBrand(email))
+      : rawName || email.split("@")[0] || email;
+
+    return { name, email };
   };
   const addresses = (value: unknown): EmailAddress[] =>
-    Array.isArray(value) ? value.map(parseAddress).filter((item) => item.email) : [];
+    Array.isArray(value) ? value.map((item) => parseAddress(item)).filter((item) => item.email) : [];
   const body = String(row.body_html ?? row.body_text ?? "");
 
   return {
     id: row.id as string,
-    from: parseAddress(row.from_address),
+    from: parseAddress(row.from_address, true),
     to: addresses(row.to_addresses),
     cc: addresses(row.cc_addresses).length ? addresses(row.cc_addresses) : undefined,
     subject: (row.subject ?? "(No Subject)") as string,
@@ -138,6 +182,32 @@ function rowToEmail(row: any): Email {
     category,
     folder,
   };
+}
+
+async function getSenderNameMap(rows: any[]): Promise<Record<string, string>> {
+  const emails = Array.from(
+    new Set(
+      rows
+        .map((row) => extractAddressEmail(row.from_address))
+        .filter((email) => email.endsWith("@afuchat.com")),
+    ),
+  );
+  if (emails.length === 0) return {};
+
+  const { data, error } = await supabase.rpc("get_afuchat_sender_display_names", {
+    _emails: emails,
+  });
+  if (error) {
+    console.warn("Sender display name lookup error:", error.message);
+    return {};
+  }
+
+  return (data ?? []).reduce((map: Record<string, string>, row: { email?: string; display_name?: string }) => {
+    const email = row.email?.trim().toLowerCase();
+    const displayName = row.display_name?.trim();
+    if (email && displayName) map[email] = displayName;
+    return map;
+  }, {});
 }
 
 // ─── Welcome email seed ─────────────────────────────────────────────────────
@@ -206,7 +276,9 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const loaded = (data ?? []).map(rowToEmail);
+      const rows = data ?? [];
+      const senderNames = await getSenderNameMap(rows);
+      const loaded = rows.map((row) => rowToEmail(row, senderNames));
 
       // Seed welcome email for brand-new accounts
       if (loaded.length === 0) {
@@ -219,7 +291,9 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
         if (seedLoadError) {
           console.warn("loadEmails after seed error:", seedLoadError.message);
         }
-        setEmails((seeded ?? []).map(rowToEmail));
+        const seededRows = seeded ?? [];
+        const senderNames = await getSenderNameMap(seededRows);
+        setEmails(seededRows.map((row) => rowToEmail(row, senderNames)));
       } else {
         setEmails(loaded);
       }
