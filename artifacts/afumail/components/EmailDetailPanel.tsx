@@ -20,6 +20,7 @@ import { Avatar } from "@/components/Avatar";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import type { EmailFolder } from "@/context/EmailContext";
 import { useEmails } from "@/context/EmailContext";
+import { useAuth } from "@/context/AuthContext";
 import { usePreferences } from "@/context/PreferencesContext";
 import { useColors } from "@/hooks/useColors";
 import { aiSmartReplies, aiSummarize } from "@/lib/ai";
@@ -207,6 +208,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
     markAsUnread,
     moveToFolder,
   } = useEmails();
+  const { user } = useAuth();
   const { preferences } = usePreferences();
   const fontScale = getFontScale(preferences.fontSize);
 
@@ -456,6 +458,10 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
   `;
 
   const olderThreadMessages = threadMessages.filter((message) => message.id !== email.id);
+  const signedInEmail = user?.email?.trim().toLowerCase() ?? "";
+  const isMessageFromUser = (message: { from: { email: string } }) =>
+    Boolean(signedInEmail && message.from.email.trim().toLowerCase() === signedInEmail);
+  const latestMessageIsFromUser = isMessageFromUser(email);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -554,16 +560,43 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
         <View style={[styles.senderSection, { borderBottomColor: colors.border }]}>
           <Avatar name={email.from.name} size={44} fontSize={15} />
           <View style={styles.senderInfo}>
+             <View style={styles.ownerLine}>
+               <View
+                 style={[
+                   styles.ownerBadge,
+                   {
+                     backgroundColor: latestMessageIsFromUser ? colors.accent + "18" : colors.secondary,
+                   },
+                 ]}
+               >
+                 <Feather
+                   name={latestMessageIsFromUser ? "corner-up-right" : "corner-down-left"}
+                   size={12}
+                   color={latestMessageIsFromUser ? colors.accent : colors.mutedForeground}
+                 />
+                 <Text
+                   style={[
+                     styles.ownerBadgeText,
+                     {
+                       color: latestMessageIsFromUser ? colors.accent : colors.mutedForeground,
+                       fontFamily: "Inter_700Bold",
+                     },
+                   ]}
+                 >
+                   {latestMessageIsFromUser ? "You sent" : "Received from"}
+                 </Text>
+               </View>
+             </View>
             <View style={styles.senderTopRow}>
               <Text style={[styles.senderName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                {email.from.name}
+                 {latestMessageIsFromUser ? "You" : email.from.name}
               </Text>
               <Text style={[styles.timestamp, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
                 {formatFullDate(email.timestamp)}
               </Text>
             </View>
             <Text style={[styles.senderEmail, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              {email.from.email}
+               {latestMessageIsFromUser ? `From: ${email.from.email}` : email.from.email}
             </Text>
             <Text style={[styles.recipientLine, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
               To: {email.to.map((t) => t.name || t.email).join(", ")}
@@ -589,7 +622,12 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
             style={({ pressed }) => [
               styles.previousMessage,
               {
-                backgroundColor: pressed ? colors.secondary : colors.card,
+                backgroundColor: pressed
+                  ? colors.secondary
+                  : isMessageFromUser(message)
+                    ? colors.accent + "0D"
+                    : colors.card,
+                borderColor: isMessageFromUser(message) ? colors.accent + "35" : colors.border,
                 borderBottomColor: colors.border,
               },
             ]}
@@ -597,11 +635,22 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
             <View style={styles.previousMessageHeader}>
               <Avatar name={message.from.name} size={32} fontSize={11} />
               <View style={styles.previousMessageInfo}>
+                <Text
+                  style={[
+                    styles.messageOwnership,
+                    {
+                      color: isMessageFromUser(message) ? colors.accent : colors.mutedForeground,
+                      fontFamily: "Inter_700Bold",
+                    },
+                  ]}
+                >
+                  {isMessageFromUser(message) ? "You sent" : "Received from"}
+                </Text>
                 <Text style={[styles.previousMessageName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-                  {message.from.name}
+                  {isMessageFromUser(message) ? "You" : message.from.name}
                 </Text>
                 <Text style={[styles.previousMessageEmail, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                  {message.from.email}
+                  {isMessageFromUser(message) ? `From: ${message.from.email}` : message.from.email}
                 </Text>
                 <Text style={[styles.previousMessageMeta, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
                   {formatFullDate(message.timestamp)}
@@ -945,6 +994,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, gap: 12,
   },
   senderInfo: { flex: 1, gap: 3 },
+  ownerLine: { flexDirection: "row", alignItems: "center", minHeight: 18 },
+  ownerBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
+  ownerBadgeText: { fontSize: 10, letterSpacing: 0.2, textTransform: "uppercase" },
   senderTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 },
   senderName: { fontSize: 15, flex: 1 },
   timestamp: { fontSize: 12, flexShrink: 0 },
@@ -961,6 +1021,7 @@ const styles = StyleSheet.create({
   },
   previousMessageHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   previousMessageInfo: { flex: 1, gap: 2 },
+  messageOwnership: { fontSize: 10, letterSpacing: 0.4, textTransform: "uppercase" },
   previousMessageName: { fontSize: 14 },
   previousMessageEmail: { fontSize: 11 },
   previousMessageMeta: { fontSize: 11 },
