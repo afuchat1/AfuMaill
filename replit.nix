@@ -1,5 +1,6 @@
 {pkgs}: {
   deps = [
+    pkgs.xorg.libXcomposite
     pkgs.xorg.libX11
     pkgs.pango
     pkgs.gtk3
