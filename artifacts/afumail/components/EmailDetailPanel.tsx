@@ -351,15 +351,38 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
           <Text style={[styles.subject, { color: colors.foreground, fontFamily: "Inter_700Bold", fontSize: 22 * fontScale, lineHeight: 30 * fontScale }]}>
             {email.subject}
           </Text>
-          <View style={styles.badgeRow}>
-            {email.category && (
-              <View style={[styles.categoryBadge, { backgroundColor: colors.accent + "18" }]}>
-                <Text style={[styles.categoryText, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>
-                  {email.category.charAt(0).toUpperCase() + email.category.slice(1)}
-                </Text>
-              </View>
-            )}
-            {!email.read && <View style={[styles.unreadDot, { backgroundColor: colors.accent }]} />}
+          <View style={styles.subjectMetaRow}>
+            <View style={styles.badgeRow}>
+              {email.category && (
+                <View style={[styles.categoryBadge, { backgroundColor: colors.accent + "18" }]}>
+                  <Text style={[styles.categoryText, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>
+                    {email.category.charAt(0).toUpperCase() + email.category.slice(1)}
+                  </Text>
+                </View>
+              )}
+              {!email.read && <View style={[styles.unreadDot, { backgroundColor: colors.accent }]} />}
+            </View>
+            <Pressable
+              onPress={handleSummarize}
+              disabled={isSummaryLoading}
+              style={({ pressed }) => [
+                styles.summaryButton,
+                {
+                  backgroundColor: pressed ? colors.accent + "22" : colors.accent + "12",
+                  borderColor: colors.accent + "44",
+                  opacity: isSummaryLoading ? 0.7 : 1,
+                },
+              ]}
+            >
+              {isSummaryLoading ? (
+                <ActivityIndicator size="small" color={colors.accent} />
+              ) : (
+                <Feather name="file-text" size={14} color={colors.accent} />
+              )}
+              <Text style={[styles.summaryButtonText, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>
+                Summarize
+              </Text>
+            </Pressable>
           </View>
         </View>
 
@@ -540,21 +563,6 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
               <Text style={[styles.replyBtnText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Forward</Text>
             </Pressable>
             <Pressable
-              onPress={handleSummarize}
-              disabled={isSummaryLoading}
-              style={({ pressed }) => [
-                styles.replyButton,
-                { backgroundColor: pressed ? colors.accent + "22" : colors.muted, borderColor: colors.border },
-              ]}
-            >
-              {isSummaryLoading ? (
-                <ActivityIndicator size={13} color={colors.accent} />
-              ) : (
-                <Feather name="file-text" size={14} color={colors.accent} />
-              )}
-              <Text style={[styles.replyBtnText, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>Summarize</Text>
-            </Pressable>
-            <Pressable
               onPress={handleFetchSmartReplies}
               disabled={isRepliesLoading}
               style={({ pressed }) => [
@@ -652,10 +660,16 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   subjectSection: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 10, gap: 8 },
   subject: { fontSize: 22, lineHeight: 30, letterSpacing: -0.3 },
+  subjectMetaRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   badgeRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   categoryBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
   categoryText: { fontSize: 12 },
   unreadDot: { width: 8, height: 8, borderRadius: 4 },
+  summaryButton: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 6, minHeight: 34, paddingHorizontal: 10, borderRadius: 100, borderWidth: 1,
+  },
+  summaryButtonText: { fontSize: 12 },
   senderSection: {
     flexDirection: "row", alignItems: "flex-start",
     paddingHorizontal: 20, paddingBottom: 18, paddingTop: 4,
