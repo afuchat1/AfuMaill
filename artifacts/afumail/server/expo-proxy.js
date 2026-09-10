@@ -80,8 +80,8 @@ const server = http.createServer((clientReq, clientRes) => {
       clientRes.writeHead(200, { "Content-Type": "text/html" });
       clientRes.end(
         `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="2"><title>AfuMail starting…</title></head>` +
-        `<body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#FAF8F5;">` +
-        `<p style="color:#555;font-size:1.1rem;">AfuMail is starting up, please wait…</p></body></html>`
+        `<body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#F7FAFF;">` +
+        `<p style="color:#016FFE;font-size:1.1rem;">AfuMail is starting up, please wait…</p></body></html>`
       );
     }
   });

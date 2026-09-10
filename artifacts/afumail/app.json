@@ -36,8 +36,8 @@
         "SYSTEM_ALERT_WINDOW"
       ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/brand-icon.png",
-        "backgroundColor": "#0D1526"
+        "foregroundImage": "./assets/images/adaptive-foreground.png",
+        "backgroundColor": "#016FFE"
       },
       "intentFilters": [
         {
@@ -61,7 +61,7 @@
         {
           "image": "./assets/images/brand-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#0D1526"
+          "backgroundColor": "#016FFE"
         }
       ],
       "expo-image"
