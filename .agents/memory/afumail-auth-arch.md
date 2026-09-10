@@ -16,6 +16,8 @@ description: How authentication, identity, and password reset work in AfuMail
 5. Edge Function resolves the linked recovery address again, validates the code, updates the Supabase Auth password with the service role, and marks the code as used.
 6. The native app does not accept Supabase recovery links or create password-recovery sessions.
 
+Recovery address resolution must use the same normalized linked mailbox in both the profile UI and the reset Edge Function. If `full_email` is empty, fall back to `local_part@domain`; otherwise a valid database link can appear as unset and password reset will incorrectly stop.
+
 ## Supabase SMTP
 Configured with Resend SMTP: host=smtp.resend.com, port=465, user=resend, sender=noreply@afuchat.com.
 `site_url` = Replit dev domain (must match where reset link lands).

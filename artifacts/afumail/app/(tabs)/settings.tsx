@@ -124,7 +124,8 @@ export default function SettingsScreen() {
     const { error } = await saveRecoveryEmail(user.id, recoveryInput);
     setSaving(false);
     if (error) { setRecoveryError(error); return; }
-    const full = recoveryInput.trim().toLowerCase();
+    const entered = recoveryInput.trim().toLowerCase();
+    const full = entered && !entered.includes("@") ? `${entered}@afuchat.com` : entered;
     setRecoveryEmail(full);
     setRecoveryModal(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

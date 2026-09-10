@@ -44,6 +44,16 @@ interface EmailAddressRecord {
   is_primary: boolean;
 }
 
+function normalizedAddressEmail(
+  address: Pick<EmailAddressRecord, "full_email" | "local_part" | "domain"> | null | undefined,
+): string | null {
+  const candidate = address?.full_email?.trim()
+    || (address?.local_part && address?.domain
+      ? `${address.local_part.trim()}@${address.domain.trim()}`
+      : "");
+  return normalizeAfuChatEmail(candidate);
+}
+
 async function getPreferredEmailAddress(userId: string): Promise<EmailAddressRecord | null> {
   const { data, error } = await supabase
     .from("email_addresses")
@@ -290,11 +300,10 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   if (data.recovery_email_address_id) {
     const { data: recovery } = await supabase
       .from("email_addresses")
-      .select("full_email")
+      .select("full_email,local_part,domain")
       .eq("id", data.recovery_email_address_id)
       .maybeSingle();
-    const candidate = recovery?.full_email ?? null;
-    recoveryEmail = candidate && normalizeAfuChatEmail(candidate) ? candidate : null;
+    recoveryEmail = normalizedAddressEmail(recovery);
   }
 
   return {

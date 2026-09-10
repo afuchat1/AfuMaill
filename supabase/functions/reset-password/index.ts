@@ -18,6 +18,8 @@ type ProfileRow = {
 type AddressRow = {
   id: string;
   user_id: string;
+  local_part: string | null;
+  domain: string | null;
   full_email: string | null;
 };
 
@@ -71,6 +73,16 @@ function isValidRecoveryEmail(email: string): boolean {
   return /^[^\s@]+@afuchat\.com$/.test(email);
 }
 
+function addressEmail(address: AddressRow | null | undefined): string | null {
+  const candidate = normalizeRecoveryEmail(
+    address?.full_email
+      ?? (address?.local_part && address?.domain
+        ? `${address.local_part}@${address.domain}`
+        : ""),
+  );
+  return isValidRecoveryEmail(candidate) ? candidate : null;
+}
+
 function createCode(): string {
   const random = new Uint32Array(1);
   crypto.getRandomValues(random);
@@ -98,13 +110,24 @@ async function findAccountByProfileEmail(profileEmail: string): Promise<{
   authEmail: string;
   recoveryEmail: string | null;
 } | null> {
-  const profileAddressResult = await restJson(
-    `/rest/v1/email_addresses?full_email=eq.${encodeURIComponent(profileEmail)}&domain=eq.afuchat.com&is_primary=eq.true&select=id,user_id,full_email&limit=1`,
+  const select = "id,user_id,local_part,domain,full_email";
+  const exactAddressResult = await restJson(
+    `/rest/v1/email_addresses?full_email=eq.${encodeURIComponent(profileEmail)}&domain=eq.afuchat.com&is_primary=eq.true&select=${select}&limit=1`,
   );
-  if (!profileAddressResult.response.ok) throw new Error("Could not look up the AfuChat profile.");
+  if (!exactAddressResult.response.ok) throw new Error("Could not look up the AfuChat profile.");
 
-  const profileAddress = (profileAddressResult.data as AddressRow[])[0];
-  if (!profileAddress?.id || !profileAddress.user_id || !profileAddress.full_email) return null;
+  let profileAddress = (exactAddressResult.data as AddressRow[])[0] ?? null;
+  if (!profileAddress) {
+    const localPart = profileEmail.slice(0, profileEmail.indexOf("@"));
+    const localAddressResult = await restJson(
+      `/rest/v1/email_addresses?local_part=eq.${encodeURIComponent(localPart)}&domain=eq.afuchat.com&is_primary=eq.true&select=${select}&limit=1`,
+    );
+    if (!localAddressResult.response.ok) throw new Error("Could not look up the AfuChat profile.");
+    profileAddress = (localAddressResult.data as AddressRow[])[0] ?? null;
+  }
+
+  const authEmail = addressEmail(profileAddress);
+  if (!profileAddress?.id || !profileAddress.user_id || !authEmail) return null;
 
   const profileResult = await restJson(
     `/rest/v1/profiles?id=eq.${encodeURIComponent(profileAddress.user_id)}&select=id,full_name,recovery_email_address_id&limit=1`,
@@ -115,21 +138,21 @@ async function findAccountByProfileEmail(profileEmail: string): Promise<{
   if (!profile?.id) return null;
 
   if (!profile.recovery_email_address_id) {
-    return { profile, authEmail: profileAddress.full_email, recoveryEmail: null };
+    return { profile, authEmail, recoveryEmail: null };
   }
 
   const recoveryAddressResult = await restJson(
-    `/rest/v1/email_addresses?id=eq.${encodeURIComponent(profile.recovery_email_address_id)}&user_id=eq.${encodeURIComponent(profile.id)}&domain=eq.afuchat.com&select=full_email&limit=1`,
+    `/rest/v1/email_addresses?id=eq.${encodeURIComponent(profile.recovery_email_address_id)}&user_id=eq.${encodeURIComponent(profile.id)}&domain=eq.afuchat.com&select=local_part,domain,full_email&limit=1`,
   );
   if (!recoveryAddressResult.response.ok) throw new Error("Could not look up the linked AfuChat recovery inbox.");
 
   const recoveryAddress = (recoveryAddressResult.data as AddressRow[])[0];
-  const recoveryEmail = recoveryAddress?.full_email?.toLowerCase() ?? null;
-  if (!recoveryEmail || !isValidRecoveryEmail(recoveryEmail)) {
-    return { profile, authEmail: profileAddress.full_email, recoveryEmail: null };
+  const recoveryEmail = addressEmail(recoveryAddress);
+  if (!recoveryEmail) {
+    return { profile, authEmail, recoveryEmail: null };
   }
 
-  return { profile, authEmail: profileAddress.full_email, recoveryEmail };
+  return { profile, authEmail, recoveryEmail };
 }
 
 async function sendRecoveryCodeEmail(
