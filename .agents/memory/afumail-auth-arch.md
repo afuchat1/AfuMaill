@@ -30,6 +30,12 @@ The unauthenticated password-reset Edge Function must resolve a linked recovery 
 
 **How to apply:** Keep the service-role lookup constrained to the profile's stored `recovery_email_address_id` and `afuchat.com`; never broaden it to a general mailbox search.
 
+The service-only `password_reset_codes` table needs explicit `service_role` table privileges in addition to client-role revocation.
+
+**Why:** The reset Edge Function uses PostgREST with the service role, and relying only on RLS bypass left the live reset-attempt query denied in this project.
+
+**How to apply:** When adding service-only tables used by Edge Functions, revoke client roles and explicitly grant the required operations to `service_role`.
+
 ## Supabase SMTP
 Configured with Resend SMTP: host=smtp.resend.com, port=465, user=resend, sender=noreply@afuchat.com.
 `site_url` = Replit dev domain (must match where reset link lands).
