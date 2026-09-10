@@ -294,7 +294,6 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
     ? `<!DOCTYPE html><html><head>
         <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
         <meta http-equiv="Content-Security-Policy" content="script-src 'none'; object-src 'none';">
-        ${emailStyles}
         <style>
           * { box-sizing: border-box; }
           html, body {
@@ -303,7 +302,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
             max-width: 100%;
             overflow-x: hidden;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background-color: ${colors.background} !important;
+            background-color: ${colors.background};
             color: ${colors.foreground};
           }
           body { padding: 4px 0; font-size: ${16 * fontScale}px; color: ${colors.foreground}; overflow-wrap: anywhere; }
@@ -313,6 +312,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
           a { word-break: break-word; cursor: pointer; color: ${colors.accent}; }
           pre, code { white-space: pre-wrap; word-break: break-word; }
         </style>
+        ${emailStyles}
       </head><body>${emailMarkup}</body></html>`
     : "";
 
