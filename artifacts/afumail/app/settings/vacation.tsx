@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   title: { flex: 1, fontSize: 20, letterSpacing: -0.3 },
   saveBtn: {
     paddingHorizontal: 18,
-    paddingVertical: 9,
+    minHeight: 40,
     borderRadius: 100,
     alignItems: "center",
     justifyContent: "center",

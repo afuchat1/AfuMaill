@@ -1078,6 +1078,9 @@ const styles = StyleSheet.create({
   brandName: { fontSize: 28, letterSpacing: -0.5 },
   card: {
     gap: 20,
+    width: "100%",
+    maxWidth: 440,
+    alignSelf: "center",
   },
   cardTitle: { fontSize: 26, letterSpacing: -0.5 },
   cardSubtitle: { fontSize: 15, lineHeight: 22, marginTop: -12 },
@@ -1135,7 +1138,8 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     borderRadius: 100,
-    paddingVertical: 15,
+    minHeight: 48,
+    paddingHorizontal: 20,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -1146,7 +1150,8 @@ const styles = StyleSheet.create({
   secondaryBtn: {
     borderWidth: 1,
     borderRadius: 100,
-    paddingVertical: 14,
+    minHeight: 48,
+    paddingHorizontal: 20,
     alignItems: "center",
     justifyContent: "center",
   },

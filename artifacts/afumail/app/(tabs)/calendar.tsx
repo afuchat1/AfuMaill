@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
   eventsSection: { paddingHorizontal: 16, paddingTop: 20, gap: 10 },
   eventsSectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   sectionLabel: { fontSize: 12, textTransform: "uppercase", letterSpacing: 0.8 },
-  addEventBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 100 },
+  addEventBtn: { flexDirection: "row", alignItems: "center", gap: 5, minHeight: 40, paddingHorizontal: 14, borderRadius: 100 },
   addEventText: { fontSize: 13, color: "#FFFFFF" },
   noEvents: { alignItems: "center", paddingVertical: 32, gap: 8 },
   noEventsText: { fontSize: 15 },
@@ -533,6 +533,6 @@ const styles = StyleSheet.create({
     boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.3)",
     elevation: 3,
   },
-  createBtn: { borderRadius: 100, paddingVertical: 15, alignItems: "center", marginTop: 4 },
+  createBtn: { borderRadius: 100, minHeight: 48, alignItems: "center", justifyContent: "center", marginTop: 4 },
   createBtnText: { fontSize: 15 },
 });

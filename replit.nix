@@ -1,5 +1,6 @@
 {pkgs}: {
   deps = [
+    pkgs.gtk3
     pkgs.cairo
     pkgs.cups
     pkgs.atk
