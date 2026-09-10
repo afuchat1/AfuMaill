@@ -16,12 +16,15 @@ const { spawn } = require("child_process");
 
 const LISTEN_PORT = parseInt(process.env.PORT || "8099", 10);
 const EXPO_PORT = 5001;
+let expoProcess = null;
+let restartTimer = null;
+let shuttingDown = false;
 
 // ── 1. Start Expo Web on EXPO_PORT (with auto-restart on crash) ──────────────
 function startExpo() {
   console.log(`[expo-proxy] Spawning Expo on port ${EXPO_PORT}…`);
 
-  const expo = spawn(
+  expoProcess = spawn(
     "pnpm",
     ["exec", "expo", "start", "--web", "--localhost", "--port", String(EXPO_PORT)],
     {
@@ -35,11 +38,16 @@ function startExpo() {
     }
   );
 
-  expo.on("exit", (code, signal) => {
+  expoProcess.on("exit", (code, signal) => {
+    expoProcess = null;
+    if (shuttingDown) return;
     console.log(
       `[expo-proxy] Expo exited (code=${code} signal=${signal}), restarting in 3s…`
     );
-    setTimeout(startExpo, 3000);
+    restartTimer = setTimeout(() => {
+      restartTimer = null;
+      startExpo();
+    }, 3000);
   });
 }
 
@@ -120,5 +128,19 @@ server.on("error", (err) => {
     process.exit(1);
   }
 });
+
+function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  if (restartTimer) clearTimeout(restartTimer);
+  if (expoProcess && !expoProcess.killed) {
+    expoProcess.kill("SIGTERM");
+  }
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 2000).unref();
+}
+
+process.once("SIGTERM", shutdown);
+process.once("SIGINT", shutdown);
 
 server.listen(LISTEN_PORT, "0.0.0.0");

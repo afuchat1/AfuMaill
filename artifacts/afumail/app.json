@@ -4,7 +4,7 @@
     "slug": "afumail",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/brand-icon.png",
     "scheme": "afumail",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -26,8 +26,8 @@
     "android": {
       "package": "com.afuchat.afuapp",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#FAF8F5"
+          "foregroundImage": "./assets/images/brand-icon.png",
+          "backgroundColor": "#0D1526"
       },
       "intentFilters": [
         {
@@ -49,9 +49,9 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/icon.png",
+          "image": "./assets/images/brand-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#FAF8F5"
+          "backgroundColor": "#0D1526"
         }
       ],
       "expo-image"
