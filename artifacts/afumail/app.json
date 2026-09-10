@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "2245",
+      "buildNumber": "2246",
       "bundleIdentifier": "com.afuchat.afuapp",
       "infoPlist": {
         "CFBundleURLTypes": [
@@ -26,7 +26,15 @@
     },
     "android": {
       "package": "com.afuchat.afuapp",
-      "versionCode": 2245,
+      "versionCode": 2246,
+      "blockedPermissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECORD_AUDIO",
+        "SYSTEM_ALERT_WINDOW"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/brand-icon.png",
         "backgroundColor": "#0D1526"
