@@ -2,7 +2,7 @@
  * expo-proxy.js  (afumail)
  *
  * Opens port 8099 immediately (so Replit's waitForPort check passes),
- * then spawns the afumail Expo Web dev server on internal port 5001
+ * then spawns the afumail Expo Metro dev server on internal port 5001
  * and transparently proxies all HTTP and WebSocket traffic 8099 → 5001.
  *
  * Port layout:
@@ -20,18 +20,20 @@ let expoProcess = null;
 let restartTimer = null;
 let shuttingDown = false;
 
-// ── 1. Start Expo Web on EXPO_PORT (with auto-restart on crash) ──────────────
+// ── 1. Start native Expo Metro on EXPO_PORT (with auto-restart on crash) ─────
 function startExpo() {
   console.log(`[expo-proxy] Spawning Expo on port ${EXPO_PORT}…`);
 
   expoProcess = spawn(
     "pnpm",
-    ["exec", "expo", "start", "--web", "--localhost", "--port", String(EXPO_PORT)],
+    ["exec", "expo", "start", "--localhost", "--port", String(EXPO_PORT)],
     {
       env: {
         ...process.env,
         PORT: String(EXPO_PORT),
         BROWSER: "none",
+        CI: "1",
+        EXPO_NO_TELEMETRY: "1",
       },
       stdio: "inherit",
       cwd: process.cwd(),

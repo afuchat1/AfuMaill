@@ -14,3 +14,9 @@ The managed workflow can report `RUNNING` while the Expo proxy repeatedly retrie
 **Why:** A stale or overlapping Expo process can hold the configured port even when the browser preview remains available through the existing process.
 
 **How to apply:** Treat repeated `Port 8099 busy` lines as a process/port conflict, not proof that the app bundle is broken; verify the preview and browser logs separately before changing the app.
+
+Native Expo Go validation uses the `/manifest` endpoint and the manifest's Expo Router `entry.bundle` launch URL. A generic `/index.bundle` probe can return a misleading `UnableToResolveError` even when the native bundle is healthy.
+
+**Why:** Expo Router's native Metro entry is not the workspace-root `index` module, so diagnostics must follow the launch asset URL returned by `/manifest`.
+
+**How to apply:** Confirm `/manifest` returns `application/expo+json`, then request its `launchAsset.url` (or the equivalent proxied path) with the target `expo-platform` header.
