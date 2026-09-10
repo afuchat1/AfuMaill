@@ -249,7 +249,7 @@ function legacyThreadBase(email: Email): string {
     .filter(Boolean)
     .sort()
     .join(",");
-  return `legacy:${participants}`;
+  return `legacy:${normalizedSubject(email.subject)}:${participants}`;
 }
 
 function threadKey(email: Email): string {

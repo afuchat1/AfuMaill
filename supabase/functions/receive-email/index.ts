@@ -128,6 +128,14 @@ function normaliseMessageId(value: string): string {
   return value.trim().replace(/^<|>$/g, "").toLowerCase();
 }
 
+function subjectKey(subject: string): string {
+  return subject
+    .replace(/^(?:(?:re|fw|fwd)\s*:\s*)+/i, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
 const FALLBACK_THREAD_SESSION_MS = 24 * 60 * 60 * 1000;
 
 async function findThreadId(
@@ -135,6 +143,7 @@ async function findThreadId(
   serviceRoleKey: string,
   userId: string,
   messageReferences: string[],
+  subject: string,
   from: ParsedAddress,
 ): Promise<string> {
   const headers = {
@@ -144,24 +153,33 @@ async function findThreadId(
 
   for (const reference of messageReferences.map(normaliseMessageId).filter(Boolean)) {
     const response = await fetch(
-      `${projectUrl}/rest/v1/emails?user_id=eq.${encodeURIComponent(userId)}&message_id=eq.${encodeURIComponent(reference)}&select=thread_id&limit=1`,
+      `${projectUrl}/rest/v1/emails?user_id=eq.${encodeURIComponent(userId)}&message_id=eq.${encodeURIComponent(reference)}&select=thread_id,subject&limit=1`,
       { headers },
     );
     if (!response.ok) continue;
-    const rows = await response.json() as Array<{ thread_id?: string | null }>;
-    if (rows[0]?.thread_id) return rows[0].thread_id;
+    const rows = await response.json() as Array<{
+      thread_id?: string | null;
+      subject?: string | null;
+    }>;
+    if (
+      rows[0]?.thread_id &&
+      subjectKey(rows[0].subject ?? "") === subjectKey(subject)
+    ) {
+      return rows[0].thread_id;
+    }
   }
 
-  // Some providers remove Message-ID headers. Keep the same sender in one
-  // fallback conversation while that sender's 24-hour activity session is
-  // open; after that, start a new grouping.
+  // Some providers remove Message-ID headers. Keep the same sender and
+  // normalized subject in one fallback conversation while the sender's
+  // 24-hour activity session is open; a changed topic starts a new grouping.
   const recentResponse = await fetch(
-    `${projectUrl}/rest/v1/emails?user_id=eq.${encodeURIComponent(userId)}&select=thread_id,from_address,created_at,received_at,sent_at&order=created_at.desc&limit=100`,
+    `${projectUrl}/rest/v1/emails?user_id=eq.${encodeURIComponent(userId)}&select=thread_id,subject,from_address,created_at,received_at,sent_at&order=created_at.desc&limit=100`,
     { headers },
   );
   if (recentResponse.ok) {
     const recentRows = await recentResponse.json() as Array<{
       thread_id?: string | null;
+      subject?: string | null;
       from_address?: string | null;
       created_at?: string | null;
       received_at?: string | null;
@@ -169,7 +187,11 @@ async function findThreadId(
     }>;
     const now = Date.now();
     const match = recentRows.find((row) => {
-      if (!row.thread_id || parseAddress(row.from_address ?? "").email !== from.email) return false;
+      if (
+        !row.thread_id ||
+        subjectKey(row.subject ?? "") !== subjectKey(subject) ||
+        parseAddress(row.from_address ?? "").email !== from.email
+      ) return false;
       const existingTimestamp = row.created_at ?? row.received_at ?? row.sent_at;
       const existingTime = existingTimestamp ? Date.parse(existingTimestamp) : Number.NaN;
       return Number.isFinite(existingTime) &&
@@ -409,6 +431,7 @@ Deno.serve(async (req) => {
                inReplyTo,
                ...referencesHeader.match(/<[^>]+>|[^\s]+/g) ?? [],
              ],
+              rawSubject || "(No Subject)",
              fromAddr,
            ),
            message_id: messageId ? normaliseMessageId(messageId) : null,
