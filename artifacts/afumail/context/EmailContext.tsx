@@ -51,6 +51,7 @@ export interface Email {
   cc?: EmailAddress[];
   subject: string;
   body: string;
+  bodyFormat?: "html" | "text";
   preview: string;
   timestamp: string;
   read: boolean;
@@ -165,7 +166,9 @@ function rowToEmail(row: any, senderNames: Record<string, string> = {}): Email {
   };
   const addresses = (value: unknown): EmailAddress[] =>
     Array.isArray(value) ? value.map((item) => parseAddress(item)).filter((item) => item.email) : [];
-  const body = String(row.body_html ?? row.body_text ?? "");
+  const htmlBody = typeof row.body_html === "string" ? row.body_html.trim() : "";
+  const textBody = typeof row.body_text === "string" ? row.body_text : "";
+  const body = htmlBody || textBody;
 
   return {
     id: row.id as string,
@@ -174,6 +177,7 @@ function rowToEmail(row: any, senderNames: Record<string, string> = {}): Email {
     cc: addresses(row.cc_addresses).length ? addresses(row.cc_addresses) : undefined,
     subject: (row.subject ?? "(No Subject)") as string,
     body,
+    bodyFormat: htmlBody ? "html" : "text",
     preview: (row.preview ?? row.body_text ?? body) as string,
     timestamp: (row.sent_at ?? row.received_at ?? row.created_at ?? new Date().toISOString()) as string,
     read: Boolean(row.is_read),

@@ -49,14 +49,24 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function blockExternalImages(html: string): string {
+function blockExternalImages(html: string, placeholderColor: string): string {
   return html
     .replace(/<img\b[^>]*>/gi, (tag) => {
       const alt = tag.match(/\balt\s*=\s*(['"])(.*?)\1/i)?.[2]?.trim();
-      return `<div style="padding:8px 0;color:#777;font-size:12px;">${alt || "External image blocked"}</div>`;
+      return `<div style="padding:8px 0;color:${placeholderColor};font-size:12px;">${alt || "External image blocked"}</div>`;
     })
     .replace(/\s(?:src|srcset)\s*=\s*(['"])[^'"]*\1/gi, "")
     .replace(/url\(\s*(['"]?)(?:https?:|data:)[^)]*\1\s*\)/gi, "none");
+}
+
+function looksLikeHtmlDocument(value: string): boolean {
+  const body = value.trim();
+  if (!body) return false;
+
+  // Real stored HTML normally starts with a document/container tag. Requiring
+  // that shape prevents prose containing snippets such as "use <p> here" from
+  // being sent through a WebView.
+  return /^(?:<!doctype\s+html\b|<(?:html|head|body|style|meta|link|div|p|table|section|article|main|blockquote|ul|ol|h[1-6]|tr|td|th|tbody|thead|span|br|img|a|strong|em|pre|code|font|form|svg|header|footer|center)\b)/i.test(body);
 }
 
 function extractEmailMarkup(html: string): { markup: string; styles: string } {
@@ -265,10 +275,20 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
 
   if (!email) return null;
 
-  // Detect HTML emails robustly — check for any common HTML tag anywhere in the body
-  const isHtml = /<\s*(html|head|body|div|p|table|tr|td|span|br|img|a\s|h[1-6]|ul|ol|li|blockquote|style|font)\b/i.test(email.body ?? "");
-  const htmlBody = preferences.externalImages ? (email.body ?? "") : blockExternalImages(email.body ?? "");
-  const { markup: emailMarkup, styles: emailStyles } = extractEmailMarkup(htmlBody);
+  // The database field is authoritative for current messages. Cached messages
+  // from before bodyFormat existed use a conservative document-shape fallback.
+  const isHtml =
+    email.bodyFormat === "html"
+      ? looksLikeHtmlDocument(email.body ?? "")
+      : email.bodyFormat === "text"
+        ? false
+        : looksLikeHtmlDocument(email.body ?? "");
+  const htmlBody = isHtml
+    ? (preferences.externalImages ? (email.body ?? "") : blockExternalImages(email.body ?? "", colors.mutedForeground))
+    : "";
+  const { markup: emailMarkup, styles: emailStyles } = isHtml
+    ? extractEmailMarkup(htmlBody)
+    : { markup: "", styles: "" };
 
   const htmlDoc = isHtml
     ? `<!DOCTYPE html><html><head>
@@ -277,12 +297,20 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
         ${emailStyles}
         <style>
           * { box-sizing: border-box; }
-          html, body { margin: 0; padding: 0; max-width: 100%; overflow-x: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-          body { padding: 4px 0; font-size: ${16 * fontScale}px; color: #202124; overflow-wrap: anywhere; }
+          html, body {
+            margin: 0;
+            padding: 0;
+            max-width: 100%;
+            overflow-x: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: ${colors.background} !important;
+            color: ${colors.foreground};
+          }
+          body { padding: 4px 0; font-size: ${16 * fontScale}px; color: ${colors.foreground}; overflow-wrap: anywhere; }
           img, video, svg { max-width: 100% !important; height: auto !important; }
           table { max-width: 100% !important; }
           td, th { max-width: 100%; overflow-wrap: anywhere; }
-          a { word-break: break-word; cursor: pointer; }
+          a { word-break: break-word; cursor: pointer; color: ${colors.accent}; }
           pre, code { white-space: pre-wrap; word-break: break-word; }
         </style>
       </head><body>${emailMarkup}</body></html>`
@@ -457,14 +485,14 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
                   width: "100%",
                   height: webHeight,
                   border: "0",
-                  backgroundColor: "transparent",
+                   backgroundColor: colors.background,
                 },
               })
             ) : (
               <NativeWebView
                 source={{ html: htmlDoc }}
                 scrollEnabled={false}
-                style={{ height: webHeight, width: "100%" }}
+                 style={{ height: webHeight, width: "100%", backgroundColor: colors.background }}
                 injectedJavaScript={webViewScript}
                 onMessage={(e: any) => {
                   try {
