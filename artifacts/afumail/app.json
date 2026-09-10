@@ -2,14 +2,14 @@
   "expo": {
     "name": "AfuMail",
     "slug": "afumail",
-    "version": "2.2.24",
+    "version": "2.2.25",
     "orientation": "portrait",
     "icon": "./assets/images/brand-icon.png",
     "scheme": "afumail",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "2246",
+      "buildNumber": "2247",
       "bundleIdentifier": "com.afuchat.afuapp",
       "infoPlist": {
         "CFBundleURLTypes": [
@@ -26,7 +26,7 @@
     },
     "android": {
       "package": "com.afuchat.afuapp",
-      "versionCode": 2246,
+      "versionCode": 2247,
       "blockedPermissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
@@ -42,12 +42,43 @@
       "intentFilters": [
         {
           "action": "SENDTO",
-          "category": [
-            "DEFAULT"
-          ],
+          "category": ["DEFAULT", "BROWSABLE"],
           "data": [
             {
               "scheme": "mailto"
+            }
+          ]
+        },
+        {
+          "action": "VIEW",
+          "category": ["DEFAULT", "BROWSABLE"],
+          "data": [
+            {
+              "scheme": "mailto"
+            }
+          ]
+        },
+        {
+          "action": "SEND",
+          "category": ["DEFAULT"],
+          "data": [
+            {
+              "mimeType": "message/rfc822"
+            },
+            {
+              "mimeType": "text/plain"
+            }
+          ]
+        },
+        {
+          "action": "SEND_MULTIPLE",
+          "category": ["DEFAULT"],
+          "data": [
+            {
+              "mimeType": "message/rfc822"
+            },
+            {
+              "mimeType": "text/plain"
             }
           ]
         }

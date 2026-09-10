@@ -9,6 +9,7 @@ export interface AuthUser {
   name: string;
   email: string;
   username: string;
+  avatarUrl: string | null;
 }
 
 interface AuthContextType {
@@ -51,6 +52,7 @@ async function readCachedProfile(userId: string): Promise<AuthUser | null> {
       name: parsed.name,
       email: parsed.email,
       username: parsed.username,
+      avatarUrl: typeof parsed.avatarUrl === "string" ? parsed.avatarUrl : null,
     };
   } catch {
     return null;
@@ -67,7 +69,7 @@ async function writeCachedProfile(profile: AuthUser): Promise<void> {
 
 async function loadProfile(userId: string): Promise<AuthUser | null> {
   const [{ data, error }, { data: address, error: addressError }] = await Promise.all([
-    supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+    supabase.from("profiles").select("full_name,avatar_url").eq("id", userId).maybeSingle(),
     supabase
       .from("email_addresses")
       .select("local_part,domain,full_email")
@@ -98,6 +100,7 @@ async function loadProfile(userId: string): Promise<AuthUser | null> {
     name: data.full_name ?? address?.local_part ?? sessionEmail.split("@")[0] ?? "AfuMail user",
     email,
     username: address?.local_part ?? sessionEmail.split("@")[0] ?? "",
+    avatarUrl: typeof data.avatar_url === "string" ? data.avatar_url : null,
   };
 }
 
@@ -124,6 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         username,
       email,
       username,
+      avatarUrl: null,
     };
   }
 

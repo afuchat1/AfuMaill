@@ -1,7 +1,6 @@
 import React from "react";
+import { Image } from "expo-image";
 import { StyleSheet, Text, View } from "react-native";
-
-import { useColors } from "@/hooks/useColors";
 
 const AVATAR_COLORS = [
   "#2563EB",
@@ -34,10 +33,10 @@ interface AvatarProps {
   name: string;
   size?: number;
   fontSize?: number;
+  imageUrl?: string | null;
 }
 
-export function Avatar({ name, size = 40, fontSize = 14 }: AvatarProps) {
-  const colors = useColors();
+export function Avatar({ name, size = 40, fontSize = 14, imageUrl }: AvatarProps) {
   const bgColor = getColorForName(name);
   const initials = getInitials(name);
 
@@ -53,14 +52,24 @@ export function Avatar({ name, size = 40, fontSize = 14 }: AvatarProps) {
         },
       ]}
     >
-      <Text
-        style={[
-          styles.initials,
-          { fontSize, color: "#FFFFFF", fontFamily: "Inter_600SemiBold" },
-        ]}
-      >
-        {initials}
-      </Text>
+      {imageUrl ? (
+        <Image
+          source={{ uri: imageUrl }}
+          contentFit="cover"
+          transition={150}
+          style={[styles.image, { width: size, height: size, borderRadius: size / 2 }]}
+          accessibilityLabel={`${name}'s profile photo`}
+        />
+      ) : (
+        <Text
+          style={[
+            styles.initials,
+            { fontSize, color: "#FFFFFF", fontFamily: "Inter_600SemiBold" },
+          ]}
+        >
+          {initials}
+        </Text>
+      )}
     </View>
   );
 }
@@ -69,6 +78,10 @@ const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  image: {
+    backgroundColor: "transparent",
   },
   initials: {
     letterSpacing: 0.5,

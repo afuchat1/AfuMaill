@@ -562,7 +562,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
 
         {/* Sender info */}
         <View style={[styles.senderSection, { borderBottomColor: colors.border }]}>
-          <Avatar name={displayEmail.from.name} size={44} fontSize={15} />
+          <Avatar name={displayEmail.from.name} imageUrl={displayEmail.from.avatarUrl} size={44} fontSize={15} />
           <View style={styles.senderInfo}>
              <View style={styles.ownerLine}>
                <View
@@ -637,7 +637,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
             ]}
           >
             <View style={styles.previousMessageHeader}>
-              <Avatar name={message.from.name} size={32} fontSize={11} />
+              <Avatar name={message.from.name} imageUrl={message.from.avatarUrl} size={32} fontSize={11} />
               <View style={styles.previousMessageInfo}>
                 <Text
                   style={[

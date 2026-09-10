@@ -142,7 +142,7 @@ export default function InboxPage({
           <View style={styles.headerRight}>
             {user && (
               <Pressable onPress={() => onGoToSettings?.()}>
-                <Avatar name={user.name} size={32} fontSize={12} />
+                <Avatar name={user.name} imageUrl={user.avatarUrl} size={32} fontSize={12} />
               </Pressable>
             )}
           </View>

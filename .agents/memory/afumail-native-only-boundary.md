@@ -7,4 +7,4 @@ The AfuMail Expo artifact supports the native mail client and an Expo Web previe
 
 **Why:** The browser preview is useful for Replit development, while the product boundary remains a focused mail client with native behavior preserved.
 
-**How to apply:** Keep native integrations such as `mailto` intent handling, native HTML email rendering through WebView, device keyboard/safe-area behavior, account recovery deep links, calendar, and mobile settings. Keep Expo Web compatibility for previewing existing app screens, but implement features primarily serving browser users in the website product.
+**How to apply:** Keep native integrations such as `mailto` intent handling, native HTML email rendering through WebView, device keyboard/safe-area behavior, account recovery deep links, calendar, and mobile settings. Native manifest changes such as Android email intent filters require a new installed Android build; Expo Web preview cannot verify them. Keep Expo Web compatibility for previewing existing app screens, but implement features primarily serving browser users in the website product.

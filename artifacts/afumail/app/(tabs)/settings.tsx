@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -21,7 +22,13 @@ import { useAuth } from "@/context/AuthContext";
 import { usePreferences } from "@/context/PreferencesContext";
 import { useColors } from "@/hooks/useColors";
 import { Preferences } from "@/lib/preferences";
-import { getEmailStats, getProfile, savePhoneNumber, saveRecoveryEmail } from "@/lib/supabase";
+import {
+  getEmailStats,
+  getProfile,
+  savePhoneNumber,
+  saveProfileAvatar,
+  saveRecoveryEmail,
+} from "@/lib/supabase";
 
 type SettingRow =
   | { label: string; icon: string; type: "nav"; value?: string }
@@ -36,13 +43,14 @@ type SettingSection = {
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const { preferences: prefs, updatePreference } = usePreferences();
 
   const [emailCount, setEmailCount] = useState<number | null>(null);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [saving, setSaving] = useState(false);
+  const [avatarSaving, setAvatarSaving] = useState(false);
 
   const [phoneModal, setPhoneModal] = useState(false);
   const [recoveryModal, setRecoveryModal] = useState(false);
@@ -117,6 +125,72 @@ export default function SettingsScreen() {
     setRecoveryEmail(full);
     setRecoveryModal(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  }
+
+  async function pickProfilePhoto() {
+    if (!user || avatarSaving) return;
+    setAvatarSaving(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (result.canceled || !result.assets[0]?.uri) return;
+
+      const { error } = await saveProfileAvatar(
+        user.id,
+        result.assets[0].uri,
+        result.assets[0].mimeType ?? "image/jpeg",
+      );
+      if (error) {
+        Alert.alert("Could not update photo", error);
+        return;
+      }
+      await refreshUser();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } finally {
+      setAvatarSaving(false);
+    }
+  }
+
+  async function removeProfilePhoto() {
+    if (!user || avatarSaving) return;
+    setAvatarSaving(true);
+    try {
+      const { error } = await saveProfileAvatar(user.id, null);
+      if (error) {
+        Alert.alert("Could not remove photo", error);
+        return;
+      }
+      await refreshUser();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } finally {
+      setAvatarSaving(false);
+    }
+  }
+
+  function openProfilePhotoActions() {
+    if (!user || avatarSaving) return;
+    Alert.alert(
+      "Profile photo",
+      "This photo can be shown to other AfuMail users you email.",
+      [
+        {
+          text: user.avatarUrl ? "Change photo" : "Choose photo",
+          onPress: () => void pickProfilePhoto(),
+        },
+        ...(user.avatarUrl
+          ? [{
+              text: "Remove photo",
+              style: "destructive" as const,
+              onPress: () => void removeProfilePhoto(),
+            }]
+          : []),
+        { text: "Cancel", style: "cancel" as const },
+      ],
+    );
   }
 
   async function pickFontSize(v: Preferences["fontSize"]) {
@@ -202,13 +276,25 @@ export default function SettingsScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}>
         {user && (
           <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border, marginHorizontal: 16, marginTop: 16 }]}>
-            <Avatar name={user.name} size={52} fontSize={18} />
+            <Pressable onPress={openProfilePhotoActions} disabled={avatarSaving} style={styles.profileAvatarButton}>
+              <Avatar name={user.name} imageUrl={user.avatarUrl} size={52} fontSize={18} />
+              <View style={[styles.cameraBadge, { backgroundColor: colors.primary, borderColor: colors.card }]}>
+                {avatarSaving ? (
+                  <ActivityIndicator size="small" color={colors.primaryForeground} />
+                ) : (
+                  <Feather name="camera" size={12} color={colors.primaryForeground} />
+                )}
+              </View>
+            </Pressable>
             <View style={styles.profileInfo}>
               <Text style={[styles.profileName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
                 {user.name}
               </Text>
               <Text style={[styles.profileEmail, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
                 {user.email}
+              </Text>
+              <Text style={[styles.changePhotoHint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                Tap photo to change
               </Text>
             </View>
           </View>
@@ -474,9 +560,24 @@ const styles = StyleSheet.create({
     gap: 14,
     marginBottom: 8,
   },
+  profileAvatarButton: {
+    position: "relative",
+  },
+  cameraBadge: {
+    position: "absolute",
+    right: -3,
+    bottom: -3,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+  },
   profileInfo: { flex: 1, gap: 3 },
   profileName: { fontSize: 16 },
   profileEmail: { fontSize: 13 },
+  changePhotoHint: { fontSize: 11, marginTop: 2 },
   section: { paddingHorizontal: 16, paddingTop: 20 },
   sectionTitle: {
     fontSize: 12,

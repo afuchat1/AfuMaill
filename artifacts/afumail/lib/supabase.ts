@@ -33,6 +33,7 @@ export interface Profile {
   vacation_reply_message: string;
   preferences: Record<string, unknown> | null;
   recent_searches: string[] | null;
+  avatar_url: string | null;
   created_at: string;
 }
 
@@ -309,8 +310,60 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     vacation_reply_message: settings?.vacation_reply_message ?? "",
     preferences: data.preferences ?? {},
     recent_searches: data.recent_searches ?? [],
+    avatar_url: typeof data.avatar_url === "string" ? data.avatar_url : null,
     created_at: data.created_at,
   };
+}
+
+const PROFILE_AVATAR_BUCKET = "profile-avatars";
+
+export async function saveProfileAvatar(
+  userId: string,
+  localUri: string | null,
+  contentType = "image/jpeg",
+): Promise<{ avatarUrl?: string | null; error?: string }> {
+  const objectPath = `${userId}/avatar`;
+
+  if (!localUri) {
+    const { error: removeError } = await supabase.storage
+      .from(PROFILE_AVATAR_BUCKET)
+      .remove([objectPath]);
+    if (removeError && !removeError.message.toLowerCase().includes("not found")) {
+      return { error: removeError.message };
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ avatar_url: null })
+      .eq("id", userId);
+    return error ? { error: error.message } : { avatarUrl: null };
+  }
+
+  try {
+    const response = await fetch(localUri);
+    if (!response.ok) {
+      return { error: "Could not read the selected photo." };
+    }
+    const file = await response.arrayBuffer();
+    const { error: uploadError } = await supabase.storage
+      .from(PROFILE_AVATAR_BUCKET)
+      .upload(objectPath, file, {
+        contentType: contentType.startsWith("image/") ? contentType : "image/jpeg",
+        upsert: true,
+        cacheControl: "3600",
+      });
+    if (uploadError) return { error: uploadError.message };
+
+    const { data } = supabase.storage.from(PROFILE_AVATAR_BUCKET).getPublicUrl(objectPath);
+    const avatarUrl = `${data.publicUrl}?v=${Date.now()}`;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ avatar_url: avatarUrl })
+      .eq("id", userId);
+    return error ? { error: error.message } : { avatarUrl };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not upload the selected photo." };
+  }
 }
 
 export async function signInUser(

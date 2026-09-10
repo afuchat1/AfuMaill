@@ -7,7 +7,7 @@ The AfuMail Supabase project currently uses normalized `email_addresses`, `folde
 
 **Why:** A native audit found the production database had the normalized tables, foreign-key names, RPCs, and RLS policies required by the current app even though the local SQL snapshot described a different model.
 
-**How to apply:** Before changing native Supabase queries, inspect the live project schema with the Supabase project access token and verify relationship names, RPC existence, RLS, and row-link integrity. Prefer app fallbacks for legacy rows rather than assuming every account has a primary address.
+**How to apply:** Before changing native Supabase queries, inspect the live project schema with the Supabase project access token and verify relationship names, RPC existence, RLS, and row-link integrity. Authenticate the Supabase CLI with that token before running remote migration commands. Prefer app fallbacks for legacy rows rather than assuming every account has a primary address.
 
 The checked-in migrations are now the authoritative local ledger for the native app contract. Keep migration versions unique and use idempotent `if not exists`/policy replacement statements when reconciling a database that was provisioned by an older project history.
 

@@ -173,7 +173,7 @@ export function EmailRow({ email, currentFolder, onOpenEmail }: EmailRowProps) {
           >
             {/* Left: avatar */}
             <View style={styles.avatarContainer}>
-              <Avatar name={email.from.name} size={44} fontSize={15} />
+              <Avatar name={email.from.name} imageUrl={email.from.avatarUrl} size={44} fontSize={15} />
               {!email.read && (
                 <View style={[styles.unreadDot, { backgroundColor: colors.accent, borderColor: colors.card }]} />
               )}

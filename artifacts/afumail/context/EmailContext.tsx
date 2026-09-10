@@ -35,6 +35,7 @@ export type EmailFolder =
 export interface EmailAddress {
   name: string;
   email: string;
+  avatarUrl?: string | null;
 }
 
 export interface Attachment {
@@ -165,7 +166,12 @@ function extractAddressEmail(value: unknown): string {
   return (match?.[1] ?? raw).trim().toLowerCase();
 }
 
-function rowToEmail(row: any, senderNames: Record<string, string> = {}): Email {
+interface SenderProfile {
+  displayName?: string | null;
+  avatarUrl?: string | null;
+}
+
+function rowToEmail(row: any, senderProfiles: Record<string, SenderProfile> = {}): Email {
   const folderRow = Array.isArray(row.folders) ? row.folders[0] : row.folders;
   const rawFolder = String(folderRow?.type ?? (row.deleted_at ? "trash" : "inbox")).toLowerCase();
   const folder = (rawFolder === "custom" ? "archived" : rawFolder) as EmailFolder;
@@ -175,12 +181,17 @@ function rowToEmail(row: any, senderNames: Record<string, string> = {}): Email {
     const match = raw.match(/^(.*?)\s*<([^>]+)>$/);
     const email = (match?.[2] ?? raw).trim().toLowerCase();
     const rawName = match?.[1]?.trim().replace(/^["']|["']$/g, "") ?? "";
+    const senderProfile = resolveSenderName ? senderProfiles[email] : undefined;
     const name = resolveSenderName
-      ? senderNames[email]?.trim()
+      ? senderProfile?.displayName?.trim()
         || (!isMailboxFallback(rawName, email) ? rawName : domainBrand(email))
       : rawName || email.split("@")[0] || email;
 
-    return { name, email };
+    return {
+      name,
+      email,
+      avatarUrl: senderProfile?.avatarUrl ?? null,
+    };
   };
   const addresses = (value: unknown): EmailAddress[] =>
     Array.isArray(value) ? value.map((item) => parseAddress(item)).filter((item) => item.email) : [];
@@ -317,7 +328,7 @@ function buildThreads(source: Email[]): EmailThread[] {
     );
 }
 
-async function getSenderNameMap(rows: any[]): Promise<Record<string, string>> {
+async function getSenderProfileMap(rows: any[]): Promise<Record<string, SenderProfile>> {
   const emails = Array.from(
     new Set(
       rows
@@ -335,10 +346,18 @@ async function getSenderNameMap(rows: any[]): Promise<Record<string, string>> {
     return {};
   }
 
-  return (data ?? []).reduce((map: Record<string, string>, row: { email?: string; display_name?: string }) => {
+  return (data ?? []).reduce((map: Record<string, SenderProfile>, row: {
+    email?: string;
+    display_name?: string | null;
+    avatar_url?: string | null;
+  }) => {
     const email = row.email?.trim().toLowerCase();
-    const displayName = row.display_name?.trim();
-    if (email && displayName) map[email] = displayName;
+    if (email) {
+      map[email] = {
+        displayName: row.display_name?.trim() || null,
+        avatarUrl: row.avatar_url?.trim() || null,
+      };
+    }
     return map;
   }, {});
 }
@@ -445,8 +464,8 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
       }
 
       const rows = data ?? [];
-      const senderNames = await getSenderNameMap(rows);
-      const loaded = rows.map((row) => rowToEmail(row, senderNames));
+      const senderProfiles = await getSenderProfileMap(rows);
+      const loaded = rows.map((row) => rowToEmail(row, senderProfiles));
 
       // Seed welcome email for brand-new accounts
       if (loaded.length === 0) {
@@ -460,8 +479,8 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
           console.warn("loadEmails after seed error:", seedLoadError.message);
         }
         const seededRows = seeded ?? [];
-        const senderNames = await getSenderNameMap(seededRows);
-        const seededEmails = seededRows.map((row) => rowToEmail(row, senderNames));
+        const senderProfiles = await getSenderProfileMap(seededRows);
+        const seededEmails = seededRows.map((row) => rowToEmail(row, senderProfiles));
         setEmails(seededEmails);
         void writeCachedEmails(user.id, seededEmails);
       } else {
