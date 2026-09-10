@@ -10,4 +10,4 @@
 - [AfuMail inbound email body should stay HTML](afumail-html-email-bodies.md) — receive-email must store raw HTML, not flattened text, or image-heavy emails look blank.
 - [AfuMail live schema](afumail-live-schema.md) — the live Supabase database uses normalized email tables and relationships; the checked-in bootstrap SQL is stale.
 - [AfuMail Expo preview](afumail-expo-preview.md) — the managed workflow serves Expo Web on the browser preview while retaining Expo Go QR access for native checks.
-- [AfuMail SDK 55 maintenance](afumail-sdk57-maintenance.md) — the native-only artifact is aligned to SDK 55; keep Expo packages consistent and verify through the managed workflow.
+- [AfuMail SDK 57 maintenance](afumail-sdk57-maintenance.md) — Expo Go and Expo Web share one SDK 57 dependency line; verify both through the managed workflow.

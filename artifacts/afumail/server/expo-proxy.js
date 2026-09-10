@@ -25,7 +25,11 @@ function startExpo() {
     "pnpm",
     ["exec", "expo", "start", "--web", "--localhost", "--port", String(EXPO_PORT)],
     {
-      env: { ...process.env, PORT: String(EXPO_PORT) },
+      env: {
+        ...process.env,
+        PORT: String(EXPO_PORT),
+        BROWSER: "none",
+      },
       stdio: "inherit",
       cwd: process.cwd(),
     }
