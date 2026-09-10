@@ -24,6 +24,12 @@ The linked recovery mailbox belongs to another user, so normal `email_addresses`
 
 **How to apply:** Keep recovery-address persistence in `set_recovery_email` and readback in `get_recovery_email`; do not grant users general read access to other users' `email_addresses` rows.
 
+The unauthenticated password-reset Edge Function must resolve a linked recovery address by the stored address ID and domain, not by filtering that address to the AfuMail profile owner's user ID.
+
+**Why:** A recovery mailbox is deliberately owned by a different AfuChat user; reusing the profile owner's `user_id` filter makes valid links look absent only after logout.
+
+**How to apply:** Keep the service-role lookup constrained to the profile's stored `recovery_email_address_id` and `afuchat.com`; never broaden it to a general mailbox search.
+
 ## Supabase SMTP
 Configured with Resend SMTP: host=smtp.resend.com, port=465, user=resend, sender=noreply@afuchat.com.
 `site_url` = Replit dev domain (must match where reset link lands).

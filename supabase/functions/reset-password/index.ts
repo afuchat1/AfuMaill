@@ -142,7 +142,7 @@ async function findAccountByProfileEmail(profileEmail: string): Promise<{
   }
 
   const recoveryAddressResult = await restJson(
-    `/rest/v1/email_addresses?id=eq.${encodeURIComponent(profile.recovery_email_address_id)}&user_id=eq.${encodeURIComponent(profile.id)}&domain=eq.afuchat.com&select=local_part,domain,full_email&limit=1`,
+    `/rest/v1/email_addresses?id=eq.${encodeURIComponent(profile.recovery_email_address_id)}&domain=eq.afuchat.com&select=local_part,domain,full_email&limit=1`,
   );
   if (!recoveryAddressResult.response.ok) throw new Error("Could not look up the linked AfuChat recovery inbox.");
 
