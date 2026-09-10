@@ -2,14 +2,14 @@
   "expo": {
     "name": "AfuMail",
     "slug": "afumail",
-    "version": "2.2.23",
+    "version": "2.2.24",
     "orientation": "portrait",
     "icon": "./assets/images/brand-icon.png",
     "scheme": "afumail",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "2244",
+      "buildNumber": "2245",
       "bundleIdentifier": "com.afuchat.afuapp",
       "infoPlist": {
         "CFBundleURLTypes": [
@@ -26,7 +26,7 @@
     },
     "android": {
       "package": "com.afuchat.afuapp",
-      "versionCode": 2244,
+      "versionCode": 2245,
       "adaptiveIcon": {
           "foregroundImage": "./assets/images/brand-icon.png",
           "backgroundColor": "#0D1526"
