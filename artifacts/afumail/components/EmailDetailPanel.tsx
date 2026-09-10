@@ -693,7 +693,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
         <View
           style={[
             styles.bodySection,
-            { backgroundColor: colors.background },
+            { backgroundColor: colors.card, borderColor: colors.border },
             isHtml && { paddingHorizontal: 12, paddingTop: 12 },
           ]}
         >
@@ -1033,7 +1033,17 @@ const styles = StyleSheet.create({
   previousMessageRecipients: { fontSize: 11 },
   previousMessagePreview: { fontSize: 14, lineHeight: 21, paddingLeft: 42 },
   previousMessageBody: { fontSize: 14, lineHeight: 21 },
-  bodySection: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24 },
+  bodySection: {
+    marginHorizontal: 12,
+    marginTop: 8,
+    marginBottom: 12,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
+  },
   body: { fontSize: 16, lineHeight: 27, letterSpacing: 0.1 },
   attachmentsSection: {
     paddingHorizontal: 20, paddingTop: 16,
