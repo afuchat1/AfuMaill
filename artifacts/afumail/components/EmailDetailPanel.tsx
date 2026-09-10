@@ -223,6 +223,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
   const [isRepliesLoading, setIsRepliesLoading] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [expandedThreadMessages, setExpandedThreadMessages] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (email && !email.read) markAsRead(email.id);
@@ -232,6 +233,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
     setSummary(null);
     setIsSummaryLoading(false);
     setWebHeight(120);
+    setExpandedThreadMessages({});
   }, [email?.id]);
 
   async function handleFetchSmartReplies() {
@@ -574,36 +576,64 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
           </View>
         </View>
 
-        {threadMessages.length > 1 && (
-          <View style={[styles.threadSummary, { backgroundColor: colors.secondary, borderBottomColor: colors.border }]}>
-            <Feather name="message-circle" size={16} color={colors.accent} />
-            <Text style={[styles.threadSummaryText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-              {threadMessages.length} messages in this conversation
-            </Text>
-          </View>
-        )}
-
         {olderThreadMessages.map((message) => (
-          <View key={message.id} style={[styles.previousMessage, { borderBottomColor: colors.border }]}>
+          <Pressable
+            key={message.id}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setExpandedThreadMessages((current) => ({
+                ...current,
+                [message.id]: !current[message.id],
+              }));
+            }}
+            style={({ pressed }) => [
+              styles.previousMessage,
+              {
+                backgroundColor: pressed ? colors.secondary : colors.card,
+                borderBottomColor: colors.border,
+              },
+            ]}
+          >
             <View style={styles.previousMessageHeader}>
               <Avatar name={message.from.name} size={32} fontSize={11} />
               <View style={styles.previousMessageInfo}>
                 <Text style={[styles.previousMessageName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
                   {message.from.name}
                 </Text>
+                <Text style={[styles.previousMessageEmail, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  {message.from.email}
+                </Text>
                 <Text style={[styles.previousMessageMeta, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
                   {formatFullDate(message.timestamp)}
                 </Text>
               </View>
+              <Feather
+                name={expandedThreadMessages[message.id] ? "chevron-up" : "chevron-down"}
+                size={17}
+                color={colors.mutedForeground}
+              />
             </View>
-            <Text
-              selectable
-              numberOfLines={8}
-              style={[styles.previousMessageBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}
-            >
-              {htmlToPlainText(message.body || message.preview || "No message body")}
-            </Text>
-          </View>
+            {expandedThreadMessages[message.id] ? (
+              <View style={styles.expandedThreadMessage}>
+                <Text style={[styles.previousMessageRecipients, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  To: {message.to.map((recipient) => recipient.name || recipient.email).join(", ")}
+                </Text>
+                <Text
+                  selectable
+                  style={[styles.previousMessageBody, { color: colors.foreground, fontFamily: "Inter_400Regular", fontSize: 15 * fontScale, lineHeight: 24 * fontScale }]}
+                >
+                  {htmlToPlainText(message.body || message.preview || "No message body")}
+                </Text>
+              </View>
+            ) : (
+              <Text
+                numberOfLines={2}
+                style={[styles.previousMessagePreview, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}
+              >
+                {htmlToPlainText(message.body || message.preview || "No message body")}
+              </Text>
+            )}
+          </Pressable>
         ))}
 
         {/* Body */}
@@ -920,28 +950,23 @@ const styles = StyleSheet.create({
   timestamp: { fontSize: 12, flexShrink: 0 },
   senderEmail: { fontSize: 13 },
   recipientLine: { fontSize: 12, marginTop: 1 },
-  threadSummary: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginHorizontal: 20,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  threadSummaryText: { fontSize: 13 },
   previousMessage: {
-    marginHorizontal: 20,
+    marginHorizontal: 12,
+    marginVertical: 6,
+    paddingHorizontal: 12,
     paddingVertical: 14,
+    borderRadius: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 10,
   },
   previousMessageHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   previousMessageInfo: { flex: 1, gap: 2 },
   previousMessageName: { fontSize: 14 },
+  previousMessageEmail: { fontSize: 11 },
   previousMessageMeta: { fontSize: 11 },
+  expandedThreadMessage: { gap: 10, paddingLeft: 42 },
+  previousMessageRecipients: { fontSize: 11 },
+  previousMessagePreview: { fontSize: 14, lineHeight: 21, paddingLeft: 42 },
   previousMessageBody: { fontSize: 14, lineHeight: 21 },
   bodySection: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24 },
   body: { fontSize: 16, lineHeight: 27, letterSpacing: 0.1 },

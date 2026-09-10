@@ -65,7 +65,6 @@ export interface Email {
   messageId?: string;
   inReplyTo?: string;
   references?: string;
-  threadCount?: number;
 }
 
 interface ComposeData {
@@ -621,10 +620,7 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
   const getEmailsByFolder = useCallback(
     (folder: EmailFolder) => {
       const source = emails.filter((e) => (folder === "starred" ? e.starred : e.folder === folder));
-      return buildThreads(source).map(({ latest, messages }) => ({
-        ...latest,
-        threadCount: messages.length,
-      }));
+      return buildThreads(source).map(({ latest }) => latest);
     },
     [emails]
   );
@@ -632,10 +628,7 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
   const getEmailsByCategory = useCallback(
     (category: EmailCategory) => {
       const source = emails.filter((e) => e.folder === "inbox" && e.category === category);
-      return buildThreads(source).map(({ latest, messages }) => ({
-        ...latest,
-        threadCount: messages.length,
-      }));
+      return buildThreads(source).map(({ latest }) => latest);
     },
     [emails]
   );
