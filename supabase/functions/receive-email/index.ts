@@ -128,34 +128,14 @@ function normaliseMessageId(value: string): string {
   return value.trim().replace(/^<|>$/g, "").toLowerCase();
 }
 
-function subjectKey(subject: string): string {
-  return subject
-    .replace(/^(?:(?:re|fw|fwd)\s*:\s*)+/i, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
-function addressEmail(value: string): string {
-  return parseAddress(value).email;
-}
-
-function participantEmails(from: ParsedAddress, to: string[], cc: string[]): string[] {
-  return [from.email, ...to, ...cc]
-    .map(addressEmail)
-    .filter(Boolean)
-    .sort();
-}
+const FALLBACK_THREAD_SESSION_MS = 24 * 60 * 60 * 1000;
 
 async function findThreadId(
   projectUrl: string,
   serviceRoleKey: string,
   userId: string,
   messageReferences: string[],
-  subject: string,
   from: ParsedAddress,
-  to: string[],
-  cc: string[],
 ): Promise<string> {
   const headers = {
     Authorization: `Bearer ${serviceRoleKey}`,
@@ -172,30 +152,29 @@ async function findThreadId(
     if (rows[0]?.thread_id) return rows[0].thread_id;
   }
 
-  // Some providers remove Message-ID headers while preserving the subject.
-  // Match a recent message only when the normalized subject and participant
-  // set overlap, avoiding unrelated mail with the same raw subject.
+  // Some providers remove Message-ID headers. Keep the same sender in one
+  // fallback conversation while that sender's 24-hour activity session is
+  // open; after that, start a new grouping.
   const recentResponse = await fetch(
-    `${projectUrl}/rest/v1/emails?user_id=eq.${encodeURIComponent(userId)}&select=thread_id,subject,from_address,to_addresses,cc_addresses&order=created_at.desc&limit=100`,
+    `${projectUrl}/rest/v1/emails?user_id=eq.${encodeURIComponent(userId)}&select=thread_id,from_address,created_at,received_at,sent_at&order=created_at.desc&limit=100`,
     { headers },
   );
   if (recentResponse.ok) {
     const recentRows = await recentResponse.json() as Array<{
       thread_id?: string | null;
-      subject?: string | null;
       from_address?: string | null;
-      to_addresses?: string[] | null;
-      cc_addresses?: string[] | null;
+      created_at?: string | null;
+      received_at?: string | null;
+      sent_at?: string | null;
     }>;
-    const incomingParticipants = new Set(participantEmails(from, to, cc));
+    const now = Date.now();
     const match = recentRows.find((row) => {
-      if (!row.thread_id || subjectKey(row.subject ?? "") !== subjectKey(subject)) return false;
-      const existingParticipants = participantEmails(
-        parseAddress(row.from_address ?? ""),
-        row.to_addresses ?? [],
-        row.cc_addresses ?? [],
-      );
-      return existingParticipants.some((participant) => incomingParticipants.has(participant));
+      if (!row.thread_id || parseAddress(row.from_address ?? "").email !== from.email) return false;
+      const existingTimestamp = row.created_at ?? row.received_at ?? row.sent_at;
+      const existingTime = existingTimestamp ? Date.parse(existingTimestamp) : Number.NaN;
+      return Number.isFinite(existingTime) &&
+        now >= existingTime &&
+        now - existingTime <= FALLBACK_THREAD_SESSION_MS;
     });
     if (match?.thread_id) return match.thread_id;
   }
@@ -430,10 +409,7 @@ Deno.serve(async (req) => {
                inReplyTo,
                ...referencesHeader.match(/<[^>]+>|[^\s]+/g) ?? [],
              ],
-             rawSubject || "(No Subject)",
              fromAddr,
-             toList,
-             ccList,
            ),
            message_id: messageId ? normaliseMessageId(messageId) : null,
            in_reply_to: inReplyTo ? normaliseMessageId(inReplyTo) : null,

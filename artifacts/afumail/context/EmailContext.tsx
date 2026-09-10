@@ -237,8 +237,9 @@ function normalizedSubject(subject: string): string {
     .toLowerCase();
 }
 
-function threadKey(email: Email): string {
-  if (email.threadId) return `thread:${email.threadId}`;
+const FALLBACK_THREAD_SESSION_MS = 24 * 60 * 60 * 1000;
+
+function legacyThreadBase(email: Email): string {
   const participants = [
     email.from.email,
     ...email.to.map((address) => address.email),
@@ -248,7 +249,49 @@ function threadKey(email: Email): string {
     .filter(Boolean)
     .sort()
     .join(",");
-  return `legacy:${normalizedSubject(email.subject)}:${participants}`;
+  return `legacy:${participants}`;
+}
+
+function threadKey(email: Email): string {
+  if (email.threadId && !email.threadId.startsWith("legacy:")) {
+    return `thread:${email.threadId}`;
+  }
+  return legacyThreadBase(email);
+}
+
+function splitLegacySessions(messages: Email[]): EmailThread[] {
+  const sorted = [...messages].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  );
+  const sessions: Email[][] = [];
+
+  for (const message of sorted) {
+    const current = sessions[sessions.length - 1];
+    const previous = current?.[current.length - 1];
+    const gap = previous
+      ? new Date(message.timestamp).getTime() - new Date(previous.timestamp).getTime()
+      : 0;
+
+    if (current && gap > FALLBACK_THREAD_SESSION_MS) {
+      sessions.push([message]);
+    } else if (current) {
+      current.push(message);
+    } else {
+      sessions.push([message]);
+    }
+  }
+
+  return sessions.map((session) => {
+    const latest = session[session.length - 1]!;
+    const first = session[0]!;
+    return {
+      id: `legacy-session:${legacyThreadBase(first)}:${first.timestamp}`,
+      latest,
+      messages: [...session].sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      ),
+    };
+  });
 }
 
 function buildThreads(source: Email[]): EmailThread[] {
@@ -261,11 +304,12 @@ function buildThreads(source: Email[]): EmailThread[] {
   }
 
   return Array.from(groups.entries())
-    .map(([id, messages]) => {
+    .flatMap(([id, messages]) => {
+      if (id.startsWith("legacy:")) return splitLegacySessions(messages);
       const sorted = [...messages].sort(
         (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
       );
-      return { id, latest: sorted[0]!, messages: sorted };
+      return [{ id, latest: sorted[0]!, messages: sorted }];
     })
     .sort(
       (a, b) =>
@@ -641,12 +685,10 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
 
   const getEmailsInThread = useCallback(
     (emailId: string) => {
-      const selected = emails.find((email) => email.id === emailId);
-      if (!selected) return [];
-      const key = threadKey(selected);
-      return emails
-        .filter((email) => threadKey(email) === key)
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      const thread = buildThreads(emails).find((candidate) =>
+        candidate.messages.some((message) => message.id === emailId),
+      );
+      return thread ? [...thread.messages].reverse() : [];
     },
     [emails],
   );
