@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
@@ -56,6 +57,20 @@ function blockExternalImages(html: string): string {
     })
     .replace(/\s(?:src|srcset)\s*=\s*(['"])[^'"]*\1/gi, "")
     .replace(/url\(\s*(['"]?)(?:https?:|data:)[^)]*\1\s*\)/gi, "none");
+}
+
+function extractEmailMarkup(html: string): { markup: string; styles: string } {
+  const bodyMatch = html.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i);
+  const markup = (bodyMatch ? bodyMatch[1] : html)
+    .replace(/<!doctype[^>]*>/gi, "")
+    .replace(/<\/?(?:html|head)\b[^>]*>/gi, "")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
+    .trim();
+  const styles = Array.from(html.matchAll(/<style\b[^>]*>[\s\S]*?<\/style>/gi))
+    .map((match) => match[0])
+    .join("\n");
+
+  return { markup, styles };
 }
 
 const URL_REGEX = /(https?:\/\/[^\s<>"']+)/g;
@@ -112,7 +127,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
   const [actionsVisible, setActionsVisible] = useState(false);
   const [moveVisible,    setMoveVisible]    = useState(false);
   const [toast,          setToast]          = useState<string | null>(null);
-  const [webHeight,      setWebHeight]      = useState(300);
+  const [webHeight,      setWebHeight]      = useState(120);
 
   const [smartReplies, setSmartReplies] = useState<string[] | null>(null);
   const [isRepliesLoading, setIsRepliesLoading] = useState(false);
@@ -126,6 +141,7 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
     setIsRepliesLoading(false);
     setSummary(null);
     setIsSummaryLoading(false);
+    setWebHeight(120);
   }, [email?.id]);
 
   async function handleFetchSmartReplies() {
@@ -250,21 +266,25 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
 
   // Detect HTML emails robustly — check for any common HTML tag anywhere in the body
   const isHtml = /<\s*(html|head|body|div|p|table|tr|td|span|br|img|a\s|h[1-6]|ul|ol|li|blockquote|style|font)\b/i.test(email.body ?? "");
-  const htmlBody = preferences.externalImages ? email.body : blockExternalImages(email.body);
+  const htmlBody = preferences.externalImages ? (email.body ?? "") : blockExternalImages(email.body ?? "");
+  const { markup: emailMarkup, styles: emailStyles } = extractEmailMarkup(htmlBody);
 
   const htmlDoc = isHtml
     ? `<!DOCTYPE html><html><head>
         <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
         <meta http-equiv="Content-Security-Policy" content="script-src 'none'; object-src 'none';">
+        ${emailStyles}
         <style>
           * { box-sizing: border-box; }
-          html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-          body { padding: 8px 0; font-size: ${16 * fontScale}px; }
-          a { word-break: break-all; cursor: pointer; }
-          img { max-width: 100%; height: auto; }
+          html, body { margin: 0; padding: 0; max-width: 100%; overflow-x: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+          body { padding: 4px 0; font-size: ${16 * fontScale}px; color: #202124; overflow-wrap: anywhere; }
+          img, video, svg { max-width: 100% !important; height: auto !important; }
+          table { max-width: 100% !important; }
+          td, th { max-width: 100%; overflow-wrap: anywhere; }
+          a { word-break: break-word; cursor: pointer; }
           pre, code { white-space: pre-wrap; word-break: break-word; }
         </style>
-      </head><body>${htmlBody}</body></html>`
+      </head><body>${emailMarkup}</body></html>`
     : "";
 
   // Combined script: report height + intercept ALL link clicks and send them out
@@ -415,38 +435,63 @@ export default function EmailDetailPanel({ emailId, onClose }: Props) {
         {/* Body */}
         <View style={[styles.bodySection, isHtml && { paddingHorizontal: 12, paddingTop: 12 }]}>
           {isHtml ? (
-            <NativeWebView
-              source={{ html: htmlDoc }}
-              scrollEnabled={false}
-              style={{ height: webHeight, width: "100%" }}
-              injectedJavaScript={webViewScript}
-              onMessage={(e: any) => {
-                try {
-                  const msg = JSON.parse(e.nativeEvent.data);
-                  if (msg.type === "height") {
-                    const h = Number(msg.value);
-                    if (!isNaN(h) && h > 0) setWebHeight(h + 32);
-                  } else if (msg.type === "link" && msg.url) {
-                    Linking.openURL(msg.url).catch(() =>
-                      showToast("Could not open link")
-                    );
+            Platform.OS === "web" ? (
+              React.createElement("iframe", {
+                title: "Email preview",
+                srcDoc: htmlDoc,
+                sandbox: "allow-same-origin",
+                onLoad: (event: any) => {
+                  const frame = event.currentTarget as HTMLIFrameElement;
+                  const documentElement = frame.contentDocument?.documentElement;
+                  const bodyElement = frame.contentDocument?.body;
+                  const height = Math.max(
+                    documentElement?.scrollHeight ?? 0,
+                    bodyElement?.scrollHeight ?? 0,
+                  );
+                  if (height > 0) setWebHeight(Math.max(24, height));
+                },
+                style: {
+                  display: "block",
+                  width: "100%",
+                  height: webHeight,
+                  border: "0",
+                  backgroundColor: "transparent",
+                },
+              })
+            ) : (
+              <NativeWebView
+                source={{ html: htmlDoc }}
+                scrollEnabled={false}
+                style={{ height: webHeight, width: "100%" }}
+                injectedJavaScript={webViewScript}
+                onMessage={(e: any) => {
+                  try {
+                    const msg = JSON.parse(e.nativeEvent.data);
+                    if (msg.type === "height") {
+                      const height = Number(msg.value);
+                      if (!isNaN(height) && height > 0) setWebHeight(Math.max(24, height));
+                    } else if (msg.type === "link" && msg.url) {
+                      Linking.openURL(msg.url).catch(() =>
+                        showToast("Could not open link")
+                      );
+                    }
+                  } catch {
+                    // Legacy plain-number height messages.
+                    const height = Number(e.nativeEvent.data);
+                    if (!isNaN(height) && height > 0) setWebHeight(Math.max(24, height));
                   }
-                } catch {
-                  // legacy plain-number height messages
-                  const h = Number(e.nativeEvent.data);
-                  if (!isNaN(h) && h > 0) setWebHeight(h + 32);
-                }
-              }}
-              // Belt-and-suspenders: block any navigation not caught by the JS interceptor
-              onShouldStartLoadWithRequest={(req: any) => {
-                if (req.url === "about:blank" || req.url.startsWith("data:")) return true;
-                Linking.openURL(req.url).catch(() => {});
-                return false;
-              }}
-              showsVerticalScrollIndicator={false}
-              originWhitelist={["*"]}
-              javaScriptEnabled
-            />
+                }}
+                // Belt-and-suspenders: block any navigation not caught by the JS interceptor
+                onShouldStartLoadWithRequest={(req: any) => {
+                  if (req.url === "about:blank" || req.url.startsWith("data:")) return true;
+                  Linking.openURL(req.url).catch(() => {});
+                  return false;
+                }}
+                showsVerticalScrollIndicator={false}
+                originWhitelist={["*"]}
+                javaScriptEnabled
+              />
+            )
           ) : (
             // Plain-text body: render tappable URLs inline
             <Text
