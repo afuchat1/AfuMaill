@@ -23,6 +23,16 @@ import { useColors } from "@/hooks/useColors";
 import { Preferences } from "@/lib/preferences";
 import { getEmailStats, getProfile, savePhoneNumber, saveRecoveryEmail } from "@/lib/supabase";
 
+type SettingRow =
+  | { label: string; icon: string; type: "nav"; value?: string }
+  | { label: string; icon: string; type: "info"; value: string }
+  | { label: string; icon: string; type: "toggle"; toggleKey: keyof Preferences };
+
+type SettingSection = {
+  title: string;
+  rows: SettingRow[];
+};
+
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -154,6 +164,7 @@ export default function SettingsScreen() {
       rows: [
         { label: "Two-Factor Auth", icon: "lock", type: "nav" as const },
         { label: "Privacy Controls", icon: "eye-off", type: "nav" as const },
+        { label: "Load External Images", icon: "image", type: "toggle" as const, toggleKey: "externalImages" as keyof Preferences },
       ],
     },
     {
@@ -177,7 +188,7 @@ export default function SettingsScreen() {
         { label: "Privacy Policy", icon: "shield", type: "nav" as const },
       ],
     },
-  ];
+  ] satisfies SettingSection[];
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
@@ -246,7 +257,7 @@ export default function SettingsScreen() {
               {section.rows.map((row, idx) => (
                 <View key={row.label}>
                   <Pressable
-                    onPress={row.type !== "toggle" && row.type !== "info" ? () => handleRowPress(row.label) : undefined}
+                    onPress={row.type === "nav" ? () => handleRowPress(row.label) : undefined}
                     style={({ pressed }) => [
                       styles.settingRow,
                       { backgroundColor: row.type === "nav" && pressed ? colors.secondary : "transparent" },
@@ -442,53 +453,6 @@ export default function SettingsScreen() {
         </View>
       </Dialog>
 
-      {/* ── Quiet Hours Dialog ── */}
-      <Dialog visible={quietModal} onClose={() => setQuietModal(false)}>
-        <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Quiet Hours</Text>
-          <Text style={[styles.modalSubtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Silence notifications between these times each day.
-          </Text>
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <View style={{ flex: 1, gap: 6 }}>
-              <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "Inter_500Medium", textTransform: "uppercase", letterSpacing: 0.6 }}>Start</Text>
-              <View style={[styles.modalInput, { borderColor: colors.border, backgroundColor: colors.background }]}>
-                <TextInput
-                  style={{ flex: 1, fontSize: 18, color: colors.foreground, fontFamily: "Inter_600SemiBold", textAlign: "center" }}
-                  value={quietStart}
-                  onChangeText={setQuietStart}
-                  placeholder="22:00"
-                  placeholderTextColor={colors.mutedForeground}
-                  keyboardType="numbers-and-punctuation"
-                  maxLength={5}
-                />
-              </View>
-            </View>
-            <View style={{ flex: 1, gap: 6 }}>
-              <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "Inter_500Medium", textTransform: "uppercase", letterSpacing: 0.6 }}>End</Text>
-              <View style={[styles.modalInput, { borderColor: colors.border, backgroundColor: colors.background }]}>
-                <TextInput
-                  style={{ flex: 1, fontSize: 18, color: colors.foreground, fontFamily: "Inter_600SemiBold", textAlign: "center" }}
-                  value={quietEnd}
-                  onChangeText={setQuietEnd}
-                  placeholder="07:00"
-                  placeholderTextColor={colors.mutedForeground}
-                  keyboardType="numbers-and-punctuation"
-                  maxLength={5}
-                />
-              </View>
-            </View>
-          </View>
-          <View style={styles.modalActions}>
-            <Pressable onPress={disableQuietHours} style={[styles.modalCancelBtn, { borderColor: colors.border }]}>
-              <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: colors.mutedForeground }}>Turn Off</Text>
-            </Pressable>
-            <Pressable onPress={saveQuietHours} style={[styles.modalSaveBtn, { backgroundColor: colors.primary }]}>
-              <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.primaryForeground }}>Save</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Dialog>
     </View>
   );
 }

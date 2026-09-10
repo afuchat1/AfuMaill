@@ -84,8 +84,6 @@ function RootLayoutNav() {
       <>
         <StatusBar
           style={scheme === "dark" ? "light" : "dark"}
-          backgroundColor={colors.background}
-          translucent={false}
         />
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
           <ActivityIndicator size="large" color={colors.foreground} />
@@ -98,8 +96,6 @@ function RootLayoutNav() {
     <>
       <StatusBar
         style={scheme === "dark" ? "light" : "dark"}
-        backgroundColor={colors.background}
-        translucent={false}
       />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

@@ -277,7 +277,7 @@ export default function ComposeScreen() {
             style={StyleSheet.absoluteFill}
             onPress={() => setShowAiMenu(false)}
           />
-          <View style={[styles.aiMenu, { backgroundColor: colors.card, borderColor: colors.border, shadowColor: colors.foreground }]}>
+          <View style={[styles.aiMenu, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {AI_ACTIONS.map((action, idx) => (
               <Pressable
                 key={action.id}
@@ -448,9 +448,7 @@ const styles = StyleSheet.create({
     right: 16,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12)",
     elevation: 8,
     minWidth: 180,
     overflow: "hidden",

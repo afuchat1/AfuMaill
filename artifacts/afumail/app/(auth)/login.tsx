@@ -31,6 +31,32 @@ function slugify(text: string) {
     .replace(/[^a-z0-9._]/g, "");
 }
 
+function FormContainer({
+  children,
+  onSubmit,
+  style,
+}: {
+  children: React.ReactNode;
+  onSubmit: () => void;
+  style?: object;
+}) {
+  if (Platform.OS !== "web") {
+    return <View style={style}>{children}</View>;
+  }
+
+  return React.createElement(
+    "form",
+    {
+      onSubmit: (event: { preventDefault: () => void }) => {
+        event.preventDefault();
+        onSubmit();
+      },
+      style,
+    },
+    children,
+  );
+}
+
 export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -384,7 +410,7 @@ export default function LoginScreen() {
                 Sign in with your @afuchat.com account
               </Text>
 
-              <View style={styles.fields}>
+              <FormContainer onSubmit={handleLogin} style={StyleSheet.flatten(styles.fields)}>
                 <View style={[styles.inputWrap, { backgroundColor: colors.secondary }]}>
                   <TextInput
                     style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
@@ -436,7 +462,7 @@ export default function LoginScreen() {
                     : <Text style={[styles.primaryBtnText, { color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }]}>Sign In</Text>
                   }
                 </Pressable>
-              </View>
+              </FormContainer>
 
               <Pressable style={styles.switchRow} onPress={switchToRegister}>
                 <Text style={[styles.switchText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
