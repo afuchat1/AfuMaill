@@ -469,7 +469,7 @@ export default function LoginScreen() {
                 <Pressable
                   onPress={handleLogin}
                   disabled={loginLoading}
-                  style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? colors.primaryPressed : colors.primary, opacity: loginLoading ? 0.7 : 1 }]}
+                  style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? "#333" : colors.primary, opacity: loginLoading ? 0.7 : 1 }]}
                 >
                   {loginLoading
                     ? <ActivityIndicator color={colors.primaryForeground} size="small" />
@@ -509,7 +509,7 @@ export default function LoginScreen() {
                   </Text>
                   <Pressable
                     onPress={switchToLogin}
-                    style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? colors.primaryPressed : colors.primary }]}
+                    style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? "#333" : colors.primary }]}
                   >
                     <Text style={[styles.primaryBtnText, { color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }]}>
                       Back to Sign In
@@ -556,7 +556,7 @@ export default function LoginScreen() {
                     <Pressable
                        onPress={handleVerifyResetCode}
                       disabled={forgotLoading}
-                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? colors.primaryPressed : colors.primary, opacity: forgotLoading ? 0.7 : 1 }]}
+                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? "#333" : colors.primary, opacity: forgotLoading ? 0.7 : 1 }]}
                     >
                       {forgotLoading
                         ? <ActivityIndicator color={colors.primaryForeground} size="small" />
@@ -659,7 +659,7 @@ export default function LoginScreen() {
                     <Pressable
                       onPress={handleConfirmPasswordReset}
                       disabled={forgotLoading}
-                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? colors.primaryPressed : colors.primary, opacity: forgotLoading ? 0.7 : 1 }]}
+                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? "#333" : colors.primary, opacity: forgotLoading ? 0.7 : 1 }]}
                     >
                       {forgotLoading
                         ? <ActivityIndicator color={colors.primaryForeground} size="small" />
@@ -704,7 +704,7 @@ export default function LoginScreen() {
                     <Pressable
                       onPress={handleForgotPassword}
                       disabled={forgotLoading}
-                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? colors.primaryPressed : colors.primary, opacity: forgotLoading ? 0.7 : 1 }]}
+                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? "#333" : colors.primary, opacity: forgotLoading ? 0.7 : 1 }]}
                     >
                       {forgotLoading
                         ? <ActivityIndicator color={colors.primaryForeground} size="small" />
@@ -788,7 +788,7 @@ export default function LoginScreen() {
 
                     <Pressable
                       onPress={handleStep1Next}
-                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? colors.primaryPressed : colors.primary }]}
+                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? "#333" : colors.primary }]}
                     >
                       <Text style={[styles.primaryBtnText, { color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }]}>
                         Next
@@ -886,7 +886,7 @@ export default function LoginScreen() {
                         styles.primaryBtn,
                         {
                           backgroundColor: usernameAvailable === true
-                            ? pressed ? colors.primaryPressed : colors.primary
+                            ? pressed ? "#333" : colors.primary
                             : colors.muted,
                         },
                       ]}
@@ -946,7 +946,7 @@ export default function LoginScreen() {
 
                     <Pressable
                       onPress={handleStep3Next}
-                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? colors.primaryPressed : colors.primary }]}
+                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? "#333" : colors.primary }]}
                     >
                       <Text style={[styles.primaryBtnText, { color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }]}>
                         Next
@@ -1025,7 +1025,7 @@ export default function LoginScreen() {
                     <Pressable
                       onPress={handleRegister}
                       disabled={registerLoading}
-                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? colors.primaryPressed : colors.primary, opacity: registerLoading ? 0.7 : 1 }]}
+                      style={({ pressed }) => [styles.primaryBtn, { backgroundColor: pressed ? "#333" : colors.primary, opacity: registerLoading ? 0.7 : 1 }]}
                     >
                       {registerLoading
                         ? <ActivityIndicator color={colors.primaryForeground} size="small" />
@@ -1067,7 +1067,7 @@ export default function LoginScreen() {
                       disabled={phoneLoading}
                       style={({ pressed }) => [
                         styles.primaryBtn,
-                        { backgroundColor: pressed ? colors.primaryPressed : colors.primary, opacity: phoneLoading ? 0.7 : 1 },
+                        { backgroundColor: pressed ? "#333" : colors.primary, opacity: phoneLoading ? 0.7 : 1 },
                       ]}
                     >
                       {phoneLoading

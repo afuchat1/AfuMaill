@@ -37,7 +37,7 @@
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-foreground.png",
-        "backgroundColor": "#016FFE"
+        "backgroundColor": "#0D1526"
       },
       "intentFilters": [
         {
@@ -61,7 +61,7 @@
         {
           "image": "./assets/images/brand-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#016FFE"
+          "backgroundColor": "#0D1526"
         }
       ],
       "expo-image"
